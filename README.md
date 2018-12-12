@@ -42,7 +42,7 @@ i.e. There are 2 solutions:
 
 See `./bosphorus -h` for the full list of options.
 
-# Installation
+# Building, Testing, Installing
 
 ### Docker
 TODO
