@@ -100,3 +100,16 @@ Run test suite via `lit indra/tests`
 
 # Known issues
 - PolyBoRi cannot handle ring of sizes over approx 1 million (1048574). Do not run `indra` on instances with over a million variables.
+
+# Parameters used in the paper
+For the paper, the following parameters are used for learning
+```
+bosphorus --anfread a.anf --cnfwrite a-learnt.cnf --stoponsolution --learnsolution --maxtime=1000
+```
+
+for just conversion, use
+```
+bosphorus --anfread a.anf --cnfwrite a-convert.cnf --stoponsolution --learnsolution --maxtime=0
+``` 
+
+For cnfs, use `--cnfread a.cnf' instead of '--anfread a.anf`
