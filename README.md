@@ -1,11 +1,6 @@
-# About
+Bosphorus is an ANF simplification and solving tool. It takes as input an ANF over GF(2) and can simplify it and also solve it. As a plus, it can also take in a CNF, convert it to ANF, simplify it, then either give a (hopefully simplified) CNF, an ANF, or can run a SAT solver directly and solve it. It uses the following systems: CryptoMiniSat, espresso, M4RI and PolyBoRi.
 
-TO DO
-1. Update this README.md
-
-Historic note:
-1. Bophorus is originally, an ANF simplification tool forked from https://github.com/msoos/anfconv.
-2. Bophorus was originally named Indra.
+The system was published in DATE 2019, see PDF here.
 
 # Installation
 
@@ -27,7 +22,6 @@ sudo make install
 
 ### PolyBoRi
 * We currrently link against BRiAl actually
-
 From https://sourceforge.net/projects/polybori/files/polybori/0.8.3/, download `polybori-0.8.3.tar.gz`
 ```
 tar -xf polybori-0.8.3.tar.gz
@@ -47,7 +41,7 @@ sudo make install
 ```
 Note (For MacOS): If you encounter `cryptominisat.h:30:10: fatal error: 'atomic' file not found` in `#include <atomic>` during compilation, you may need to use `CFLAGS='-stdlib=libc++' make` instead of just `make`.
 
-### Bosphorus (This tool!)
+### This tool, once everything above is installed
 ```
 git clone https://github.com/cxjdavin/indra.git
 cd indra
@@ -67,7 +61,6 @@ pip install OutputCheck
 Run test suite via `lit indra/tests`
 
 # Usage
-
 Suppose we have a system of 2 equations:
 1. x1 + x2 + x3 = 0
 2. x1 \* x2 + x2 \* x3 + 1 = 0
