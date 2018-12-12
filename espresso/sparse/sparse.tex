@@ -1,0 +1,628 @@
+\documentstyle{article} 
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{9in}
+\addtolength{\topmargin}{-0.875in}
+\addtolength{\oddsidemargin}{-0.875in}
+
+\begin{document}
+
+\title {Sparse Matrix Package}
+\author {Richard Rudell}
+\maketitle
+
+\section{General Information}
+The package {\em sparse} implements a general sparse-matrix data structure.
+This documentation describes the fields of the sparse-matrix structure which
+a user is allowed to examine, and the functions which are defined in the
+package for manipulating the sparse matrix.
+
+
+\subsection{Structure Definitions}
+This section gives the structure layouts for the fields of the sparse
+matrix structures which the user is allowed to reference directly.
+
+\begin{verbatim}
+/*
+ *  sparse matrix element
+ */
+typedef struct sm_element_struct sm_element;
+struct sm_element_struct {
+    int row_num;                        /* row number of this element */
+    int col_num;                        /* column number of this element */
+    sm_element *next_row;               /* pointers to next and prev row */
+    sm_element *prev_row;
+    sm_element *next_col;               /* pointers to next and prev column */
+    sm_element *prev_col;
+};
+
+
+/*
+ *  sparse row
+ */
+typedef struct sm_row_struct sm_row;
+struct sm_row_struct {
+    int row_num;                        /* row number of this row */
+    int length;                         /* number of elements in this row */
+    sm_element *first_col;              /* first element in this row */
+    sm_element *last_col;               /* last element in this row */
+    sm_row *next_row;                   /* next and previous rows */
+    sm_row *prev_row;
+};
+
+
+/*
+ *  sparse column
+ */
+typedef struct sm_col_struct sm_col;
+struct sm_col_struct {
+    int col_num;                        /* column number of this column */
+    int length;                         /* number of elements in this column */
+    sm_element *first_row;              /* first element in this column */
+    sm_element *last_row;               /* last element in this column */
+    sm_col *next_col;                   /* next and previous columns */
+    sm_col *prev_col;
+};
+
+
+/*
+ *  sparse matrix
+ */
+typedef struct sm_matrix_struct sm_matrix;
+struct sm_matrix_struct {
+    sm_row *first_row;                  /* first and last rows in matrix */
+    sm_row *last_row;
+    sm_col *first_col;                  /* first and last columns in matrix */
+    sm_col *last_col;
+    int nrows;                          /* number of rows */
+    int ncols;                          /* number of columns */
+};
+\end{verbatim}
+
+\subsection{Iteration Macro's}
+\begin{verbatim}
+
+#define sm_foreach_row(A, prow) \
+    for(prow = A->first_row; prow != 0; prow = prow->next_row)
+
+#define sm_foreach_col(A, pcol) \
+    for(pcol = A->first_col; pcol != 0; pcol = pcol->next_col)
+
+#define sm_foreach_row_element(prow, p) \
+    for(p = prow->first_col; p != 0; p = p->next_col)
+
+#define sm_foreach_col_element(pcol, p) \
+    for(p = pcol->first_col; p != 0; p = p->next_col)
+\end{verbatim}
+
+These simple iteration macros will not operate correctly if the current
+element (whether it be a row, column, or element) is deleted during
+the loop.  This can be fixed
+(manually) using the following sort of construct:
+
+\begin{verbatim}
+sm_matrix *A;
+sm_row *prow, *prownext;
+
+for(prow = A->first_row; prow != 0; prow = prownext) {
+    prownext = prow->next;
+        .
+        .
+        .
+}
+\end{verbatim}
+
+Note, however, that this modified
+iteration construct does not allow the
+next item to be deleted during the generation.
+
+\subsection{Matrix Manipulation Functions}
+
+\begin{verbatim}
+sm_matrix *
+sm_alloc()
+\end{verbatim}
+
+        Allocates a new sparse matrix.  Initially it has no rows and no columns.
+
+
+\begin{verbatim}
+void
+sm_free(A)
+sm_matrix *A;
+\end{verbatim}
+
+        Frees a sparse matrix.  All rows, columns and elements of the matrix
+        are discarded.
+
+
+\begin{verbatim}
+sm_matrix *
+sm_dup(A)
+sm_matrix *A;
+\end{verbatim}
+
+        Make a copy of the sparse matrix A.
+
+
+\begin{verbatim}
+sm_element *
+sm_insert(A, rownum, colnum)
+sm_matrix *A;
+int rownum, colnum;
+\end{verbatim}
+
+        Create an element at (rownum, colnum) in the sparse matrix A, if one
+        does not already exit.  Returns a pointer to the sparse matrix element.
+
+
+\begin{verbatim}
+sm_element *
+sm_find(A, rownum, colnum)
+sm_matrix *A;
+int rownum, colnum;
+\end{verbatim}
+
+        Locate the item at position (rownum, colnum) in sparse matrix A.
+        Returns 0 if no element exists at that location, otherwise returns a
+        pointer to the sparse matrix element.
+
+
+\begin{verbatim}
+void
+sm_remove(A, rownum, colnum)
+sm_matrix *A;
+int rownum, colnum;
+\end{verbatim}
+
+        Remove the element at (rownum, colnum) in sparse matrix A (if it exists).
+
+
+\begin{verbatim}
+void
+sm_remove_element(A, p)
+sm_matrix *A;
+sm_element *p;
+\end{verbatim}
+
+        Remove the element p from the sparse matrix A.  Disaster can occur if
+        p is not an element of A.
+
+
+\begin{verbatim}
+sm_row *
+sm_get_row(A, rownum)
+sm_matrix *A;
+int rownum;
+\end{verbatim}
+
+        Return a pointer to the specified row of sparse matrix A.  Returns 0
+        if there are no elements in that row.
+
+
+\begin{verbatim}
+sm_col *
+sm_get_col(A, colnum)
+sm_matrix *A;
+int colnum;
+\end{verbatim}
+
+        Return a pointer to the specified column of sparse matrix A.  Returns 0
+        if there are no elements in that column.
+
+
+\begin{verbatim}
+void
+sm_delrow(A, rownum)
+sm_matrix *A;
+int rownum;
+\end{verbatim}
+
+        Delete a row from the sparse matrix (if it exists).  All elements in
+        the row are discarded.
+
+
+\begin{verbatim}
+void
+sm_delcol(A, colnum)
+sm_matrix *A;
+int colnum;
+\end{verbatim}
+
+        Delete a column from the sparse matrix (if it exists).  All elements
+        in the column are discarded.
+
+
+\begin{verbatim}
+void
+sm_copy_row(A, rownum, row)
+sm_matrix *A;
+int rownum;
+sm_row *row;
+\end{verbatim}
+
+        Copy a row to the specified row number of sparse matrix A.
+
+
+\begin{verbatim}
+void
+sm_copy_col(A, colnum, col)
+sm_matrix *A;
+int colnum;
+sm_col *col;
+\end{verbatim}
+
+        Copy a column to the specified column number of sparse matrix A.
+
+
+\begin{verbatim}
+sm_row *
+sm_longest_row(A)
+sm_matrix *A;
+\end{verbatim}
+
+        Return a pointer to the row in A with the most elements; returns
+        0 if there are no rows in A.
+
+
+\begin{verbatim}
+sm_col *
+sm_longest_col(A)
+sm_matrix *A;
+\end{verbatim}
+
+        Return a pointer to the column in A with the most elements; returns
+        0 if there are no columns in A.
+
+
+\begin{verbatim}
+int
+sm_read(fp, A)
+FILE *fp;
+sm_matrix **A;
+\end{verbatim}
+
+        Reads a sparse matrix from a file.  Format is
+
+\begin{verbatim}
+                row_num col_num
+                    .
+                    .
+                    .
+                row_num col_num
+\end{verbatim}
+
+        Returns 1 on normal termination, 0 on any error.  No attempt is made
+        to give the cause for the error.
+
+
+\begin{verbatim}
+void
+sm_write(fp, A)
+FILE *fp;
+sm_matrix *A;
+\end{verbatim}
+
+        Writes a sparse matrix to a file which can be read by
+        {\bf sm\_read()}.
+
+
+\begin{verbatim}
+void
+sm_print(fp, A)
+FILE *fp;
+sm_matrix *A;
+\end{verbatim}
+
+        Debugging routine to print the structural layout of a sparse matrix.
+
+
+\begin{verbatim}
+int
+sm_num_elements(A)
+sm_matrix *A;
+\end{verbatim}
+
+        Returns the number of nonzero elements in the matrix.
+
+\subsection{Row Manipulation Functions}
+
+\begin{verbatim}
+sm_row *
+sm_row_alloc()
+\end{verbatim}
+
+        Allocates a new row vector.
+
+
+\begin{verbatim}
+void
+sm_row_free(row)
+sm_row *row;
+\end{verbatim}
+
+        Frees a row vector and discards its elements.
+
+
+\begin{verbatim}
+sm_row *
+sm_row_dup(row)
+sm_row *row;
+\end{verbatim}
+
+        Creates a new row vector which is a copy of an existing row vector.
+
+
+\begin{verbatim}
+sm_element *
+sm_row_insert(row, colnum)
+sm_row *row;
+int colnum;
+\end{verbatim}
+
+        Adds a column to a row vector, if it does not already exist.  Returns
+        a pointer to the element.
+
+
+\begin{verbatim}
+sm_element *
+sm_row_remove(row, colnum)
+sm_row *row;
+int colnum;
+\end{verbatim}
+
+        Removes an element from a row vector, if it exists.
+
+
+\begin{verbatim}
+sm_element *
+sm_row_find(row, colnum)
+sm_row *row;
+int colnum;
+\end{verbatim}
+
+        Finds an element of a row vector, or returns 0 if the element does not
+        exist.
+
+
+\begin{verbatim}
+int
+sm_row_contains(row1, row2)
+sm_row *row1, *row2;
+\end{verbatim}
+
+        Returns 1 if row2 structurally contains row1 (that is, row2 has
+        an element everywhere row1 does).
+
+
+\begin{verbatim}
+int
+sm_row_intersects(row1, row2)
+sm_row *row1, *row2;
+\end{verbatim}
+
+        Returns 1 if row1 and row2 share a column in common.
+
+
+\begin{verbatim}
+sm_row *
+sm_row_and(row1, row2)
+sm_row *row1, *row2;
+\end{verbatim}
+
+        Returns a row vector containing the elements which row1 and
+        row2 have in common.
+
+
+\begin{verbatim}
+int
+sm_row_compare(row1, row2)
+sm_row *row1, *row2;
+\end{verbatim}
+
+        Returns -1, 0, or 1 depending on the lexiographical ordering
+        of the two rows.  Suitable for use by st (see st.doc).
+
+
+\begin{verbatim}
+int
+sm_row_hash(row1, modulus)
+sm_row *row1;
+int modulus;
+\end{verbatim}
+
+        A hashing function defined on rows which is suitable for use
+        by st (see st.doc).
+
+
+\begin{verbatim}
+void
+sm_row_print(fp, row1)
+FILE *fp;
+sm_row *row1;
+\end{verbatim}
+
+        Print a row as a sparse vector -- useful for debugging.
+
+\subsection{Column Manipulation Functions}
+
+\begin{verbatim}
+sm_column *
+sm_col_alloc()
+\end{verbatim}
+
+        Allocates a new column vector.
+
+\begin{verbatim}
+void
+sm_col_free()
+\end{verbatim}
+
+        Frees a column vector and discards its elements.
+
+
+\begin{verbatim}
+sm_column *
+sm_col_dup(col)
+sm_column *col;
+\end{verbatim}
+
+        Creates a new column vector which is a copy of an existing
+        column vector.
+
+
+\begin{verbatim}
+sm_element *
+sm_col_insert(col, rownum)
+sm_column *col;
+int rownum;
+\end{verbatim}
+
+        Adds an element to a column vector.  Returns a pointer to the element.
+
+
+\begin{verbatim}
+void
+sm_col_remove(col, rownum)
+sm_column *col;
+int rownum;
+\end{verbatim}
+
+        Removes an element from a column vector, if it exists.
+
+
+\begin{verbatim}
+sm_element *
+sm_col_find(column, colnum)
+sm_column *column;
+int colnum;
+\end{verbatim}
+
+        Finds an element of a column vector.  Returns 0 if the element does not
+        exist.
+
+
+\begin{verbatim}
+int
+sm_col_contains(column1, column2)
+sm_column *column1, *column2;
+\end{verbatim}
+
+        Returns 1 if column2 contains column1 (that is, column2 has
+        an element for every row that column1 does).
+
+
+\begin{verbatim}
+int
+sm_col_intersects(column1, column2)
+sm_column *column1, *column2;
+\end{verbatim}
+
+        Returns 1 if column1 and column2 share a row number in common.
+
+
+\begin{verbatim}
+sm_col *
+sm_col_and(col1, col2)
+sm_col *col1, *col2;
+\end{verbatim}
+
+        Returns a column vector containing the elements which col1 and
+        col2 have in common.
+
+
+\begin{verbatim}
+int
+sm_col_compare(col1, col2)
+sm_column *col1, *col2;
+\end{verbatim}
+
+        Returns -1, 0, or 1 depending on the lexiographical ordering
+        of the two columns.  Suitable for use by st (see st.doc).
+
+
+\begin{verbatim}
+int
+sm_col_hash(col, modulus)
+sm_col *col;
+int modulus;
+\end{verbatim}
+
+        A hashing function defined on columns which is suitable for use
+        by st (see st.doc).
+
+
+\begin{verbatim}
+void
+sm_col_print(fp, col)
+FILE *fp;
+sm_column *col;
+\end{verbatim}
+
+        Print a column as a sparse vector -- useful for debugging.
+
+\subsection{User-definable Fields}
+
+Associated with each matrix, row, column, and element is a single
+generic pointer (called the {\em user-word}) for placing user-defined
+information.  This field is initialized to zero, and may be set or
+modified by using the routines shown below.  Note that {\bf sm\_get()} and
+{\bf sm\_put()} are macros, and hence polymorphic.
+
+When one of the objects in this package are
+copied (e.g., {\bf sm\_dup()} or {\bf sm\_row\_dup()}), the
+user-word fields are initialized to 0 in the copy.
+It is the user's responsibility to also copy the user-word fields, if this
+is the desired effect.  Likewise, when a matrix, row, column, or element
+is freed, the user-word field is not touched.
+It is the user's responsibility
+to first walk over the given data type, and free all of the user-words
+if this is the desired effect.
+
+
+
+\begin{verbatim}
+type
+sm_get(type, p)
+\end{verbatim}
+
+        Returns the {\em user-defined} pointer
+        associated with the argument p.  p may
+        be either a
+        {\bf sm\_matrix *}, {\bf sm\_row *}, {\bf sm\_col *},
+        or an {\bf sm\_element *}.
+
+
+        Typical use:
+
+\begin{verbatim}
+                sm_matrix *p;
+                struct my_struct *my;
+                    .
+                    .
+                    .
+                my = sm_get(struct my_struct *, p);
+\end{verbatim}
+
+
+\begin{verbatim}
+void
+sm_put(p, val)
+\end{verbatim}
+
+        Sets the {\em user-defined} pointer assoicated with
+        the argument p.  p may be either a
+        {\bf sm\_matrix *}, {\bf sm\_row *}, {\bf sm\_col *},
+        or an {\bf sm\_element *}.
+
+
+\begin{verbatim}
+        Typical use:
+
+                sm_matrix *p;
+                struct my_struct *my;
+                    .
+                    .
+                    .
+                sm_put(p, my);
+\end{verbatim}
+\end{document}

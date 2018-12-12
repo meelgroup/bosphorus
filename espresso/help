@@ -1,0 +1,330 @@
+
+
+
+ESPRESSO(1CAD)    MISC. REFERENCE MANUAL PAGES     ESPRESSO(1CAD)
+
+
+
+NAME
+     espresso - Boolean Minimization
+
+SYNOPSIS
+     espresso [_o_p_t_i_o_n_s] [_f_i_l_e]
+
+DESCRIPTION
+     _E_s_p_r_e_s_s_o takes as input  a  two-level  representation  of  a
+     two-valued  (or  multiple-valued) Boolean function, and pro-
+     duces a minimal equivalent representation.   The  algorithms
+     used  are  new  and  represent  an advance in both speed and
+     optimality of solution in heuristic Boolean minimization.
+
+     _E_s_p_r_e_s_s_o reads the _f_i_l_e provided (or standard  input  if  no
+     files  are specified), performs the minimization, and writes
+     the minimized result to standard output.  _E_s_p_r_e_s_s_o automati-
+     cally  verifies that the minimized function is equivalent to
+     the original function.  Options allow  for  using  an  exact
+     minimization   algorithm,  for  choosing  an  optimal  phase
+     assignment for the output functions,  and  for  choosing  an
+     optimal assignment of the inputs to input decoders.
+
+     The default input and output  file  formats  are  compatible
+     with  the Berkeley standard format for the physical descrip-
+     tion of a PLA.  The input format is described in  detail  in
+     espresso(5).    Note  that  the  input  file  is  a  _l_o_g_i_c_a_l
+     representation of a set of Boolean equations, and hence  the
+     input  format differs slightly from that described in pla(5)
+     (which provides for the _p_h_y_s_i_c_a_l representation of  a  PLA).
+     The input and output formats have been expanded to allow for
+     multiple-valued  logic  functions,  and  to  allow  for  the
+     specification  of  the  don't-care set which will be used in
+     the minimization.
+
+     A complete list of the command line options is given  below.
+     Be  warned  that  many  of  the command line options are not
+     intended for general use.
+
+     -d        Enables debugging.  Useful only for those familiar
+               with the algorithms used.
+
+     -Dcheck   Checks that the function is  a  partition  of  the
+               entire  space  (i.e., that the ON-set, OFF-set and
+               DC-set are pairwise disjoint, and that their union
+               is the Universe).
+
+     -Dd1merge Performs a quick distance-1  merge  on  the  input
+               file.   This is useful when the input file is very
+               large (e.g., a truth table  with  more  than  1000
+               terms)  because  distance-1  merge  is  O(n log n)
+               rather than the EXPAND step of Espresso  which  is
+               O(n  *  n).  The output should then be run through
+
+
+
+Sun Release 4.1   Last change: 31 January 1988                  1
+
+
+
+
+
+
+ESPRESSO(1CAD)    MISC. REFERENCE MANUAL PAGES     ESPRESSO(1CAD)
+
+
+
+               Espresso to complete the minimization.  A range of
+               variables to be merged can also be specified using
+               -rn-m (the default is  to  merge  over  all  vari-
+               ables).
+
+     -Decho    Echoes the function to standard output.  This  can
+               be  used  to get the complement of a function when
+               combined with -o.
+
+     -Dequiv   Identify output variables  which  are  equivalent.
+               Takes  into  account the don't-care set and checks
+               for equivalence of both the ON-set and OFF-set.
+
+     -Dexact   Exact minimization algorithm  (guarantees  minimum
+               number  of product terms, and heuristically minim-
+               izes number of literals).  Potentially expensive.
+
+     -Dmany    Reads and minimizes  PLA's  until  end-of-file  is
+               detected.  PLA's in the same file are separated by
+               ._e.
+
+     -Dmap     Draw the Karnaugh maps for a  binary-valued  func-
+               tion.
+
+     -Dmapdc   Derive from the binary-valued variable _D_O_N_T__C_A_R_E a
+               don't-care  set,  and  then  delete this variable.
+               All input conditions for which an  output  changes
+               when  _D_O_N_T__C_A_R_E changes define the don't-care con-
+               ditions for that output.  This is a hack  to  sup-
+               port don't-cares from high-level languages without
+               a notion of don't-cares.
+
+     -Dopo     Perform output phase optimization (i.e., determine
+               which functions to complement to reduce the number
+               of terms needed to implement the function).  After
+               choosing  an assignment of phases for the outputs,
+               the function is minimized.  A simple algorithm  is
+               used  which  may become very expensive for a large
+               number of outputs (e.g., more than 40).
+
+     -Dopoall  Minimize the  function  with  all  possible  phase
+               assignments.   A range of outputs to cycle through
+               can be given with -rn-m (the default is to use all
+               outputs).   The  option  -S1 will perform an exact
+               minimization for each phase assignment.  Be warned
+               that  opoall  requires  an  exponential  number of
+               minimizations !
+
+     -Dpair    Choose an assignment  of  the  inputs  to  two-bit
+               decoders, and minimize the function.  The function
+               MUST be minimized first to achieve  good  results.
+               There  are  actually  4  different  algorithms, of
+
+
+
+Sun Release 4.1   Last change: 31 January 1988                  2
+
+
+
+
+
+
+ESPRESSO(1CAD)    MISC. REFERENCE MANUAL PAGES     ESPRESSO(1CAD)
+
+
+
+               increasing cost, which may be selected  with  -S1,
+               -S2,  or  -S3.   The default is -S0 which seems to
+               give the best results for the cost.
+
+     -Dpairall Minimize the function with  all  possible  assign-
+               ments  of  inputs to two-bit decoders.  The option
+               -S1 will perform an exact  minimization  for  each
+               assignment  of  inputs to decoders, and the option
+               -S2 will perform an  output-phase  assignment  for
+               each  assignment of inputs to decoders.  Be warned
+               that pairall requires  an  exponential  number  of
+               minimizations !
+
+     -Dseparate
+               Remove the don't-care set from the ON-set  of  the
+               function.
+
+     -Dso      Minimize each function one at a time as a  single-
+               output  function.   Terms will not be shared among
+               the functions.  The option  -S1  will  perform  an
+               exact  minimization  for  each single-output func-
+               tion.
+
+     -Dso_both Minimize each function one at a time as a  single-
+               output  function,  but  choose the function or its
+               complement based on which has  fewer  terms.   The
+               option  -S1 will perform an exact minimization for
+               each single-output function and its complement  to
+               determine which has fewer terms.
+
+     -Dstats   Provide simple statistics on the size of the func-
+               tion.
+
+     -Dverify  Checks  for  Boolean  equivalence  of  two  PLA's.
+               Reads  two  filenames  from the command line, each
+               containing a single PLA.
+
+     -DPLAverify
+               Checks for Boolean equivalence  of  two  PLA's  by
+               first permuting the columns based on the user sup-
+               plied variable names.  Reads  two  filenames  from
+               the command line.
+
+     -eeat     Normally comments are echoed from the  input  file
+               to  the  output  file.   This options discards any
+               comments in the input file.
+
+     -efast    Stop after the first EXPAND and IRREDUNDANT opera-
+               tions (i.e., do not iterate over the solution).
+
+     -ekiss    Sets up a _k_i_s_s-style minimization  problem.   This
+               is a hack.
+
+
+
+Sun Release 4.1   Last change: 31 January 1988                  3
+
+
+
+
+
+
+ESPRESSO(1CAD)    MISC. REFERENCE MANUAL PAGES     ESPRESSO(1CAD)
+
+
+
+     -eness    Essential primes will not be detected.
+
+     -enirr    The result will not necessarily be  made  irredun-
+               dant  in  the  final  step which removes redundant
+               literals.
+
+     -enunwrap The ON-set will not be unwrapped before  beginning
+               the minimization.
+
+     -eonset   Recompute  the  ON-set  before  the  minimization.
+               Useful  when the PLA has a large number of product
+               terms (e.g., an exhaustive list of minterms).
+
+     -epos     Swaps the ON-set and OFF-set of the function after
+               reading  the function.  This can be used to minim-
+               ize  the  OFF-set  of  a  function.   ._p_h_a_s_e  (see
+               espresso(5)) in the input file can also specify an
+               arbitrary choice of output phases.
+
+     -estrong  Uses  the  alternate  strategy  SUPER_GASP  (as  a
+               replacement  for  LAST_ GASP) which is more expen-
+               sive, but occasionally provides better results.
+
+     -o[type]  Selects the output format.  By default,  only  the
+               ON-set  (i.e., type f) is output after the minimi-
+               zation.  [type] can be one of f, d, r, fd, dr, fr,
+               or  fdr  to  select  any combination of the ON-set
+               (f), the OFF-set (r) or the  DC-set  (d).   [type]
+               may  also be eqntott to output algebraic equations
+               acceptable to _e_q_n_t_o_t_t(1CAD), or pleasure to output
+               an  unmerged  PLA (with the ._l_a_b_e_l and ._g_r_o_u_p key-
+               words) acceptable to _p_l_e_a_s_u_r_e(1CAD).
+
+     -s        Will provide a short summary of the  execution  of
+               the  program  including  the  initial  cost of the
+               function,  the  final  cost,  and   the   computer
+               resources used.
+
+     -t        Will produce a trace showing the execution of  the
+               program.  After each main step of the algorithm, a
+               single line is printed which reports the processor
+               time used, and the current cost of the function.
+
+     -x        Suppress printing of the solution.
+
+     -v [type] Specifies verbose debugging detail.  Not generally
+               useful.
+
+DIAGNOSTICS
+     Espresso will issue a warning  message  if  a  product  term
+     spans  more  than  one  line.  Usually this is an indication
+     that the number of inputs or  outputs  of  the  function  is
+
+
+
+Sun Release 4.1   Last change: 31 January 1988                  4
+
+
+
+
+
+
+ESPRESSO(1CAD)    MISC. REFERENCE MANUAL PAGES     ESPRESSO(1CAD)
+
+
+
+     specified incorrectly.
+
+SEE ALSO
+     kiss(1CAD), pleasure(1CAD), pla(5CAD), espresso(5CAD)
+
+     R. Brayton, G. Hachtel, C.  McMullen,  and  A.  Sangiovanni-
+     Vincentelli,  _L_o_g_i_c  _M_i_n_i_m_i_z_a_t_i_o_n  _A_l_g_o_r_i_t_h_m_s  _f_o_r _V_L_S_I _S_y_n_-
+     _t_h_e_s_i_s, Kluwer Academic Publishers, 1984.
+
+     R. Rudell, A. Sangiovanni-Vincentelli,  "Espresso-MV:  Algo-
+     rithms  for Multiple-Valued Logic Minimization," _P_r_o_c. _C_u_s_t.
+     _I_n_t. _C_i_r_c. _C_o_n_f., Portland, May 1985.
+
+     R. Rudell, "Multiple-Valued Minimization for PLA Synthesis,"
+     Master's  Report,  University  of California, Berkeley, June
+     1986.
+
+     R. Rudell, A. Sangiovanni-Vincentelli,  "Exact  Minimization
+     of  Multiple-Valued  Functions  for  PLA Optimization", _I_n_t.
+     _C_o_n_f. _C_o_m_p. _A_i_d. _D_e_s., Santa Clara, November 1986.
+
+AUTHOR
+     Please direct any questions or comments to:
+     Richard Rudell
+     205 Cory Hall
+     Dept. of EECS
+     University of California
+     Berkeley, California  94720
+
+     Arpanet mail address is rudell@ic.Berkeley.EDU.
+
+COMMENTS
+     Default is to pass comments and  unrecognized  options  from
+     the input file to standard output (sometimes this isn't what
+     you want).
+
+     It is no longer possible to specify the type on the  command
+     line.
+
+     There are a lot of options, but  typical  use  doesn't  need
+     them.
+
+     This manual page refers to Version  2.3  of  Espresso.   The
+     major change from Version 2.2 to Version 2.3 is the addition
+     of a fast sparse-matrix covering algorithm for  the  -Dexact
+     mode.
+
+     The -Dopo option becomes very slow for many outputs (> 20).
+
+
+
+
+
+
+
+Sun Release 4.1   Last change: 31 January 1988                  5
+
+
+

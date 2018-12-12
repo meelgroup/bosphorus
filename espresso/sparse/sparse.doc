@@ -1,0 +1,381 @@
+/*
+ *  sparse matrix element
+ */
+struct sm_element {
+    int row_num;			/* row number of this element */
+    int col_num;			/* column number of this element */
+    sm_element *next_row;		/* pointers to next and previous row */
+    sm_element *prev_row;
+    sm_element *next_col;		/* pointer to next and previous column */
+    sm_element *prev_col;
+    char *user_word;			/* user-definable generic pointer */
+};
+
+
+/*
+ *  sparse row
+ */
+struct sm_row {
+    int row_num;			/* row number of this row */
+    int length;				/* number of elements in this row */
+    int flag;				/* user-definable flag */
+    sm_element *first_col;		/* first element in this row */
+    sm_element *last_col;		/* last element in this row */
+    sm_row *next_row;			/* next and previous rows */
+    sm_row *prev_row;
+};
+
+
+/*
+ *  sparse column
+ */
+struct sm_col {
+    int col_num;			/* column number of this column */
+    int length;				/* nubmer of elements in this column */
+    int flag;				/* user-definable flag */
+    sm_element *first_row;		/* first element in this column */
+    sm_element *last_row;		/* last element in this column */
+    sm_col *next_col;			/* next and previous columns */
+    sm_col *prev_col;
+};
+
+
+/*
+ *  sparse matrix
+ */
+struct sm_matrix_struct {
+    sm_row *first_row;			/* first and last rows in matrix */
+    sm_row *last_row;
+    sm_col *first_col;			/* first and last columns in matrix */
+    sm_col *last_col;
+    int nrows;				/* number of rows */
+    int ncols;				/* number of columns */
+};
+
+/*
+ *  Useful macros to loop over all rows (or columns) in a matrix, and to
+ *  loop over all elements in a row (or column).
+ *
+ *  Warning: these macros are unsafe if you attempt to delete the current
+ *  item (either row, column, or element).
+ */
+
+ 
+#define foreach_row(A, prow)	\
+	for(prow = A->first_row; prow != 0; prow = prow->next_row)
+
+#define foreach_col(A, pcol)	\
+	for(pcol = A->first_col; pcol != 0; pcol = pcol->next_col)
+
+#define foreach_row_element(prow, p)	\
+	for(p = prow->first_col; p != 0; p = p->next_col)
+
+#define foreach_col_element(pcol, p)	\
+	for(p = pcol->first_col; p != 0; p = p->next_col)
+
+sm_matrix *
+sm_alloc()
+	Allocates a new sparse matrix.  Initially it has no rows and no columns.
+
+
+void
+sm_free(A)
+sm_matrix *A;
+	Frees a sparse matrix.  All rows, columns and elements of the matrix 
+	are discarded.
+
+
+sm_matrix *
+sm_dup(A)
+sm_matrix *A;
+	Make a copy of the sparse matrix A.
+
+
+sm_element *
+sm_insert(A, rownum, colnum)
+sm_matrix *A;
+int rownum, colnum;
+	Create an element at (rownum, colnum) in the sparse matrix A, if one 
+	does not already exit.  Returns a pointer to the sparse matrix element.
+
+
+sm_element *
+sm_find(A, rownum, colnum)
+sm_matrix *A;
+int rownum, colnum;
+	Locate the item at position (rownum, colnum) in sparse matrix A.
+	Returns 0 if no element exists at that location, otherwise returns a 
+	pointer to the sparse matrix element.
+
+
+void
+sm_remove(A, rownum, colnum)
+sm_matrix *A;
+int rownum, colnum;
+	Remove the element at (rownum, colnum) in sparse matrix A (if it exists).
+
+
+void
+sm_remove_element(A, p)
+sm_matrix *A;
+sm_element *p;
+	Remove the element p from the sparse matrix A.  Disaster can occur if 
+	p is not an element of A.
+
+
+sm_row *
+sm_get_row(A, rownum)
+sm_matrix *A;
+int rownum;
+	Return a pointer to the specified row of sparse matrix A.  Returns 0 
+	if there are no elements in that row.
+
+
+sm_col *
+sm_get_col(A, colnum)
+sm_matrix *A;
+int colnum;
+	Return a pointer to the specified column of sparse matrix A.  Returns 0
+	if there are no elements in that column.
+
+
+void
+sm_delrow(A, rownum)
+sm_matrix *A;
+int rownum;
+	Delete a row from the sparse matrix (if it exists).  All elements in 
+	the row are discarded.
+
+
+void
+sm_delcol(A, colnum)
+sm_matrix *A;
+int colnum;
+	Delete a column from the sparse matrix (if it exists).  All elements 
+	in the column are discarded.
+
+
+void
+sm_copy_row(A, rownum, row)
+sm_matrix *A;
+int rownum;
+sm_row *row;
+	Copy a row to the specified row number of sparse matrix A.
+
+
+void
+sm_copy_col(A, colnum, col)
+sm_matrix *A;
+int colnum;
+sm_col *col;
+	Copy a column to the specified column number of sparse matrix A.
+
+
+sm_row *
+sm_longest_row(A)
+sm_matrix *A;
+	Return a pointer to the row in A with the most elements; returns
+	0 if there are no rows in A.
+
+
+sm_col *
+sm_longest_col(A)
+sm_matrix *A;
+	Return a pointer to the column in A with the most elements; returns
+	0 if there are no columns in A.
+
+
+int
+sm_read(fp, A)
+FILE *fp;
+sm_matrix **A;
+	Reads a sparse matrix from a file.  Format is <row_num, col_num>.
+	Returns 1 on normal termination, 0 on any error.  No attempt is made
+	to give the cause for the error. 
+
+
+void
+sm_write(fp, A)
+FILE *fp;
+sm_matrix *A;
+	Writes a sparse matrix to a file which can be read by sm_read.
+
+
+void
+sm_print(A)
+sm_matrix *A;
+	Debugging routine to print the structural layout of a sparse matrix.
+
+
+int
+sm_num_elements(A)
+sm_matrix *A;
+	Returns the number of nonzero elements in the matrix.
+
+sm_row *
+sm_row_alloc()
+	Allocates a new row vector.
+
+
+void
+sm_row_free()
+	Frees a row vector and discards its elements.
+
+
+sm_row *
+sm_row_dup(row)
+sm_row *row;
+	Creates a new row vector which is a copy of an existing row vector.
+
+
+sm_element *
+sm_row_insert(row, colnum)
+sm_row *row;
+int colnum;
+	Adds a column to a row vector, if it does not already exist.  Returns 
+	a pointer to the element.
+
+
+sm_element *
+sm_row_remove(row, colnum)
+sm_row *row;
+int colnum;
+	Removes an element from a row vector, if it exists.
+
+
+sm_element *
+sm_row_find(row, colnum)
+sm_row *row;
+int colnum;
+	Finds an element of a row vector, or returns 0 if the element does not 
+	exist.
+
+
+int
+sm_row_contains(row1, row2)
+sm_row *row1, *row2;
+	Returns 1 if row2 structurally contains row1 (that is, row2 has
+	an element everywhere row1 does).
+
+
+int
+sm_row_intersects(row1, row2)
+sm_row *row1, *row2;
+	Returns 1 if row1 and row2 share a column in common.
+
+
+sm_row *
+sm_row_and(row1, row2)
+sm_row *row1, *row2;
+	Returns a row vector containing the elements which row1 and
+	row2 have in common.
+
+
+int
+sm_row_compare(row1, row2)
+sm_row *row1, *row2;
+	Returns -1, 0, or 1 depending on the lexiographical ordering
+	of the two rows.  Suitable for use by st (see st.doc).
+
+
+int
+sm_row_hash(row1, modulus)
+sm_row *row1;
+int modulus;
+  	A hashing function defined on rows which is suitable for use 
+	by st (see st.doc).
+
+
+void
+sm_row_print(fp, row1)
+FILE *fp;
+sm_row *row1;
+	Print a row as a sparse vector -- useful for debugging.
+
+sm_column *
+sm_col_alloc()
+	Allocates a new column vector.
+
+void
+sm_col_free()
+	Frees a column vector and discards its elements.
+
+
+sm_column *
+sm_col_dup(col)
+sm_column *col;
+	Creates a new column vector which is a copy of an existing 
+	column vector.
+
+
+sm_element *
+sm_col_insert(col, rownum)
+sm_column *col;
+int rownum;
+	Adds an element to a column vector.  Returns a pointer to the element.
+
+
+void
+sm_col_remove(col, rownum)
+sm_column *col;
+int rownum;
+	Removes an element from a column vector, if it exists.
+
+
+sm_element *
+sm_col_find(column, colnum)
+sm_column *column;
+int colnum;
+	Finds an element of a column vector.  Returns 0 if the element does not 
+	exist.
+
+
+int
+sm_col_contains(column1, column2)
+sm_column *column1, *column2;
+	Returns 1 if column2 contains column1 (that is, column2 has
+	an element for every row that column1 does).
+
+
+int
+sm_col_intersects(column1, column2)
+sm_column *column1, *column2;
+	Returns 1 if column1 and column2 share a row number in common.
+
+
+sm_col *
+sm_col_and(col1, col2)
+sm_col *col1, *col2;
+	Returns a column vector containing the elements which col1 and
+	col2 have in common.
+
+
+int
+sm_col_compare(col1, col2)
+sm_column *col1, *col2;
+	Returns -1, 0, or 1 depending on the lexiographical ordering
+	of the two columns.  Suitable for use by st (see st.doc).
+
+
+int
+sm_col_hash(col, modulus)
+sm_col *col;
+int modulus;
+  	A hashing function defined on columns which is suitable for use 
+	by st (see st.doc).
+
+
+void
+sm_col_print(fp, col)
+FILE *fp;
+sm_column *col;
+	Print a column as a sparse vector -- useful for debugging.
+
+int
+sm_block_partition(A, L, R)
+sm_matrix *A;
+sm_matrix **l, **R;
+	Returns 1 if A has a block-decomposition.  In this case, L equals
+	the maximal block component of A, and R is the remainder of the
+	matrix.  (Note that R may itself contain further subblocks;
+	L does not).  Returns 0 if A does not have a block decomposition.

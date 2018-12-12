@@ -1,0 +1,13 @@
+* Bosphorus is MIT-licensed software.
+  Copyright (C) 2016  Security Research Labs
+  Copyright (C) 2018  Mate Soos, Davin Choo, Kian Ming A. Chai, DSO National Laboratories
+  Please read LICENSE-MIT.txt
+
+* Espresso is MIT-licensed software.
+  Please read LICENSE-MIT.txt
+
+* We link against PolyBori/BRiAI which is GPL licensed
+  Please read LICENSE-GPL2.txt
+
+* We link against M4RI which is GPL licensed
+  Please read LICENSE_GPL2.txt

@@ -1,0 +1,62 @@
+add_library(main
+	cofactor.c
+	compl.c
+	contain.c
+	cubestr.c
+	cvrin.c
+	cvrm.c
+	cvrmisc.c
+	cvrout.c
+	equiv.c
+	espresso.c
+	essen.c
+	exact.c
+	expand.c
+	gasp.c
+	globals.c
+	irred.c
+	map.c
+	opo.c
+	pair.c
+	primes.c
+	reduce.c
+	set.c
+	setc.c
+	sharp.c
+	sminterf.c
+	sparse.c
+	unate.c
+	verify.c
+)
+
+add_library(main_original
+	hack.c
+	cofactor.c
+	compl.c
+	contain.c
+	cubestr.c
+	cvrin_original.c
+	cvrm.c
+	cvrmisc.c
+	cvrout_original.c
+	equiv.c
+	espresso.c
+	essen.c
+	exact.c
+	expand.c
+	gasp.c
+	globals.c
+	irred.c
+	map.c
+	opo.c
+	pair.c
+	primes.c
+	reduce.c
+	set.c
+	setc.c
+	sharp.c
+	sminterf.c
+	sparse.c
+	unate.c
+	verify.c
+)

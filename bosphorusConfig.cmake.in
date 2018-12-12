@@ -1,0 +1,10 @@
+# Compute paths
+get_filename_component(bosphorus_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(bosphorus_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
+
+# Our library dependencies (contains definitions for IMPORTED targets)
+include("${bosphorus_CMAKE_DIR}/@BOSPHORUS_TARGETS_FILENAME@")
+
+# These are IMPORTED targets created by @Bosphorus_TARGETS_FILENAME@
+set(bosphorus_LIBRARIES libbosphorus)
+set(bosphorus_EXECUTABLE bosphorus)
