@@ -59,7 +59,8 @@ sudo make install
 ```
 
 ### PolyBoRi
-* We currrently link against BRiAl actually
+We currrently link against BRiAl actually.
+
 From https://sourceforge.net/projects/polybori/files/polybori/0.8.3/, download `polybori-0.8.3.tar.gz`
 ```
 tar -xf polybori-0.8.3.tar.gz
