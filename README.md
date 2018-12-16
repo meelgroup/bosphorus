@@ -7,15 +7,15 @@ Suppose we have a system of 2 equations:
 1. x1 ⊕ x2 ⊕ x3 = 0
 2. x1 \* x2 ⊕ x2 \* x3 + 1 = 0
 
-Write an ANF file `readme.anf` as follows:
+Write an ANF file `myeqs.anf` as follows:
 ```
 x1 + x2 + x3
 x1*x2 + x2*x3 + 1
 ```
 
-Running `./bosphorus --anfread readme.anf --anfwrite readme.anf.out --custom --elsimp` will apply only the ElimLin simplification (ignoring other processes that the tool offers) to `readme.anf` and write it out to `readme.anf.out`. `readme.anf.out` will then ßcontain the following:
+Running `./bosphorus --anfread myeqs.anf --anfwrite myeqs.anf.out --custom --elsimp` will apply only the ElimLin simplification (ignoring other processes that the tool offers) to `readme.anf` and write it out to `myeqs.anf.out`. `myeqs.anf.out` will then contain the following:
 ```
-c Executed arguments: --anfread readme.anf --anfwrite readme.anf.out --custom --elsimp
+c Executed arguments: --anfread myeqs.anf --anfwrite myeqs.anf.out --custom --elsimp
 c -------------
 c Fixed values
 c -------------
@@ -32,7 +32,7 @@ Explanation of simplification done:
 * Then, further simplification by substituting `x2 + 1 = 0` yields `x1 + x3 + 1 = 0`
 
 
-The output of `readme.anf.out` tells us that
+The output of `myeqs.anf.out` tells us that
 * x2 = 1
 * x1 != x3
 
