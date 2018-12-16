@@ -505,7 +505,11 @@ inline void ANF::removePolyFromOccur(const BoolePolynomial& poly,
 }
 
 bool ANF::propagate() {
-    double startTime = cpuTime();
+    double myTime = cpuTime();
+    if (config.verbosity) {
+        cout << "c [ANF prop] Running ANF propagation..." << endl;
+    }
+
     unordered_set<uint32_t>
         updatedVars; //When a polynomial updates some var's definition, this set is updated. Used during simplify & addBoolePolynomial
 
@@ -613,10 +617,10 @@ bool ANF::propagate() {
     if (!timeout && !config.notparanoid)
         checkSimplifiedPolysContainNoSetVars(); // May not fully propagate due to timeout
 
-    if (config.verbosity >= 2) {
-        cout << "c [ANF propagation] removed " << empty_equations.size()
-             << " equations in " << (cpuTime() - startTime) << " seconds. "
-             << eqs.size() << " equations left" << endl;
+    if (config.verbosity) {
+        cout << "c [ANF prop] removed " << empty_equations.size()
+             << " eqs. Left eqs: " << eqs.size()
+             << " T: " << std::fixed << std::setprecision(2) << (cpuTime() - myTime) << endl;
     }
     return true;
 }
@@ -761,7 +765,13 @@ int ANF::extendedLinearization(vector<BoolePolynomial>& loop_learnt) {
         }
         return 0;
     }
-    //else {
+
+    double myTime = cpuTime();
+    if (config.verbosity) {
+        cout << "c [ExLin] Running Extended Linearlization..." << endl;
+    }
+
+
     int num_learnt = 0;
     vector<BoolePolynomial> equations;
     map<uint32_t, vector<BoolePolynomial> > deg_buckets;
@@ -889,6 +899,12 @@ int ANF::extendedLinearization(vector<BoolePolynomial>& loop_learnt) {
         loop_learnt.push_back(poly);
         num_learnt += addLearntBoolePolynomial(poly);
     }
+
+    if (config.verbosity) {
+        cout << "c [ExLin] Done. Learnt: " << num_learnt
+        << " T: " << std::fixed << std::setprecision(2) << (cpuTime()-myTime)
+        << endl;
+    }
     return num_learnt;
 }
 
@@ -924,8 +940,9 @@ int ANF::elimLin(vector<BoolePolynomial>& loop_learnt) {
         return 0;
     }
 
+    double myTime = cpuTime();
     if (config.verbosity) {
-        cout << "c Running ElimLin... ring size: " << getRing().nVariables() << endl;
+        cout << "c [ElimLin] Running ElimLin... ring size: " << getRing().nVariables() << endl;
     }
 
     vector<BoolePolynomial> learnt_equations;
@@ -1071,5 +1088,12 @@ int ANF::elimLin(vector<BoolePolynomial>& loop_learnt) {
             }
         }
     }
+
+    if (config.verbosity) {
+        cout << "c [ElimLin] Done. Learnt: " << num_learnt
+        << " T: " << std::fixed << std::setprecision(2) << (cpuTime()-myTime)
+        << endl;
+    }
+
     return num_learnt;
 }

@@ -55,7 +55,7 @@ void parseOptions(int argc, char* argv[]) {
     }
 
     std::ostringstream maxTime_str;
-    maxTime_str << std::setprecision(4) << config.maxTime;
+    maxTime_str << std::sclientific << std::setprecision(2) << config.maxTime << std::fixed;
 
     // Declare the supported options.
     po::options_description generalOptions("Main options");
@@ -437,7 +437,7 @@ void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
               const ANF* orig_anf, const vector<Clause>& cutting_clauses) {
     bool timeout = (cpuTime() > config.maxTime);
     if (timeout) {
-        if (config.verbosity >= 1) {
+        if (config.verbosity) {
             cout << "c Timeout before learning" << endl;
         }
         return;
