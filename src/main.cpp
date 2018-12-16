@@ -54,6 +54,10 @@ void parseOptions(int argc, char *argv[]) {
     config.executedArgs.append(string(argv[i]).append(" "));
   }
   
+
+  std::ostringstream maxTime_str;
+  maxTime_str << std::setprecision(4) << config.maxTime;
+
   // Declare the supported options.
   po::options_description generalOptions("Allowed options");
   generalOptions.add_options()
@@ -73,7 +77,7 @@ void parseOptions(int argc, char *argv[]) {
     ("karn", po::value(&config.maxKarnTableSize)->default_value(8),
      "Sets Karnaugh map dimension during CNF conversion")
     // Processes
-    ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime),
+    ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
      "Stop solving after this much time (s); Use 0 if you do not want to do fact-finding")
     ("noxl", po::bool_switch(&config.noXL), "No XL")
     ("xldeg", po::value<uint32_t>(&config.xlDeg)->default_value(1),
