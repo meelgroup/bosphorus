@@ -46,19 +46,20 @@ inline const lbool evaluatePoly(const BoolePolynomial& poly,
         for (const uint32_t v : mono) {
             map<uint32_t, uint32_t>::const_iterator fit = mapping.find(v);
             assert(fit != mapping.end());
-            thisMonom *= ((setting >> (fit->second))&1);
+            thisMonom *= ((setting >> (fit->second)) & 1);
         }
         ret ^= thisMonom;
     }
     return CMSat::boolToLBool(ret);
 }
 
-inline lbool evaluatePoly(const BoolePolynomial& poly, const vector<lbool>& sol) {
+inline lbool evaluatePoly(const BoolePolynomial& poly,
+                          const vector<lbool>& sol) {
     BoolePolynomial ret(poly.ring());
-    for(const BooleMonomial& mono : poly) {
+    for (const BooleMonomial& mono : poly) {
         BoolePolynomial thisSubPoly(true, poly.ring());
-        for(const uint32_t v : mono) {
-            assert((uint32_t) sol.size() > v);
+        for (const uint32_t v : mono) {
+            assert((uint32_t)sol.size() > v);
             if (sol[v] == l_Undef) {
                 thisSubPoly *= BooleVariable(v, poly.ring());
                 continue;

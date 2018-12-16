@@ -54,17 +54,17 @@ struct ConfigData {
     bool noEL = false;
     bool noSAT = false;
     double XLsample = 30.0;
-    double XLsampleX = 4.0; 
+    double XLsampleX = 4.0;
     double ELsample = 30.0;
     uint32_t xlDeg;
-    uint64_t numConfl_inc =  10000;
+    uint64_t numConfl_inc = 10000;
     uint64_t numConfl_lim = 100000;
     bool stopOnSolution = false;
     bool learnSolution = false;
 
     // checks
-    bool notparanoid = false;  // the safer but slower option
-    
+    bool notparanoid = false; // the safer but slower option
+
     // Solve processed CNF
     bool doSolveSAT = false;
     string solverExe;

@@ -22,11 +22,11 @@ SOFTWARE.
 ***********************************************/
 
 #include "replacer.h"
-#include "anf.h"
 #include <iostream>
+#include "anf.h"
 #include "cryptominisat5/solvertypesmini.h"
-using CMSat::Lit;
 using CMSat::lbool;
+using CMSat::Lit;
 
 using std::cout;
 using std::endl;
@@ -34,23 +34,21 @@ using std::endl;
 bool Replacer::evaluate(const vector<lbool>& vals) const {
     bool ret = true;
     size_t num = 0;
-    for(vector<lbool>::const_iterator
-        it = value.begin(), end = value.end(); it != end
-        ; it++, num++
-    ) {
-        if (*it == l_Undef) continue;
+    for (vector<lbool>::const_iterator it = value.begin(), end = value.end();
+         it != end; it++, num++) {
+        if (*it == l_Undef)
+            continue;
 
         assert(vals.size() >= num);
         ret &= (vals[num] == *it);
     }
 
     num = 0;
-    for(vector<Lit>::const_iterator
-        it = replaceTable.begin(), end = replaceTable.end()
-        ; it != end
-        ; it++, num++
-    ) {
-        if (num == it->var()) continue;
+    for (vector<Lit>::const_iterator it = replaceTable.begin(),
+                                     end = replaceTable.end();
+         it != end; it++, num++) {
+        if (num == it->var())
+            continue;
 
         assert(vals.size() >= it->var());
         assert(vals.size() >= num);
@@ -81,17 +79,20 @@ bool Replacer::evaluate(const vector<lbool>& vals) const {
 BoolePolynomial Replacer::update(const BooleMonomial& m) const {
     BoolePolynomial ret(true, m.ring());
 
-    for(const uint32_t v : m) {
+    for (const uint32_t v : m) {
         if (value[v] != l_Undef) {
-            if (value[v] == l_True) continue;
-            else return BoolePolynomial(m.ring());
+            if (value[v] == l_True)
+                continue;
+            else
+                return BoolePolynomial(m.ring());
         }
 
         assert(replaceTable.size() > v); //Variable must exist
         const Lit lit = replaceTable[v];
 
         BoolePolynomial alsoAdd(m.ring());
-        if (lit.sign()) alsoAdd = ret;
+        if (lit.sign())
+            alsoAdd = ret;
         ret *= BooleVariable(lit.var(), m.ring());
         ret += alsoAdd;
     }
@@ -101,23 +102,21 @@ BoolePolynomial Replacer::update(const BooleMonomial& m) const {
 
 BoolePolynomial Replacer::update(const BoolePolynomial& eq) const {
     BoolePolynomial ret = BoolePolynomial(eq.ring());
-    for(const BooleMonomial& mono : eq) {
+    for (const BooleMonomial& mono : eq) {
         ret += update(mono);
     }
     return ret;
 }
 
-
 bool Replacer::willUpdate(const BoolePolynomial& eq) const {
-  for(const uint32_t v: eq.usedVariables() ) {
-    if (value[v] != l_Undef)
-      return true;
-    if( replaceTable[v] != Lit(v, false) )
-      return true;    
-  }
-  return false;
+    for (const uint32_t v : eq.usedVariables()) {
+        if (value[v] != l_Undef)
+            return true;
+        if (replaceTable[v] != Lit(v, false))
+            return true;
+    }
+    return false;
 }
-
 
 vector<uint32_t> Replacer::setValue(uint32_t var, bool val) {
     vector<uint32_t> alsoUpdated;
@@ -147,11 +146,8 @@ vector<uint32_t> Replacer::setValue(uint32_t var, bool val) {
     }
 
     vector<uint32_t>& vars = it->second;
-    for (vector<uint32_t>::iterator
-        it2 = vars.begin(), end2 = vars.end()
-        ; it2 != end2
-        ; it2++
-    ) {
+    for (vector<uint32_t>::iterator it2 = vars.begin(), end2 = vars.end();
+         it2 != end2; it2++) {
         assert(replaceTable[*it2].var() == var);
         value[*it2] = CMSat::boolToLBool(replaceTable[*it2].sign() ^ val);
         alsoUpdated.push_back(*it2);
@@ -185,7 +181,8 @@ vector<uint32_t> Replacer::setReplace(uint32_t var, Lit lit) {
     //they are already replaced with each other
     if (lit.var() == var) {
         //..but invertedly, so UNSAT
-        if (lit.sign()) ok = false;
+        if (lit.sign())
+            ok = false;
         return ret;
     }
 
@@ -195,11 +192,9 @@ vector<uint32_t> Replacer::setReplace(uint32_t var, Lit lit) {
         revReplaceTable[var].push_back(lit.var());
 
         //These may have been updated
-        for(vector<uint32_t>::const_iterator
-            it = revReplaceTable[var].begin(), end = revReplaceTable[var].end()
-            ; it != end
-            ; it++
-        ) {
+        for (vector<uint32_t>::const_iterator it = revReplaceTable[var].begin(),
+                                              end = revReplaceTable[var].end();
+             it != end; it++) {
             ret.push_back(*it);
         }
         return ret;
@@ -211,11 +206,10 @@ vector<uint32_t> Replacer::setReplace(uint32_t var, Lit lit) {
         revReplaceTable[lit.var()].push_back(var);
 
         //These may have been updated
-        for(vector<uint32_t>::const_iterator
-            it = revReplaceTable[lit.var()].begin(), end = revReplaceTable[lit.var()].end()
-            ; it != end
-            ; it++
-        ) {
+        for (vector<uint32_t>::const_iterator
+                 it = revReplaceTable[lit.var()].begin(),
+                 end = revReplaceTable[lit.var()].end();
+             it != end; it++) {
             ret.push_back(*it);
         }
 
@@ -227,11 +221,8 @@ vector<uint32_t> Replacer::setReplace(uint32_t var, Lit lit) {
     assert(revReplaceTable.find(var) != revReplaceTable.end());
 
     vector<uint32_t>& vars = revReplaceTable[lit.var()];
-    for (vector<uint32_t>::iterator
-        it = vars.begin(), end = vars.end()
-        ;it != end
-        ; it++
-    ) {
+    for (vector<uint32_t>::iterator it = vars.begin(), end = vars.end();
+         it != end; it++) {
         revReplaceTable[var].push_back(*it);
         replaceTable[*it] = Lit(var, replaceTable[*it].sign() ^ lit.sign());
         ret.push_back(*it);
@@ -241,11 +232,9 @@ vector<uint32_t> Replacer::setReplace(uint32_t var, Lit lit) {
     revReplaceTable[var].push_back(lit.var());
 
     //These may have been updated
-    for(vector<uint32_t>::const_iterator
-        it = revReplaceTable[var].begin(), end = revReplaceTable[var].end()
-        ; it != end
-        ; it++
-    ) {
+    for (vector<uint32_t>::const_iterator it = revReplaceTable[var].begin(),
+                                          end = revReplaceTable[var].end();
+         it != end; it++) {
         ret.push_back(*it);
     }
 
@@ -260,16 +249,12 @@ vector<lbool> Replacer::extendSolution(const vector<lbool>& solution) const {
     //add stored solutions
     assert(sol2.size() == value.size());
     size_t num = 0;
-    for(vector<lbool>::const_iterator
-        it = value.begin(), end = value.end()
-        ; it != end
-        ; it++, num++
-    ) {
-        if (sol2[num] != l_Undef
-            && *it != l_Undef
-        ) {
+    for (vector<lbool>::const_iterator it = value.begin(), end = value.end();
+         it != end; it++, num++) {
+        if (sol2[num] != l_Undef && *it != l_Undef) {
             if (sol2[num] != *it) {
-                cout << "Solved solution and solution stored by replacer differ!\n";
+                cout << "Solved solution and solution stored by replacer "
+                        "differ!\n";
                 exit(-1);
             }
             continue;
@@ -283,11 +268,9 @@ vector<lbool> Replacer::extendSolution(const vector<lbool>& solution) const {
     //Add replaced variables
     assert(sol2.size() == replaceTable.size());
     num = 0;
-    for(vector<Lit>::const_iterator
-        it = replaceTable.begin(), end = replaceTable.end()
-        ; it != end
-        ; it++, num++
-    ) {
+    for (vector<Lit>::const_iterator it = replaceTable.begin(),
+                                     end = replaceTable.end();
+         it != end; it++, num++) {
         //uint32_t is not replaced
         if (it->var() == num)
             continue;
@@ -299,9 +282,12 @@ vector<lbool> Replacer::extendSolution(const vector<lbool>& solution) const {
 
         const lbool val = sol2[it->var()] ^ it->sign();
         if (sol2[num] != l_Undef && sol2[num] != val) {
-            cout << "num:" << num << " var:" << it->var() << "sign: " << (int)it->sign() << endl;
-            cout << "sol2[num]: " << sol2[num] << " sol2[it->var()]:" << sol2[it->var()] << endl;
-            cout << "Solved replaced solution and stored solution differ!" << endl;
+            cout << "num:" << num << " var:" << it->var()
+                 << "sign: " << (int)it->sign() << endl;
+            cout << "sol2[num]: " << sol2[num]
+                 << " sol2[it->var()]:" << sol2[it->var()] << endl;
+            cout << "Solved replaced solution and stored solution differ!"
+                 << endl;
             exit(-1);
         }
         sol2[num] = val;
@@ -310,8 +296,6 @@ vector<lbool> Replacer::extendSolution(const vector<lbool>& solution) const {
     return sol2;
 }
 
-
 bool Replacer::isReplaced(const uint32_t var) const {
     return getReplaced(var).var() != var;
 }
-

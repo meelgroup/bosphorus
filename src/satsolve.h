@@ -24,8 +24,8 @@ SOFTWARE.
 #ifndef SATSOLVE__H
 #define SATSOLVE__H
 
-#include <boost/lexical_cast.hpp>
 #include <stdio.h>
+#include <boost/lexical_cast.hpp>
 #include <string>
 
 #include "anf.h"
@@ -48,7 +48,7 @@ inline void printSolution(const vector<lbool>& solution) {
     size_t num = 0;
     std::stringstream toWrite;
     toWrite << "v ";
-    for(const lbool lit : solution) {
+    for (const lbool lit : solution) {
         if (lit != l_Undef) {
             toWrite << ((lit == l_True) ? "" : "-") << num << " ";
         }
@@ -58,35 +58,36 @@ inline void printSolution(const vector<lbool>& solution) {
 }
 
 class SATSolve {
-    public:
-       SATSolve(const int verbosity, const bool testsolution, string solverExecutable);
-  
-        vector<lbool> solveCNF(const ANF* orig_anf, const ANF& anf, const CNF& cnf);
-        const vector<lbool>& getSolution() const {
-            return solution;
-        }
-        const lbool getSatisfiable() const {
-            return satisfiable;
-        }
+   public:
+    SATSolve(const int verbosity, const bool testsolution,
+             string solverExecutable);
 
-    private:
-        void createChildProcess();
-        string readchild();
-        void error(const char *s);
+    vector<lbool> solveCNF(const ANF* orig_anf, const ANF& anf, const CNF& cnf);
+    const vector<lbool>& getSolution() const {
+        return solution;
+    }
+    const lbool getSatisfiable() const {
+        return satisfiable;
+    }
 
-        //Managing processes
-        int in[2];
-        int out[2];
-        int pid; //process ID
+   private:
+    void createChildProcess();
+    string readchild();
+    void error(const char* s);
 
-        //Solution
-        vector<lbool> solution;
-        lbool satisfiable;
+    //Managing processes
+    int in[2];
+    int out[2];
+    int pid; //process ID
 
-        //Parameters
-        string solverExecutable;
-        int verbosity;
-        bool testsolution;
+    //Solution
+    vector<lbool> solution;
+    lbool satisfiable;
+
+    //Parameters
+    string solverExecutable;
+    int verbosity;
+    bool testsolution;
 };
 
 #endif //SATSOLVE__H

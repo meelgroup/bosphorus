@@ -23,49 +23,51 @@ SOFTWARE.
 
 #include "cnf.h"
 #include <iostream>
-#include <ostream>
 #include <iterator>
+#include <ostream>
 
 #include "dimacscache.h"
 
-CNF::CNF(const ANF& _anf, const vector<Clause>& cutting_clauses, const ConfigData& _config) :
-        anf(_anf), config(_config), karn(_config.maxKarnTableSize) {
+CNF::CNF(const ANF& _anf, const vector<Clause>& cutting_clauses,
+         const ConfigData& _config)
+    : anf(_anf), config(_config), karn(_config.maxKarnTableSize) {
     //Make sure outside var X is inside var X
     init();
 
     if (config.readCNF) {
-      addOriginalCNF(cutting_clauses);
+        addOriginalCNF(cutting_clauses);
     } else {
-      addAllEquations();
-    }    
+        addAllEquations();
+    }
 }
 
-size_t CNF::update(void)
-{
-  size_t prev = clauses.size();
-  
-  // Add new replaced and set variables to CNF
-  addTrivialEquations();
-  
-  if (!config.readCNF) {
-    // Because ANF may have changed to give better clauses
-    const vector<BoolePolynomial>& eqs = anf.getEqs();
-    for (const BoolePolynomial& poly : eqs) {
-      addBoolePolynomial(poly);
+size_t CNF::update(void) {
+    size_t prev = clauses.size();
+
+    // Add new replaced and set variables to CNF
+    addTrivialEquations();
+
+    if (!config.readCNF) {
+        // Because ANF may have changed to give better clauses
+        const vector<BoolePolynomial>& eqs = anf.getEqs();
+        for (const BoolePolynomial& poly : eqs) {
+            addBoolePolynomial(poly);
+        }
     }
-  }    
-  return prev;
+    return prev;
 }
 
 void CNF::init() {
-    monomMap.reserve( anf.getRing().nVariables() );
-    revCombinedMap.resize(anf.getRing().nVariables(), BooleMonomial(anf.getRing()));
-    assert(next_cnf_var == 0);    
-    for(uint32_t var = 0; var < anf.getRing().nVariables(); ++var) { // Add ALL variables
-      BooleVariable v = anf.getRing().variable(var);
-      monomMap[v.hash()] = next_cnf_var;
-      revCombinedMap[next_cnf_var] = BooleMonomial(v);
-      next_cnf_var++;
+    monomMap.reserve(anf.getRing().nVariables());
+    revCombinedMap.resize(anf.getRing().nVariables(),
+                          BooleMonomial(anf.getRing()));
+    assert(next_cnf_var == 0);
+    for (uint32_t var = 0; var < anf.getRing().nVariables();
+         ++var) { // Add ALL variables
+        BooleVariable v = anf.getRing().variable(var);
+        monomMap[v.hash()] = next_cnf_var;
+        revCombinedMap[next_cnf_var] = BooleMonomial(v);
+        next_cnf_var++;
     }
 
     // If ANF is not OK, then add polynomial '1'
@@ -74,9 +76,7 @@ void CNF::init() {
     }
 }
 
-
-void CNF::addAllEquations()
-{
+void CNF::addAllEquations() {
     // Add replaced and set variables to CNF
     addTrivialEquations();
 
@@ -87,33 +87,31 @@ void CNF::addAllEquations()
     }
 }
 
-
 void CNF::addOriginalCNF(const vector<Clause>& cutting_clauses) {
-  // Add replaced and set variables to CNF
-  addTrivialEquations();
+    // Add replaced and set variables to CNF
+    addTrivialEquations();
 
-  
-  DIMACSCache dimacs_cache(config.cnfInput.c_str());  
-  vector<Clause> setOfClauses(dimacs_cache.getClauses());
-  // add cutting clauses
-  setOfClauses.insert(setOfClauses.end(), cutting_clauses.begin(), cutting_clauses.end());
-  
-  // Associate with 0=0 polynomial
-  BoolePolynomial eq(0, anf.getRing());
-  clauses.push_back(std::make_pair(setOfClauses, eq));  
+    DIMACSCache dimacs_cache(config.cnfInput.c_str());
+    vector<Clause> setOfClauses(dimacs_cache.getClauses());
+    // add cutting clauses
+    setOfClauses.insert(setOfClauses.end(), cutting_clauses.begin(),
+                        cutting_clauses.end());
+
+    // Associate with 0=0 polynomial
+    BoolePolynomial eq(0, anf.getRing());
+    clauses.push_back(std::make_pair(setOfClauses, eq));
 }
 
-
 void CNF::addTrivialEquations() {
-  size_t nv = 0, nr=0;
-  for(size_t i = 0; i < anf.getRing().nVariables(); i++) {
+    size_t nv = 0, nr = 0;
+    for (size_t i = 0; i < anf.getRing().nVariables(); i++) {
         //Add variables already set
         if (anf.value(i) != l_Undef) {
             BoolePolynomial poly(false, anf.getRing());
             poly += BooleVariable(i, anf.getRing());
             poly += BooleConstant(anf.value(i) == l_True);
             addBoolePolynomial(poly);
-	    ++nv;
+            ++nv;
         }
 
         //Add variables replaced
@@ -124,18 +122,16 @@ void CNF::addTrivialEquations() {
             poly += BooleVariable(replacedWith.var(), anf.getRing());
             poly += BooleVariable(i, anf.getRing());
             addBoolePolynomial(poly);
-	    ++nr;
+            ++nr;
         }
     }
-  if(config.verbosity >= 4) {
-    std::cout << "c Number of value assignments = " << nv 
-	      << "\nc Number of equiv assigments = " << nr << std::endl;
-  }
+    if (config.verbosity >= 4) {
+        std::cout << "c Number of value assignments = " << nv
+                  << "\nc Number of equiv assigments = " << nr << std::endl;
+    }
 }
 
-
-size_t CNF::readCNF(const char* fname, vector<Clause>& clauses)
-{
+size_t CNF::readCNF(const char* fname, vector<Clause>& clauses) {
     size_t maxVar = 0;
 
     std::ifstream ifs;
@@ -146,7 +142,7 @@ size_t CNF::readCNF(const char* fname, vector<Clause>& clauses)
         exit(-1);
     }
 
-    while (std::getline(ifs,temp)) {
+    while (std::getline(ifs, temp)) {
         if (temp.length() == 0 || temp[0] == 'p' || temp[0] == 'c') {
             continue;
         } else {
@@ -156,18 +152,16 @@ size_t CNF::readCNF(const char* fname, vector<Clause>& clauses)
                 iss >> x;
                 int v = stoi(x);
                 if (v == 0) {
-		  clauses.push_back(Clause(lits));
+                    clauses.push_back(Clause(lits));
                 } else {
-		  lits.push_back(Lit(abs(v)-1, v < 0));
-                } 
-                maxVar = std::max(maxVar, (size_t) abs(stoi(x)));
+                    lits.push_back(Lit(abs(v) - 1, v < 0));
+                }
+                maxVar = std::max(maxVar, (size_t)abs(stoi(x)));
             }
         }
     }
     return maxVar;
 }
-
-
 
 bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq) {
     vector<Clause> cls = karn.convert(eq);
@@ -182,7 +176,7 @@ bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq) {
     // Estimate ANF cost
     uint32_t anfCost = 0;
     for (const BooleMonomial& mono : eq) {
-        anfCost += mono.deg()*2;
+        anfCost += mono.deg() * 2;
         anfCost += 5;
     }
 
@@ -202,7 +196,8 @@ bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq) {
 
 XorClause CNF::xorClauseFromPoly(const BoolePolynomial& eq) {
     XorClause cl(std::numeric_limits<uint32_t>::max(), eq.hasConstantPart());
-    for (BoolePolynomial::const_iterator it = eq.begin(), end = eq.end(); it != end; it++) {
+    for (BoolePolynomial::const_iterator it = eq.begin(), end = eq.end();
+         it != end; it++) {
         if (it->isConstant()) {
             continue;
         } else {
@@ -214,9 +209,9 @@ XorClause CNF::xorClauseFromPoly(const BoolePolynomial& eq) {
 }
 
 void CNF::addBoolePolynomial(const BoolePolynomial& poly) {
-    if( ! in_clauses.insert(poly.hash()).second )
-      return; // is already added
-      
+    if (!in_clauses.insert(poly.hash()).second)
+        return; // is already added
+
     // If UNSAT, make it UNSAT
     if (poly.isOne()) {
         vector<Clause> tmp;
@@ -252,7 +247,8 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly) {
 
 set<uint32_t> CNF::getVarsInPoly(const BoolePolynomial& poly) const {
     set<uint32_t> vars;
-    for(BoolePolynomial::const_iterator it = poly.begin(), end = poly.end(); it != end; it++) {
+    for (BoolePolynomial::const_iterator it = poly.begin(), end = poly.end();
+         it != end; it++) {
         const BooleMonomial& m = *it;
 
         //We will deal with the +1 given cl.getConst()
@@ -261,7 +257,8 @@ set<uint32_t> CNF::getVarsInPoly(const BoolePolynomial& poly) const {
 
         //Update to CNF (external) variable numbers
         const auto findIt = monomMap.find(it->hash());
-        assert(findIt != monomMap.end()); //We have added all monoms once we are here
+        assert(findIt !=
+               monomMap.end()); //We have added all monoms once we are here
 
         vars.insert(findIt->second);
     }
@@ -269,36 +266,38 @@ set<uint32_t> CNF::getVarsInPoly(const BoolePolynomial& poly) const {
     return vars;
 }
 
-vector<uint32_t> CNF::addToPolyVarsUntilCutoff(BoolePolynomial& thisPoly, set<uint32_t>& vars)
-{
+vector<uint32_t> CNF::addToPolyVarsUntilCutoff(BoolePolynomial& thisPoly,
+                                               set<uint32_t>& vars) {
     vector<uint32_t> vars_added;
     uint32_t added = 0;
-    for(set<uint32_t>::const_iterator it = vars.begin(); it != vars.end(); it++, added++) {
-        if (added >= config.cutNum) break;
+    for (set<uint32_t>::const_iterator it = vars.begin(); it != vars.end();
+         it++, added++) {
+        if (added >= config.cutNum)
+            break;
         vars_added.push_back(*it);
 
-	switch( revCombinedMap[*it].which() ) {
-	case 0:
-	  thisPoly += get<BooleMonomial>(revCombinedMap[*it]);
-	  break;
-	case 1:
-	  thisPoly += get<BoolePolynomial>(revCombinedMap[*it]);
-	  break;
-	default:
-	  assert("var has to be either a monom or a cut XOR!" == nullptr);
-	}
+        switch (revCombinedMap[*it].which()) {
+            case 0:
+                thisPoly += get<BooleMonomial>(revCombinedMap[*it]);
+                break;
+            case 1:
+                thisPoly += get<BoolePolynomial>(revCombinedMap[*it]);
+                break;
+            default:
+                assert("var has to be either a monom or a cut XOR!" == nullptr);
+        }
     }
 
     //Remove vars from set
-    for(uint32_t var: vars_added) {
+    for (uint32_t var : vars_added) {
         vars.erase(var);
     }
 
     return vars_added;
 }
 
-void CNF::addXorClauseAsNormals(const XorClause& cl, const BoolePolynomial& poly)
-{
+void CNF::addXorClauseAsNormals(const XorClause& cl,
+                                const BoolePolynomial& poly) {
     assert(config.cutNum > 1);
 
     set<uint32_t> vars = getVarsInPoly(poly);
@@ -318,11 +317,12 @@ void CNF::addXorClauseAsNormals(const XorClause& cl, const BoolePolynomial& poly
 
         //add the representative var (if appropriate)
         if (varAdded != std::numeric_limits<uint32_t>::max()) {
-	    assert(revCombinedMap.size() == varAdded);
-	    revCombinedMap.push_back(thisPoly);
+            assert(revCombinedMap.size() == varAdded);
+            revCombinedMap.push_back(thisPoly);
 
             vars.insert(varAdded); //Adding representative to orig set
-            vars_in_xor.push_back(varAdded); //This will be the definition of the representive
+            vars_in_xor.push_back(
+                varAdded); //This will be the definition of the representive
         }
 
         bool result = false;
@@ -336,14 +336,15 @@ void CNF::addXorClauseAsNormals(const XorClause& cl, const BoolePolynomial& poly
 
 uint32_t CNF::hammingWeight(uint64_t num) const {
     uint32_t ret = 0;
-    for(uint32_t i = 0; i < 64; i ++) {
+    for (uint32_t i = 0; i < 64; i++) {
         ret += ((num >> i) & 1UL);
     }
 
     return ret;
 }
 
-void CNF::addEveryCombination(vector<uint32_t>& vars, bool isTrue, vector<Clause>& thisClauses) {
+void CNF::addEveryCombination(vector<uint32_t>& vars, bool isTrue,
+                              vector<Clause>& thisClauses) {
     const uint64_t max = 1UL << vars.size();
     for (uint32_t i = 0; i < max; i++) {
         //even hamming weight -> it is true
@@ -352,7 +353,7 @@ void CNF::addEveryCombination(vector<uint32_t>& vars, bool isTrue, vector<Clause
 
         vector<Lit> lits;
         for (size_t i2 = 0; i2 < vars.size(); i2++) {
-            const bool sign = (i >>i2)&1;
+            const bool sign = (i >> i2) & 1;
             lits.push_back(Lit(vars[i2], sign));
         }
         thisClauses.push_back(Clause(lits));
@@ -361,7 +362,9 @@ void CNF::addEveryCombination(vector<uint32_t>& vars, bool isTrue, vector<Clause
 
 uint32_t CNF::addBooleMonomial(const BooleMonomial& m) {
     if (m.isConstant()) {
-        cout << "The CNF class doesn't handle adding BooleMonomials that are empty" << std::endl;
+        cout << "The CNF class doesn't handle adding BooleMonomials that are "
+                "empty"
+             << std::endl;
         exit(-1);
     }
 
@@ -379,17 +382,20 @@ uint32_t CNF::addBooleMonomial(const BooleMonomial& m) {
     next_cnf_var++;
 
     //Check that all variables exist&create m2 that is the monom in internal representation
-    std::vector<uint32_t> m2; m2.reserve(m.deg());
-    for (BooleMonomial::const_iterator it = m.begin(), end = m.end(); it != end; it++) {
-      auto it2 = monomMap.find(BooleVariable(*it, anf.getRing()).hash());
-      assert(it2 != monomMap.end());
-      m2.push_back(it2->second);
+    std::vector<uint32_t> m2;
+    m2.reserve(m.deg());
+    for (BooleMonomial::const_iterator it = m.begin(), end = m.end(); it != end;
+         it++) {
+        auto it2 = monomMap.find(BooleVariable(*it, anf.getRing()).hash());
+        assert(it2 != monomMap.end());
+        m2.push_back(it2->second);
     }
 
     vector<Clause> setOfClauses;
     //create clauses e.g. '-a b', '-a c', '-a d' , etc.
-    vector<Lit> lits; lits.reserve(m2.size()+1);
-    for(uint32_t v: m2) {
+    vector<Lit> lits;
+    lits.reserve(m2.size() + 1);
+    for (uint32_t v : m2) {
         lits.clear();
         lits.push_back(Lit(newVar, true));
         lits.push_back(Lit(v, false));
@@ -399,7 +405,7 @@ uint32_t CNF::addBooleMonomial(const BooleMonomial& m) {
     //create final clause e.g. 'a -b -c -d'
     lits.clear();
     lits.push_back(Lit(newVar, false));
-    for(uint32_t v: m2) {
+    for (uint32_t v : m2) {
         lits.push_back(Lit(v, true));
     }
     setOfClauses.push_back(Clause(lits));
@@ -407,40 +413,38 @@ uint32_t CNF::addBooleMonomial(const BooleMonomial& m) {
     return newVar;
 }
 
-
-vector<lbool> CNF::mapSolToOrig(const std::vector<lbool>& solution) const
-{
+vector<lbool> CNF::mapSolToOrig(const std::vector<lbool>& solution) const {
     vector<lbool> ret;
     if (solution.size() != next_cnf_var) {
         std::cerr << "ERROR: The CNF gave a solution to " << solution.size()
-        << " variables but there are only " << next_cnf_var
-        << " variables according to our count!" << endl;
+                  << " variables but there are only " << next_cnf_var
+                  << " variables according to our count!" << endl;
         assert(false);
     }
 
-    for(size_t i=0; i < solution.size(); ++i) {
-      // only map monomials which are single variables
-      if(revCombinedMap[i].which() == 0) {
-	const BooleMonomial& m(get<BooleMonomial>(revCombinedMap[i]));
-	
-        //Only single-vars
-        if (m.deg() == 1) {
-	  const uint32_t var = m.firstVariable().index();
-	  if (ret.size() <= var) ret.resize(var+1, l_Undef);
-	  ret[var] = solution[i];
+    for (size_t i = 0; i < solution.size(); ++i) {
+        // only map monomials which are single variables
+        if (revCombinedMap[i].which() == 0) {
+            const BooleMonomial& m(get<BooleMonomial>(revCombinedMap[i]));
+
+            //Only single-vars
+            if (m.deg() == 1) {
+                const uint32_t var = m.firstVariable().index();
+                if (ret.size() <= var)
+                    ret.resize(var + 1, l_Undef);
+                ret[var] = solution[i];
+            }
         }
-      }
     }
 
     return ret;
 }
 
-
 BooleMonomial CNF::getMonomForVar(const uint32_t& var) const {
-  if( revCombinedMap[var].which() == 0)
-    return get<BooleMonomial>(revCombinedMap[var]);
-  else
-    return BooleMonomial( anf.getRing() );
+    if (revCombinedMap[var].which() == 0)
+        return get<BooleMonomial>(revCombinedMap[var]);
+    else
+        return BooleMonomial(anf.getRing());
 }
 
 uint32_t CNF::getVarForMonom(const BooleMonomial& mono) const {
@@ -449,9 +453,14 @@ uint32_t CNF::getVarForMonom(const BooleMonomial& mono) const {
 
 uint64_t CNF::getNumAllLits() const {
     uint64_t numLits = 0;
-    for(vector<pair<vector<Clause>, BoolePolynomial> >::const_iterator it = clauses.begin(), end = clauses.end(); it != end; it++) {
+    for (vector<pair<vector<Clause>, BoolePolynomial> >::const_iterator
+             it = clauses.begin(),
+             end = clauses.end();
+         it != end; it++) {
         const vector<Clause>& thisClauses = it->first;
-        for(vector<Clause>::const_iterator itCls = thisClauses.begin(), endCls = thisClauses.end(); itCls != endCls; itCls++) {
+        for (vector<Clause>::const_iterator itCls = thisClauses.begin(),
+                                            endCls = thisClauses.end();
+             itCls != endCls; itCls++) {
             numLits += itCls->size();
         }
     }
@@ -461,7 +470,10 @@ uint64_t CNF::getNumAllLits() const {
 
 uint64_t CNF::getNumAllClauses() const {
     uint64_t numClauses = 0;
-    for(vector<pair<vector<Clause>, BoolePolynomial> >::const_iterator it = clauses.begin(), end = clauses.end(); it != end; it++) {
+    for (vector<pair<vector<Clause>, BoolePolynomial> >::const_iterator
+             it = clauses.begin(),
+             end = clauses.end();
+         it != end; it++) {
         numClauses += it->first.size();
     }
 

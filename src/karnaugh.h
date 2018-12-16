@@ -25,65 +25,57 @@ SOFTWARE.
 #define _KARNAUGH_H_
 
 #include "clauses.h"
-#include "polybori.h"
 #include "cryptominisat5/solvertypesmini.h"
-using CMSat::Lit;
+#include "polybori.h"
 using CMSat::lbool;
+using CMSat::Lit;
 
 USING_NAMESPACE_PBORI
 
-extern "C"
-{
-    extern void minimise_karnaugh(
-        int no_inputs
-        , int no_outputs
-        , int** input
-        , int** output
-        , int* no_lines
-        , bool onlymerge
-    );
+extern "C" {
+extern void minimise_karnaugh(int no_inputs, int no_outputs, int** input,
+                              int** output, int* no_lines, bool onlymerge);
 }
 
+class Karnaugh {
+   public:
+    Karnaugh(uint32_t maxKarnTableSize) {
+        maxKarnTable = maxKarnTableSize;
+        karnSize = (0x1UL) << maxKarnTable;
 
-class Karnaugh
-{
-    public:
-        Karnaugh(uint32_t maxKarnTableSize) {
-            maxKarnTable = maxKarnTableSize;
-            karnSize = (0x1UL) << maxKarnTable;
+        input = new int*[karnSize];
+        for (uint i = 0; i < karnSize; i++)
+            input[i] = new int[maxKarnTable];
 
-            input = new int*[karnSize];
-            for (uint i = 0; i < karnSize; i++)
-                input[i] = new int[maxKarnTable];
+        output = new int*[karnSize];
+        for (uint i = 0; i < karnSize; i++)
+            output[i] = new int[3];
+    }
 
-            output = new int*[karnSize];
-            for (uint i = 0; i < karnSize; i++)
-                output[i] = new int[3];
-        }
+    ~Karnaugh() {
+        for (uint i = 0; i < karnSize; i++)
+            delete[] input[i];
+        delete[] input;
 
-        ~Karnaugh() {
-            for (uint i = 0; i < karnSize; i++)
-                delete[] input[i];
-            delete[] input;
+        for (uint i = 0; i < karnSize; i++)
+            delete[] output[i];
+        delete[] output;
+    }
 
-            for (uint i = 0; i < karnSize; i++)
-                delete[] output[i];
-            delete[] output;
-        }
+    bool possibleToConv(const BoolePolynomial& eq);
+    vector<Clause> convert(const BoolePolynomial& eq);
+    void print() const;
 
-        bool possibleToConv(const BoolePolynomial& eq);
-        vector<Clause> convert(const BoolePolynomial& eq);
-        void print() const;
-
-    private:
-        void evaluateIntoKarn(const BoolePolynomial& eq);
-        vector<Clause> getClauses();
-        int no_lines[3];
-        int** input; ///<The input
-        int** output; ///<The output
-        vector<uint32_t> tableVars; ///<The variables that correspond to each column in the Karnaugh table
-        uint32_t karnSize;
-        uint32_t maxKarnTable;
+   private:
+    void evaluateIntoKarn(const BoolePolynomial& eq);
+    vector<Clause> getClauses();
+    int no_lines[3];
+    int** input;  ///<The input
+    int** output; ///<The output
+    vector<uint32_t>
+        tableVars; ///<The variables that correspond to each column in the Karnaugh table
+    uint32_t karnSize;
+    uint32_t maxKarnTable;
 };
 
 #endif //_KARNAUGH_H_

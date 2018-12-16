@@ -24,140 +24,144 @@ SOFTWARE.
 #ifndef _CLAUSES_H_
 #define _CLAUSES_H_
 
-#include <vector>
 #include <limits>
+#include <vector>
 #include "assert.h"
 #include "cryptominisat5/solvertypesmini.h"
-using CMSat::Lit;
 using CMSat::lbool;
+using CMSat::Lit;
 using std::vector;
 
-class XorClause
-{
-    public:
-        explicit XorClause(const vector<uint32_t>& _vars, const bool _constant = false) :
-            constant(_constant)
-        {
-            for(vector<uint32_t>::const_iterator it = _vars.begin(), end = _vars.end(); it != end; it++) {
-                assert(*it != std::numeric_limits<uint32_t>::max());
-                *this ^= XorClause(*it);
-            }
+class XorClause {
+   public:
+    explicit XorClause(const vector<uint32_t>& _vars,
+                       const bool _constant = false)
+        : constant(_constant) {
+        for (vector<uint32_t>::const_iterator it = _vars.begin(),
+                                              end = _vars.end();
+             it != end; it++) {
+            assert(*it != std::numeric_limits<uint32_t>::max());
+            *this ^= XorClause(*it);
         }
+    }
 
-        explicit XorClause(const uint32_t var = std::numeric_limits<uint32_t>::max(), const bool _equalTrue = false) :
-            constant(_equalTrue)
-        {
-            if (var != std::numeric_limits<uint32_t>::max()) vars.push_back(var);
-        }
+    explicit XorClause(
+        const uint32_t var = std::numeric_limits<uint32_t>::max(),
+        const bool _equalTrue = false)
+        : constant(_equalTrue) {
+        if (var != std::numeric_limits<uint32_t>::max())
+            vars.push_back(var);
+    }
 
-        size_t size() const
-        {
-            return vars.size();
-        }
+    size_t size() const {
+        return vars.size();
+    }
 
-        XorClause operator^(const XorClause& other) const
-        {
-            assert(other.sortedUnique());
-            assert(sortedUnique());
+    XorClause operator^(const XorClause& other) const {
+        assert(other.sortedUnique());
+        assert(sortedUnique());
 
-            XorClause cl(std::numeric_limits<uint32_t>::max(), constant ^ other.constant);
+        XorClause cl(std::numeric_limits<uint32_t>::max(),
+                     constant ^ other.constant);
 
-            for(vector<uint32_t>::const_iterator it1 = vars.begin()
-                , end1 = vars.end()
-                , it2 = other.vars.begin()
-                , end2 = other.vars.end(); it1 != end1 || it2 != end2;)
-            {
-                //it1 is finished, add it2
-                if (it1 == end1) {
-                    cl.vars.push_back(*it2);
-                    it2++;
-                    continue;
-                }
-
-                //it2 is finished, add it1
-                if (it2 == end2) {
-                    cl.vars.push_back(*it1);
-                    it1++;
-                    continue;
-                }
-
-                //Neither one is finished
-                assert(it1 != end1);
-                assert(it2 != end2);
-
-                //*it1 is strictly smaller than *it2, so add *it1
-                if (*it1 < *it2) {
-                    cl.vars.push_back(*it1);
-                    it1++;
-                    continue;
-                }
-
-                //*it2 is strictly smaller than *it1, so add *it2
-                if (*it1 > *it2) {
-                    cl.vars.push_back(*it2);
-                    it2++;
-                    continue;
-                }
-
-                //They are the same, so they knock each other out
-                assert(*it1 == *it2);
-                it1++;
+        for (vector<uint32_t>::const_iterator it1 = vars.begin(),
+                                              end1 = vars.end(),
+                                              it2 = other.vars.begin(),
+                                              end2 = other.vars.end();
+             it1 != end1 || it2 != end2;) {
+            //it1 is finished, add it2
+            if (it1 == end1) {
+                cl.vars.push_back(*it2);
                 it2++;
+                continue;
             }
 
-            return cl;
-        }
-
-        XorClause& operator^=(const XorClause& other)
-        {
-            *this = (*this ^ other);
-            return *this;
-        }
-
-        bool empty() const
-        {
-            return vars.empty();
-        }
-
-        bool getConst() const
-        {
-            return constant;
-        }
-
-        bool sortedUnique() const
-        {
-            uint32_t lastVar = var_Undef;
-            for(vector<uint32_t>::const_iterator it = vars.begin(), end = vars.end(); it != end; it++) {
-                if (*it == lastVar) return false; // not unique
-                if (lastVar != var_Undef && *it < lastVar) return false; // not sorted in ascending order
-                lastVar = *it;
+            //it2 is finished, add it1
+            if (it2 == end2) {
+                cl.vars.push_back(*it1);
+                it1++;
+                continue;
             }
 
-            return true;
+            //Neither one is finished
+            assert(it1 != end1);
+            assert(it2 != end2);
+
+            //*it1 is strictly smaller than *it2, so add *it1
+            if (*it1 < *it2) {
+                cl.vars.push_back(*it1);
+                it1++;
+                continue;
+            }
+
+            //*it2 is strictly smaller than *it1, so add *it2
+            if (*it1 > *it2) {
+                cl.vars.push_back(*it2);
+                it2++;
+                continue;
+            }
+
+            //They are the same, so they knock each other out
+            assert(*it1 == *it2);
+            it1++;
+            it2++;
         }
 
-        vector<uint32_t> getClause() const
-        {
-            return vars;
+        return cl;
+    }
+
+    XorClause& operator^=(const XorClause& other) {
+        *this = (*this ^ other);
+        return *this;
+    }
+
+    bool empty() const {
+        return vars.empty();
+    }
+
+    bool getConst() const {
+        return constant;
+    }
+
+    bool sortedUnique() const {
+        uint32_t lastVar = var_Undef;
+        for (vector<uint32_t>::const_iterator it = vars.begin(),
+                                              end = vars.end();
+             it != end; it++) {
+            if (*it == lastVar)
+                return false; // not unique
+            if (lastVar != var_Undef && *it < lastVar)
+                return false; // not sorted in ascending order
+            lastVar = *it;
         }
 
-        friend std::ostream& operator<<(std::ostream& os, const XorClause& xcl);
+        return true;
+    }
 
-    private:
-        vector<uint32_t> vars;
-        bool constant;
+    vector<uint32_t> getClause() const {
+        return vars;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const XorClause& xcl);
+
+   private:
+    vector<uint32_t> vars;
+    bool constant;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const XorClause& xcl)
-{
+inline std::ostream& operator<<(std::ostream& os, const XorClause& xcl) {
     if (xcl.empty()) {
-        if (xcl.getConst()) os << "0";
+        if (xcl.getConst())
+            os << "0";
         return os;
     }
 
     os << "x";
-    if (!xcl.constant) os << "-";
-    for(vector<uint32_t>::const_iterator it = xcl.vars.begin(), end = xcl.vars.end(); it != end; it++) {
+    if (!xcl.constant)
+        os << "-";
+    for (vector<uint32_t>::const_iterator it = xcl.vars.begin(),
+                                          end = xcl.vars.end();
+         it != end; it++) {
         os << (*it + 1) << " ";
     }
     os << "0";
@@ -165,43 +169,37 @@ inline std::ostream& operator<<(std::ostream& os, const XorClause& xcl)
     return os;
 }
 
-class Clause
-{
-    public:
-        Clause(const vector<Lit>& _lits) :
-            lits(_lits)
-        {}
+class Clause {
+   public:
+    Clause(const vector<Lit>& _lits) : lits(_lits) {
+    }
 
-        const vector<Lit>& getLits() const
-        {
-            return lits;
-        }
+    const vector<Lit>& getLits() const {
+        return lits;
+    }
 
-        size_t size() const
-        {
-            return lits.size();
-        }
+    size_t size() const {
+        return lits.size();
+    }
 
-        bool empty() const
-        {
-            return lits.empty();
-        }
+    bool empty() const {
+        return lits.empty();
+    }
 
-        vector<Lit> getClause() const
-        {
-            assert(!lits.empty());
-            return lits;
-        }
+    vector<Lit> getClause() const {
+        assert(!lits.empty());
+        return lits;
+    }
 
-        friend std::ostream& operator<<(std::ostream& os, const Clause& cl);
+    friend std::ostream& operator<<(std::ostream& os, const Clause& cl);
 
-    private:
-        vector<Lit> lits;
+   private:
+    vector<Lit> lits;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Clause& cl)
-{
-    for(vector<Lit>::const_iterator it = cl.lits.begin(), end = cl.lits.end(); it != end; it++) {
+inline std::ostream& operator<<(std::ostream& os, const Clause& cl) {
+    for (vector<Lit>::const_iterator it = cl.lits.begin(), end = cl.lits.end();
+         it != end; it++) {
         os << *it << " ";
     }
     os << "0";

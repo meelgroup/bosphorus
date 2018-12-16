@@ -20,9 +20,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
+#include <fstream>
 #include <iostream>
 #include <sstream>
-#include <fstream>
 
 #include "dimacscache.h"
 
@@ -30,40 +30,39 @@ std::vector<Clause> DIMACSCache::clauses;
 size_t DIMACSCache::maxVar;
 const char* DIMACSCache::fname = nullptr;
 
-DIMACSCache::DIMACSCache(const char* _fname)
-{
-  if( _fname == fname )
-    return;
-  fname = _fname;
+DIMACSCache::DIMACSCache(const char* _fname) {
+    if (_fname == fname)
+        return;
+    fname = _fname;
 
-  maxVar = 0;
-  clauses.empty();
-  
-  std::ifstream ifs;
-  std::string temp, x;
-  ifs.open(fname);
-  if (!ifs) {
-    std::cout << "Problem opening file: " << fname << " for reading\n";
-    exit(-1);
-  }
-  
-  while (std::getline(ifs,temp)) {
-    if (temp.length() == 0 || temp[0] == 'p' || temp[0] == 'c') {
-      continue;
-    } else {
-      std::istringstream iss(temp);
-      vector<Lit> lits;
-      while (iss.good() && !iss.eof()) {
-	iss >> x;
-	int v = stoi(x);
-	if (v == 0) {
-	  clauses.push_back(Clause(lits));
-	  break;
-	} else {
-	  lits.push_back(Lit(abs(v)-1, v < 0));
-	} 
-	maxVar = std::max(maxVar, (size_t) abs(stoi(x)));
-      }
+    maxVar = 0;
+    clauses.empty();
+
+    std::ifstream ifs;
+    std::string temp, x;
+    ifs.open(fname);
+    if (!ifs) {
+        std::cout << "Problem opening file: " << fname << " for reading\n";
+        exit(-1);
     }
-  }  
+
+    while (std::getline(ifs, temp)) {
+        if (temp.length() == 0 || temp[0] == 'p' || temp[0] == 'c') {
+            continue;
+        } else {
+            std::istringstream iss(temp);
+            vector<Lit> lits;
+            while (iss.good() && !iss.eof()) {
+                iss >> x;
+                int v = stoi(x);
+                if (v == 0) {
+                    clauses.push_back(Clause(lits));
+                    break;
+                } else {
+                    lits.push_back(Lit(abs(v) - 1, v < 0));
+                }
+                maxVar = std::max(maxVar, (size_t)abs(stoi(x)));
+            }
+        }
+    }
 }

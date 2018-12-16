@@ -30,8 +30,12 @@ SOFTWARE.
 using std::cout;
 using std::endl;
 
-SATSolve::SATSolve(const int _verbosity, const bool _testsolution, string _solverExecutable) :
-  satisfiable(l_Undef), solverExecutable(_solverExecutable), verbosity(_verbosity), testsolution(_testsolution) {
+SATSolve::SATSolve(const int _verbosity, const bool _testsolution,
+                   string _solverExecutable)
+    : satisfiable(l_Undef),
+      solverExecutable(_solverExecutable),
+      verbosity(_verbosity),
+      testsolution(_testsolution) {
 }
 
 void SATSolve::createChildProcess() {
@@ -52,9 +56,9 @@ void SATSolve::createChildProcess() {
         close(2);
 
         // make our pipes, our new stdin,stdout and stderr
-        dup2(in[0],0);
-        dup2(out[1],1);
-        dup2(out[1],2);
+        dup2(in[0], 0);
+        dup2(out[1], 1);
+        dup2(out[1], 2);
 
         /* Close the other ends of the pipes that the parent will use, because if
         * we leave these open in the child, the child/parent will not get an EOF
@@ -64,7 +68,7 @@ void SATSolve::createChildProcess() {
         close(out[0]);
 
         // Over-write the child process with the binary
-        execl(solverExecutable.c_str(), solverExecutable.c_str(), (char *)NULL);
+        execl(solverExecutable.c_str(), solverExecutable.c_str(), (char*)NULL);
 
         //If we couldn't overwrite it, it means there is a failure
         cout << "ERROR! Could not execute '" << solverExecutable << "'" << endl;
@@ -77,7 +81,7 @@ string SATSolve::readchild() {
     string str;
     char buf[255];
     int n;
-    while((n = read(out[0], buf, 250)) > 0) {
+    while ((n = read(out[0], buf, 250)) > 0) {
         buf[n] = 0;
         str += buf;
     }
@@ -85,17 +89,19 @@ string SATSolve::readchild() {
     return str;
 }
 
-vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf, const CNF& cnf) {
+vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf,
+                                 const CNF& cnf) {
     /* In a pipe, xx[0] is for reading, xx[1] is for writing */
-    if (pipe(in) < 0) error("pipe in");
-    if (pipe(out) < 0) error("pipe out");
+    if (pipe(in) < 0)
+        error("pipe in");
+    if (pipe(out) < 0)
+        error("pipe out");
 
     createChildProcess();
 
     if (verbosity >= 4) {
         cout << "c Spawned '" << solverExecutable
-             << "' as a child process at pid " <<  pid
-             << endl;
+             << "' as a child process at pid " << pid << endl;
     }
 
     /* This is the parent process */
@@ -120,16 +126,14 @@ vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf, const CNF&
 
     //Handle errors
     if (ret == -1) {
-        cout << "Could not write to child process (maybe '"
-        << solverExecutable << "' does not exist?" << endl;
+        cout << "Could not write to child process (maybe '" << solverExecutable
+             << "' does not exist?" << endl;
         exit(-1);
     }
 
     if (ret < (ssize_t)(ss.str().length())) {
         cout << "Could not write full CNF to child process" << endl;
-        cout
-        << "Child said: " << endl
-        << readchild() << endl;
+        cout << "Child said: " << endl << readchild() << endl;
         cout << "Possiby early exit... checking output" << endl;
     }
 
@@ -142,16 +146,19 @@ vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf, const CNF&
     string SAT;
     size_t pos = 0;
     cout << "c solver output: " << str << endl;
-    while(pos < str.size()) {
+    while (pos < str.size()) {
         string tmp;
-        while(pos < str.size() && str[pos] == '\n') pos++;
-        if (pos == str.size()) break;
+        while (pos < str.size() && str[pos] == '\n')
+            pos++;
+        if (pos == str.size())
+            break;
 
-        while(pos < str.size() && str[pos] != '\n') {
+        while (pos < str.size() && str[pos] != '\n') {
             tmp += str[pos];
             pos++;
         }
-        if (tmp.size() == 0) continue;
+        if (tmp.size() == 0)
+            continue;
 
         if (tmp[0] != 'c') {
             if (tmp[0] == 'v') {
@@ -159,9 +166,8 @@ vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf, const CNF&
             } else if (tmp[0] == 's') {
                 SAT = tmp;
             } else {
-                cout << "ERROR! Line '"
-                << tmp << "' doesn't contain correct starting character"
-                << endl;
+                cout << "ERROR! Line '" << tmp
+                     << "' doesn't contain correct starting character" << endl;
 
                 exit(-1);
             }
@@ -173,8 +179,7 @@ vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf, const CNF&
     } else if (SAT == "s SATISFIABLE") {
         satisfiable = l_True;
     } else {
-        cout << "ERROR! Solution line '"
-        << SAT << "' not recognised" << endl;
+        cout << "ERROR! Solution line '" << SAT << "' not recognised" << endl;
         exit(-1);
     }
 
@@ -187,56 +192,52 @@ vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf, const CNF&
     //std::map<uint32_t, lbool> solutionFromSolver;
     vector<lbool> solutionFromSolver;
 
-    for(vector<string>::const_iterator
-        it = solLines.begin(), end = solLines.end()
-        ; it != end
-        ; it++
-    ) {
+    for (vector<string>::const_iterator it = solLines.begin(),
+                                        end = solLines.end();
+         it != end; it++) {
         const string& str = *it;
         assert(str[0] == 'v');
         size_t pos = 1;
         bool finishing = false;
         while (pos < it->size()) {
-            while(str[pos] == ' ' && pos < it->size()) pos++;
-            if (pos == it->size()) break;
+            while (str[pos] == ' ' && pos < it->size())
+                pos++;
+            if (pos == it->size())
+                break;
 
             string tmp;
-            while(str[pos] != ' ' && pos < it->size()) {
+            while (str[pos] != ' ' && pos < it->size()) {
                 tmp += str[pos];
                 pos++;
             }
             int val;
             try {
                 val = boost::lexical_cast<int>(tmp);
-            } catch (boost::bad_lexical_cast &) {
-                cout
-                << "Solution from SAT solver contains part '"
-                << tmp
-                << "', which cannot be converted to int!"
-                << endl;
+            } catch (boost::bad_lexical_cast&) {
+                cout << "Solution from SAT solver contains part '" << tmp
+                     << "', which cannot be converted to int!" << endl;
 
                 exit(-1);
             }
             if (val == 0) {
-                if (!finishing) finishing = true;
+                if (!finishing)
+                    finishing = true;
                 else {
-                    cout
-                    << "Finishing value '0' encountered twice while "
-                    << "reading solution from SAT solver!"
-                    << endl;
+                    cout << "Finishing value '0' encountered twice while "
+                         << "reading solution from SAT solver!" << endl;
 
                     exit(-1);
                 }
                 finishing = true;
             } else {
-	      size_t v = std::abs(val)-1;
-	      if( v >= solutionFromSolver.size())
-		solutionFromSolver.resize(v+1, l_Undef);
-	      solutionFromSolver[v] = CMSat::boolToLBool(val >0);
+                size_t v = std::abs(val) - 1;
+                if (v >= solutionFromSolver.size())
+                    solutionFromSolver.resize(v + 1, l_Undef);
+                solutionFromSolver[v] = CMSat::boolToLBool(val > 0);
             }
         }
     }
-    
+
     //Map solution from SAT solver to ANF values
     vector<lbool> solution2 = cnf.mapSolToOrig(solutionFromSolver);
 
@@ -247,18 +248,18 @@ vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf, const CNF&
         printSolution(solution);
     }
 
-    if( orig_anf != nullptr && testsolution) {
-      const bool ok = testSolution(*orig_anf, solution);
-      assert(ok);
-      if (verbosity >= 3) {
-	cout << "c  Solution found is correct." << endl;
-      }
+    if (orig_anf != nullptr && testsolution) {
+        const bool ok = testSolution(*orig_anf, solution);
+        assert(ok);
+        if (verbosity >= 3) {
+            cout << "c  Solution found is correct." << endl;
+        }
     }
 
     return solution;
 }
 
-void SATSolve::error(const char *s) {
-  perror(s);
-  exit(1);
+void SATSolve::error(const char* s) {
+    perror(s);
+    exit(1);
 }

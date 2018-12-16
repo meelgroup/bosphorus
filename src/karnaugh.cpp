@@ -22,8 +22,8 @@ SOFTWARE.
 ***********************************************/
 
 #include "karnaugh.h"
-#include "evaluator.h"
 #include <iostream>
+#include "evaluator.h"
 
 using std::cout;
 using std::endl;
@@ -48,7 +48,7 @@ void Karnaugh::print() const {
         for (size_t i2 = 0; i2 < tableVars.size(); i2++) {
             cout << input[i][i2] << " ";
         }
-        cout << "-- " << output[i][0]  << endl;
+        cout << "-- " << output[i][0] << endl;
     }
     cout << "--------------" << endl;
 }
@@ -56,11 +56,8 @@ void Karnaugh::print() const {
 bool Karnaugh::possibleToConv(const BoolePolynomial& eq) {
     tableVars.clear();
     BooleMonomial m = eq.usedVariables();
-    for(BooleMonomial::const_iterator
-        it = m.begin(), end = m.end()
-        ; it != end
-        ; it++
-    ) {
+    for (BooleMonomial::const_iterator it = m.begin(), end = m.end(); it != end;
+         it++) {
         tableVars.push_back(*it);
     }
     return (maxKarnTable >= tableVars.size());
@@ -69,7 +66,7 @@ bool Karnaugh::possibleToConv(const BoolePolynomial& eq) {
 void Karnaugh::evaluateIntoKarn(const BoolePolynomial& eq) {
     // Move vars to tablevars
     tableVars.clear();
-    for(const uint32_t v : eq.usedVariables()) {
+    for (const uint32_t v : eq.usedVariables()) {
         tableVars.push_back(v);
     }
 
@@ -77,7 +74,7 @@ void Karnaugh::evaluateIntoKarn(const BoolePolynomial& eq) {
     if (maxKarnTable < tableVars.size()) {
         cout << "equation: " << eq << " (vars in poly:";
         std::copy(tableVars.begin(), tableVars.end(),
-             std::ostream_iterator<uint32_t>(cout, ","));
+                  std::ostream_iterator<uint32_t>(cout, ","));
         cout << ")" << endl;
         cout << "max_var in equationstosat.cpp is too small!" << endl;
         exit(-1);
@@ -94,7 +91,8 @@ void Karnaugh::evaluateIntoKarn(const BoolePolynomial& eq) {
     no_lines[0] = 0;
     no_lines[1] = 0;
     no_lines[2] = 0;
-    for (uint32_t setting = 0; setting < ((uint32_t)0x1 << tableVars.size()); setting++) {
+    for (uint32_t setting = 0; setting < ((uint32_t)0x1 << tableVars.size());
+         setting++) {
         // Variable setting
         for (size_t i = 0; i < tableVars.size(); i++) {
             uint val = (setting >> i) & 0x1;

@@ -24,16 +24,15 @@ SOFTWARE.
 #ifndef __ANF_H__
 #define __ANF_H__
 
-#include <algorithm>
 #include <assert.h>
+#include <stdint.h>
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <list>
 #include <map>
 #include <set>
-#include <unordered_set>
-#include <stdint.h>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -62,85 +61,94 @@ using std::vector;
 struct anf_no_replacer_tag {};
 
 class ANF {
-    public:
-        typedef unordered_set<BoolePolynomial::hash_type> eqs_hash_t;
-  
-    public:
-        ANF(const polybori::BoolePolyRing* _ring, ConfigData& _config);
-        ANF(const ANF& other, const anf_no_replacer_tag);
-        ANF(const ANF&) = delete;
-        ~ANF();
+   public:
+    typedef unordered_set<BoolePolynomial::hash_type> eqs_hash_t;
 
-        size_t readFile(const string& filename);
-        bool propagate();
-        int extendedLinearization(vector<BoolePolynomial>& truths);
-        int elimLin(vector<BoolePolynomial>& truths);
-        inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
-        void learnSolution(const vector<lbool>& solution);
-        void printStats() const;
+   public:
+    ANF(const polybori::BoolePolyRing* _ring, ConfigData& _config);
+    ANF(const ANF& other, const anf_no_replacer_tag);
+    ANF(const ANF&) = delete;
+    ~ANF();
 
-        // Returns true if polynomial is new and has been added
-        bool addBoolePolynomial(const BoolePolynomial& poly);
-        bool addLearntBoolePolynomial(const BoolePolynomial& poly);
-        void contextualize(vector<BoolePolynomial>& learnt) const;
+    size_t readFile(const string& filename);
+    bool propagate();
+    int extendedLinearization(vector<BoolePolynomial>& truths);
+    int elimLin(vector<BoolePolynomial>& truths);
+    inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
+    void learnSolution(const vector<lbool>& solution);
+    void printStats() const;
 
-        // Query functions
-        size_t size() const;
-        size_t deg() const;
-        size_t getNumSimpleXors() const;
-        inline size_t getNumReplacedVars() const;
-        inline size_t getNumSetVars() const;
-        inline size_t getNumVars() const;
-        size_t numMonoms() const;
-        //size_t numUniqueMonoms(const vector<BoolePolynomial>& equations) const;
-        inline bool hasPolynomial(const BoolePolynomial& p) const;  
-        const BoolePolyRing& getRing() const;
-        const vector<BoolePolynomial>& getEqs() const;
-        inline const vector<lbool>& getFixedValues() const;
-        inline const eqs_hash_t& getEqsHash(void) const;
-        const vector<vector<size_t> >& getOccur() const;
-        inline bool getOK() const;
-        bool evaluate(const vector<lbool>& vals) const;
-        void checkOccur() const;
-        inline lbool value(const uint32_t var) const;
-        inline Lit getReplaced(const uint32_t var) const;
-        inline ANF& operator= (const ANF& other);
-        static size_t readFileForMaxVar(const std::string& filename);
-    private:
-        bool check_if_need_update(const BoolePolynomial& poly, unordered_set<uint32_t>& updatedVars);
-        void addPolyToOccur(const BooleMonomial& mono, size_t eq_idx);
-        void removePolyFromOccur(const BooleMonomial& mono, size_t eq_idx);
-        void addPolyToOccur(const BoolePolynomial& poly, size_t eq_idx);
-        void removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx);
-        void removeEquations(std::vector<size_t>& eq2r);
-        void checkSimplifiedPolysContainNoSetVars() const;
-        bool containsMono(const BooleMonomial& mono1, const BooleMonomial& mono2) const;
-        double sample_and_clone(vector<BoolePolynomial>& equations, double log2size) const;
-  
-        //Config
-        const polybori::BoolePolyRing* ring;
-        ConfigData& config;
+    // Returns true if polynomial is new and has been added
+    bool addBoolePolynomial(const BoolePolynomial& poly);
+    bool addLearntBoolePolynomial(const BoolePolynomial& poly);
+    void contextualize(vector<BoolePolynomial>& learnt) const;
 
-        //Comments from ANF file
-        vector<string> comments;
+    // Query functions
+    size_t size() const;
+    size_t deg() const;
+    size_t getNumSimpleXors() const;
+    inline size_t getNumReplacedVars() const;
+    inline size_t getNumSetVars() const;
+    inline size_t getNumVars() const;
+    size_t numMonoms() const;
+    //size_t numUniqueMonoms(const vector<BoolePolynomial>& equations) const;
+    inline bool hasPolynomial(const BoolePolynomial& p) const;
+    const BoolePolyRing& getRing() const;
+    const vector<BoolePolynomial>& getEqs() const;
+    inline const vector<lbool>& getFixedValues() const;
+    inline const eqs_hash_t& getEqsHash(void) const;
+    const vector<vector<size_t> >& getOccur() const;
+    inline bool getOK() const;
+    bool evaluate(const vector<lbool>& vals) const;
+    void checkOccur() const;
+    inline lbool value(const uint32_t var) const;
+    inline Lit getReplaced(const uint32_t var) const;
+    inline ANF& operator=(const ANF& other);
+    static size_t readFileForMaxVar(const std::string& filename);
 
-        //State
-        vector<BoolePolynomial> eqs;
-        eqs_hash_t eqs_hash;
-        Replacer* replacer;
-        vector<vector<size_t> > occur; //occur[var] -> index of polys where the variable occurs
+   private:
+    bool check_if_need_update(const BoolePolynomial& poly,
+                              unordered_set<uint32_t>& updatedVars);
+    void addPolyToOccur(const BooleMonomial& mono, size_t eq_idx);
+    void removePolyFromOccur(const BooleMonomial& mono, size_t eq_idx);
+    void addPolyToOccur(const BoolePolynomial& poly, size_t eq_idx);
+    void removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx);
+    void removeEquations(std::vector<size_t>& eq2r);
+    void checkSimplifiedPolysContainNoSetVars() const;
+    bool containsMono(const BooleMonomial& mono1,
+                      const BooleMonomial& mono2) const;
+    double sample_and_clone(vector<BoolePolynomial>& equations,
+                            double log2size) const;
 
-         size_t new_equations_begin;
-  
-         friend std::ostream& operator<<(std::ostream& os, const ANF& anf);
+    //Config
+    const polybori::BoolePolyRing* ring;
+    ConfigData& config;
+
+    //Comments from ANF file
+    vector<string> comments;
+
+    //State
+    vector<BoolePolynomial> eqs;
+    eqs_hash_t eqs_hash;
+    Replacer* replacer;
+    vector<vector<size_t> >
+        occur; //occur[var] -> index of polys where the variable occurs
+
+    size_t new_equations_begin;
+
+    friend std::ostream& operator<<(std::ostream& os, const ANF& anf);
 };
 
-
-inline ANF::ANF(const ANF& other, const anf_no_replacer_tag):
-  ring(other.ring), config(other.config), comments(other.comments), eqs(other.eqs), eqs_hash(other.eqs_hash),
-  replacer(nullptr), occur(other.occur), new_equations_begin(other.new_equations_begin)
-{}
-  
+inline ANF::ANF(const ANF& other, const anf_no_replacer_tag)
+    : ring(other.ring),
+      config(other.config),
+      comments(other.comments),
+      eqs(other.eqs),
+      eqs_hash(other.eqs_hash),
+      replacer(nullptr),
+      occur(other.occur),
+      new_equations_begin(other.new_equations_begin) {
+}
 
 inline size_t ANF::size() const {
     return eqs.size();
@@ -152,14 +160,13 @@ inline const BoolePolyRing& ANF::getRing() const {
 
 inline size_t ANF::numMonoms() const {
     size_t num = 0;
-    for(const BoolePolynomial& poly : eqs) {
+    for (const BoolePolynomial& poly : eqs) {
         num += poly.length();
     }
     return num;
 }
 
-
-//Prevent the use of this dangerously expensive operation 
+//Prevent the use of this dangerously expensive operation
 /*
 inline size_t ANF::numUniqueMonoms(const vector<BoolePolynomial>& equations) const {
     set<BooleMonomial> unique;
@@ -172,9 +179,10 @@ inline size_t ANF::numUniqueMonoms(const vector<BoolePolynomial>& equations) con
 }
 */
 
-inline bool ANF::containsMono(const BooleMonomial& mono1, const BooleMonomial& mono2) const {
-  return mono1.reducibleBy(mono2);
-  /*
+inline bool ANF::containsMono(const BooleMonomial& mono1,
+                              const BooleMonomial& mono2) const {
+    return mono1.reducibleBy(mono2);
+    /*
   // Returns whether mono1 contains mono2
     for (uint32_t v2 : mono2) {
         bool has_var = false;
@@ -194,7 +202,7 @@ inline bool ANF::containsMono(const BooleMonomial& mono1, const BooleMonomial& m
 
 inline size_t ANF::deg() const {
     int deg = 0;
-    for(const BoolePolynomial& poly : eqs) {
+    for (const BoolePolynomial& poly : eqs) {
         deg = std::max(deg, poly.deg());
     }
     return deg;
@@ -205,17 +213,16 @@ inline const vector<BoolePolynomial>& ANF::getEqs() const {
 }
 
 inline const ANF::eqs_hash_t& ANF::getEqsHash(void) const {
-  return eqs_hash;
+    return eqs_hash;
 }
 
-
 inline bool ANF::hasPolynomial(const BoolePolynomial& p) const {
-  return eqs_hash.find(p.hash()) != eqs_hash.end();
+    return eqs_hash.find(p.hash()) != eqs_hash.end();
 }
 
 inline size_t ANF::getNumSimpleXors() const {
     size_t num = 0;
-    for(const BoolePolynomial& poly : eqs) {
+    for (const BoolePolynomial& poly : eqs) {
         num += (poly.deg() == 1);
     }
     return num;
@@ -227,7 +234,7 @@ inline const vector<vector<size_t> >& ANF::getOccur() const {
 
 inline std::ostream& operator<<(std::ostream& os, const ANF& anf) {
     // Dump comments
-    for(const string& comment : anf.comments) {
+    for (const string& comment : anf.comments) {
         os << comment << endl;
     }
 
@@ -253,8 +260,6 @@ inline void ANF::printStats() const {
          << "c Num vars replaced: " << getNumReplacedVars() << endl
          << "c --------------------" << endl;
 }
-
-
 
 vector<lbool> ANF::extendSolution(const vector<lbool>& solution) const {
     return replacer->extendSolution(solution);
@@ -288,13 +293,12 @@ const vector<lbool>& ANF::getFixedValues() const {
     return replacer->getValues();
 }
 
-ANF& ANF::operator= (const ANF& other) {
-  //assert(updatedVars.empty() && other.updatedVars.empty());
+ANF& ANF::operator=(const ANF& other) {
+    //assert(updatedVars.empty() && other.updatedVars.empty());
     eqs = other.eqs;
     *replacer = *other.replacer;
     occur = other.occur;
     return *this;
 }
-
 
 #endif //__ANF_H__
