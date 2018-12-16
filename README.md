@@ -7,13 +7,14 @@ Suppose we have a system of 2 equations:
 1. x1 ⊕ x2 ⊕ x3 = 0
 2. x1 \* x2 ⊕ x2 \* x3 + 1 = 0
 
-Write an ANF file `myeqs.anf` as follows:
+Write the ANF file `myeqs.anf`:
 ```
 x1 + x2 + x3
 x1*x2 + x2*x3 + 1
 ```
 
-Running `./bosphorus --anfread myeqs.anf --anfwrite myeqs.anf.out --custom --elsimp` will apply only the ElimLin simplification (ignoring other processes that the tool offers) to `readme.anf` and write it out to `myeqs.anf.out`. `myeqs.anf.out` will then contain the following:
+Run `./bosphorus --anfread myeqs.anf --anfwrite myeqs.anf.out --custom --elsimp` to apply only the ElimLin simplification to `myeqs.anf` and write it out to `myeqs.anf.out`. The simplified`myeqs.anf.out` then contains the following:
+
 ```
 c Executed arguments: --anfread myeqs.anf --anfwrite myeqs.anf.out --custom --elsimp
 c -------------
@@ -26,6 +27,7 @@ c -------------
 x(3) + x(1) + 1
 c UNSAT : false
 ```
+
 Explanation of simplification done:
 * The first linear polynomial rearranged to `x1 = x2 + x3` to eliminate x1 from the other equations (in this case, there is only one other equation)
 * The second polynomial becomes `(x2 + x3) * x2 + x2 * x3 + 1 = 0`, which simplifies to `x2 + 1 = 0`
@@ -43,9 +45,8 @@ i.e. There are 2 solutions:
 See `./bosphorus -h` for the full list of options.
 
 # Building, Testing, Installing
+You must install M4RI, BriAl, and CryptoMiniSat to use compile Bosphorus. Below, we explain how to compile them all.
 
-### Docker
-TODO
 
 ### M4RI
 ```
@@ -95,7 +96,7 @@ make -j4
 ./bosphorus -h
 ```
 
-### Testing
+# Testing
 Must have [LLVM lit](https://github.com/llvm-mirror/llvm/tree/master/utils/lit) and [stp OutputCheck](https://github.com/stp/OutputCheck). Please install with:
 ```
 pip install lit
