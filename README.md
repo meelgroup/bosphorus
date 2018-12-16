@@ -9,14 +9,15 @@ Suppose we have a system of 2 equations:
 
 Write the ANF file `myeqs.anf`:
 ```
-x1 + x2 + x3
-x1*x2 + x2*x3 + 1
+echo "x1 + x2 + x3
+x1*x2 + x2*x3 + 1" > myeqs.anf
+./bosphorus --anfread test.anf --anfwrite out.anf -s --solvewrite solution
 ```
 
-Run `./bosphorus --anfread myeqs.anf --anfwrite myeqs.anf.out --custom --elsimp` to apply only the ElimLin simplification to `myeqs.anf` and write it out to `myeqs.anf.out`. The simplified`myeqs.anf.out` then contains the following:
+The simplified ANF is in `out.anf`
 
 ```
-c Executed arguments: --anfread myeqs.anf --anfwrite myeqs.anf.out --custom --elsimp
+$ cat out.anf
 c -------------
 c Fixed values
 c -------------
@@ -28,19 +29,19 @@ x(3) + x(1) + 1
 c UNSAT : false
 ```
 
-Explanation of simplification done:
+A solution to the problem is in `solution`:
+```
+cat solution
+v -0 1 2 -3
+```
+Which solves satisfies the set of equations.
+
+
+Explanation of simplifications performed:
 * The first linear polynomial rearranged to `x1 = x2 + x3` to eliminate x1 from the other equations (in this case, there is only one other equation)
 * The second polynomial becomes `(x2 + x3) * x2 + x2 * x3 + 1 = 0`, which simplifies to `x2 + 1 = 0`
 * Then, further simplification by substituting `x2 + 1 = 0` yields `x1 + x3 + 1 = 0`
 
-
-The output of `myeqs.anf.out` tells us that
-* x2 = 1
-* x1 != x3
-
-i.e. There are 2 solutions:
-* (x1, x2, x3) = (1,1,0)
-* (x1, x2, x3) = (0,1,1)
 
 See `./bosphorus -h` for the full list of options.
 
