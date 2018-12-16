@@ -920,6 +920,10 @@ static void subsitute(const BooleMonomial& from_mono,
 
 // Implementation based on https://infoscience.epfl.ch/record/176270/files/ElimLin_full_version.pdf
 int ANF::elimLin(vector<BoolePolynomial>& loop_learnt) {
+    if (eqs.empty()) {
+        return 0;
+    }
+
     if (config.verbosity) {
         cout << "c Running ElimLin... ring size: " << getRing().nVariables() << endl;
     }
