@@ -3,6 +3,15 @@ Bosphorus is an ANF simplification and solving tool. It takes as input an ANF ov
 If you use Bosphorus, please cite our [paper](https://www.comp.nus.edu.sg/~meel/Papers/date-cscm19.pdf) ([bibtex](https://www.comp.nus.edu.sg/~meel/bib/CSCM19.bib)) published at DATE 2019.
 
 # Usage
+The sytem can be used to:
+* Simplify ANF problems
+* Solve ANF problems
+* Simplify CNF problems
+* Solve CNF problems
+
+When simplifying or solving CNF problems, the CNF is (extremely) naively translated to ANF, then simplifications are applied, and a sophisticated system then translates the ANF back to CNF. This CNF can then be optinally solved.
+
+## ANF simplification and solving
 Suppose we have a system of 2 equations:
 1. x1 ⊕ x2 ⊕ x3 = 0
 2. x1 \* x2 ⊕ x2 \* x3 + 1 = 0
@@ -44,6 +53,11 @@ Explanation of simplifications performed:
 
 
 See `./bosphorus -h` for the full list of options.
+
+## CNF simplification and solving
+
+Blah
+
 
 # Building, Testing, Installing
 You must install M4RI, BriAl, and CryptoMiniSat to use compile Bosphorus. Below, we explain how to compile them all.
