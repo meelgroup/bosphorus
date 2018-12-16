@@ -707,6 +707,13 @@ double ANF::sample_and_clone(vector<BoolePolynomial>& equations,
     const size_t log2fullsz =
         log2(eqs.size()) +
         2 * log2(getRing().nVariables()); // assume quadratic equations only
+
+    if (config.verbosity > 2) {
+        cout << "eqs.size(): " << eqs.size() << endl;
+        cout << "log2fullsz:" << log2fullsz << endl;
+        cout << "log2size: " << log2size << endl;
+    }
+
     if (log2fullsz < log2size) {
         // Small system, so clone the entire system
         equations = eqs;
@@ -913,6 +920,10 @@ static void subsitute(const BooleMonomial& from_mono,
 
 // Implementation based on https://infoscience.epfl.ch/record/176270/files/ElimLin_full_version.pdf
 int ANF::elimLin(vector<BoolePolynomial>& loop_learnt) {
+    if (config.verbosity) {
+        cout << "c Running ElimLin... ring size: " << getRing().nVariables() << endl;
+    }
+
     vector<BoolePolynomial> learnt_equations;
     vector<BoolePolynomial> all_equations;
     int num_learnt = 0;
