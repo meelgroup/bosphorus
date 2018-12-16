@@ -4,8 +4,8 @@ If you use Bosphorus, please cite our [paper](https://www.comp.nus.edu.sg/~meel/
 
 # Usage
 Suppose we have a system of 2 equations:
-1. x1 + x2 + x3 = 0
-2. x1 \* x2 + x2 \* x3 + 1 = 0
+1. x1 ⊕ x2 ⊕ x3 = 0
+2. x1 \* x2 ⊕ x2 \* x3 + 1 = 0
 
 Write an ANF file `readme.anf` as follows:
 ```
