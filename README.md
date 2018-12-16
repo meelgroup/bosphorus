@@ -47,30 +47,34 @@ See `./bosphorus -h` for the full list of options.
 ### Docker
 TODO
 
-### m4ri
-From https://bitbucket.org/malb/m4ri/downloads/, download `m4ri-20140914.tar.gz`
-
+### M4RI
 ```
+wget https://bitbucket.org/malb/m4ri/downloads/m4ri-20140914.tar.gz
 tar -xf m4ri-20140914.tar.gz
 cd m4ri-20140914
 ./configure
-make
+make -j4
 sudo make install
 ```
 
-### PolyBoRi
-We currrently link against BRiAl actually.
+### BRiAl
+```
+git clone --depth 1 https://github.com/BRiAl/BRiAl
+cd BRiAl
+aclocal
+autoheader
+libtoolize --copy
+automake --copy --add-missing
+automake
+autoconf
+./configure
+make -j4
+sudo make install
+```
 
-From https://sourceforge.net/projects/polybori/files/polybori/0.8.3/, download `polybori-0.8.3.tar.gz`
+### CryptoMiniSat
 ```
-tar -xf polybori-0.8.3.tar.gz
-cd polybori-0.8.3
-sudo scons devel-install
-```
-
-### Cryptominisat
-```
-git clone https://github.com/msoos/cryptominisat.git
+git clone --depth 1 https://github.com/msoos/cryptominisat.git
 cd cryptominisat
 mkdir build
 cd build
@@ -80,16 +84,16 @@ sudo make install
 ```
 Note (For MacOS): If you encounter `cryptominisat.h:30:10: fatal error: 'atomic' file not found` in `#include <atomic>` during compilation, you may need to use `CFLAGS='-stdlib=libc++' make` instead of just `make`.
 
-### This tool, once everything above is installed
+### Bosphorus (this tool)
 ```
-git clone https://github.com/cxjdavin/indra.git
-cd indra
+git clone --depth 1 https://github.com/meelgroup/bosphorus
+cd bosphorus
 mkdir build
 cd build
 cmake ..
 make -j4
+./bosphorus -h
 ```
-Use `cmake -DSTATICCOMPILE=ON ..` instead if you wish to compile statically. You may now run using the executable `indra` in the `build` directory.
 
 ### Testing
 Must have [LLVM lit](https://github.com/llvm-mirror/llvm/tree/master/utils/lit) and [stp OutputCheck](https://github.com/stp/OutputCheck). Please install with:
@@ -97,10 +101,10 @@ Must have [LLVM lit](https://github.com/llvm-mirror/llvm/tree/master/utils/lit) 
 pip install lit
 pip install OutputCheck
 ```
-Run test suite via `lit indra/tests`
+Run test suite via `lit bosphorus/tests`
 
 # Known issues
-- PolyBoRi cannot handle ring of sizes over approx 1 million (1048574). Do not run `indra` on instances with over a million variables.
+- PolyBoRi cannot handle ring of sizes over approx 1 million (1048574). Do not run `bosphorus` on instances with over a million variables.
 
 # Parameters used in the paper
 For the paper, the following parameters are used for learning
