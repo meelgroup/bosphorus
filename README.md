@@ -48,7 +48,7 @@ See `./bosphorus -h` for the full list of options.
 You must install M4RI, BriAl, and CryptoMiniSat to use compile Bosphorus. Below, we explain how to compile them all.
 
 
-### Install main dependencies
+### Install base dependencies
 
 ```
 sudo apt-get install build-essential cmake zlib1g-dev libboost-program-options-dev libm4ri-dev
