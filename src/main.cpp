@@ -58,8 +58,9 @@ void parseOptions(int argc, char* argv[]) {
     maxTime_str << std::setprecision(4) << config.maxTime;
 
     // Declare the supported options.
-    po::options_description generalOptions("Allowed options");
-    generalOptions.add_options()("help,h", "produce help message")("help,h", "produce help message")
+    po::options_description generalOptions("Main options");
+    generalOptions.add_options()
+    ("help,h", "produce help message")
     ("version", "print version number and exit")
     // Input/Output
     ("anfread", po::value(&config.anfInput), "Read ANF from this file")
@@ -69,14 +70,24 @@ void parseOptions(int argc, char* argv[]) {
     ("writecomments", po::bool_switch(&config.writecomments), "Do not write comments to output files")
     ("verbosity,v", po::value<uint32_t>(&config.verbosity)->default_value(1),
      "Verbosity setting (0 = silent); only levels 0 to 3 have been tested for sanity. Any higher may give you too much information.")
-    // CNF conversion
+
+    // Processes
+    ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
+     "Stop solving after this much time (s); Use 0 if you do not want to do fact-finding")
+    // checks
+    ("notparanoid", po::bool_switch(&config.notparanoid), "no sanity checks")
+    ;
+
+    po::options_description cnf_conv_options("CNF conversion");
+    cnf_conv_options.add_options()
     ("cutnum", po::value<uint32_t>(&config.cutNum)->default_value(config.cutNum),
      "Cutting number when not using XOR clauses")
     ("karn", po::value(&config.maxKarnTableSize)->default_value(8),
      "Sets Karnaugh map dimension during CNF conversion")
-    // Processes
-    ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
-     "Stop solving after this much time (s); Use 0 if you do not want to do fact-finding")
+    ;
+
+    po::options_description xl_options("XL");
+    xl_options.add_options()
     ("noxl", po::bool_switch(&config.noXL), "No XL")
     ("xldeg", po::value<uint32_t>(&config.xlDeg)->default_value(1),
      "Expansion degree for XL algorithm. Default = 1 (0 = Just GJE. For now we only support 0 <= xldeg = 3)")
@@ -84,9 +95,17 @@ void parseOptions(int argc, char* argv[]) {
      "Size of matrix to sample for XL, in log2")
     ("xlsamplex", po::value<double>(&config.XLsampleX)->default_value(config.XLsampleX),
      "Size of matrix to sample for XL, in log2, that we can expand by")
+    ;
+
+    po::options_description elimlin_options("ElimLin options");
+    elimlin_options.add_options()
     ("noel", po::bool_switch(&config.noEL), "no ElimLin")
     ("elsample", po::value<double>(&config.ELsample)->default_value(config.ELsample),
      "Size of matrixto sample for EL, in log2")
+    ;
+
+    po::options_description sat_options("SAT options");
+    sat_options.add_options()
     ("nosat", po::bool_switch(&config.noSAT),  "No SAT solving")
     ("stoponsolution", po::bool_switch(&config.stopOnSolution),
      "Stops further simplifications and store solution if SAT simp finds a solution")
@@ -94,20 +113,26 @@ void parseOptions(int argc, char* argv[]) {
      "Conflict inc for built-in SAT solver.")
     ("satlim", po::value<uint64_t>(&config.numConfl_lim)->default_value(config.numConfl_lim),
      "Conflict limit for built-in SAT solver.")
-    // checks
-    ("notparanoid", po::bool_switch(&config.notparanoid), "no sanity checks")
-    // Solve processed CNF
+    ;
+
+    po::options_description solving_processed_CNF_opts("CNF solving");
+    solving_processed_CNF_opts.add_options()
     ("learnsolution", po::bool_switch(&config.learnSolution),
-     "Make concrete the solution that SAT solver returns on the ANF representation")
-    ("solvesat,s", po::bool_switch(&config.doSolveSAT), "Solve with SAT solver (not tested)")
+     "Make concrete the solution that SAT solver returns on the ANF representation. This is not strictly 'correct' as there may be other solutions(!) to the ANF")
+    ("solvesat,s", po::bool_switch(&config.doSolveSAT), "Solve with SAT solver as per '--solverexe")
     ("solverexe,e", po::value(&config.solverExe)->default_value("/usr/local/bin/cryptominisat5"),
-     "Solver executable (for SAT solving on processed CNF)")
+     "Solver executable for SAT solving CNF")
     ("solvewrite,o", po::value(&config.solutionOutput), "Write solver output to file")
     ;
 
     po::variables_map vm;
     po::options_description cmdline_options;
     cmdline_options.add(generalOptions);
+    cmdline_options.add(cnf_conv_options);
+    cmdline_options.add(xl_options);
+    cmdline_options.add(elimlin_options);
+    cmdline_options.add(sat_options);
+    cmdline_options.add(solving_processed_CNF_opts);
 
     try {
         po::store(
@@ -115,6 +140,11 @@ void parseOptions(int argc, char* argv[]) {
             vm);
         if (vm.count("help")) {
             cout << generalOptions << endl;
+            cout <<  cnf_conv_options << endl;
+            cout <<  xl_options << endl;
+            cout <<  elimlin_options << endl;
+            cout <<  sat_options << endl;
+            cout <<  solving_processed_CNF_opts << endl;
             exit(0);
         }
         po::notify(vm);
@@ -193,8 +223,8 @@ void parseOptions(int argc, char* argv[]) {
         exit(-1);
     }
     if (config.doSolveSAT && !vm.count("solvewrite")) {
-        cout << "ERROR! Provide a output file for the solving of the processed "
-                "CNF\n";
+        cout << "ERROR! Provide a output file for the solving of the solved "
+                "CNF with '--solvewrite x'\n";
         exit(-1);
     }
 
