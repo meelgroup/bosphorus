@@ -1,6 +1,6 @@
 Bosphorus is an ANF simplification and solving tool. It takes as input an ANF over GF(2) and can simplify it and also solve it. As a plus, it can also take in a CNF, convert it to ANF, simplify it, then either give a (hopefully simplified) CNF, an ANF, or can run a SAT solver directly and solve it. It uses the following systems: CryptoMiniSat, espresso, M4RI and PolyBoRi.
 
-If you use Bosphorus, please cite the following papers: [DATE19](https://www.comp.nus.edu.sg/~meel/bib/CSCM19.bib). The system was published in DATE 2019, see [PDF](https://www.comp.nus.edu.sg/~meel/Papers/date-cscm19.pdf) here.
+If you use Bosphorus, please cite our [paper](https://www.comp.nus.edu.sg/~meel/Papers/date-cscm19.pdf) [bibtex](https://www.comp.nus.edu.sg/~meel/bib/CSCM19.bib) published in DATE 2019.
 
 # Usage
 Suppose we have a system of 2 equations:
