@@ -460,7 +460,8 @@ void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
     while (
         !timeout && anf->getOK() &&
         (!config.stopOnSolution || !foundSolution) &&
-        std::accumulate(changes, changes + 3, false, std::logical_or<bool>())) {
+        std::accumulate(changes, changes + 3, false, std::logical_or<bool>())
+    ) {
         static const char* strategy_str[] = {"XL", "ElimLin", "SAT"};
         const double startTime = cpuTime();
         int num_learnt = 0;
