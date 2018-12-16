@@ -54,7 +54,7 @@ You must install M4RI, BriAl, and CryptoMiniSat to use compile Bosphorus. Below,
 sudo apt-get install build-essential cmake zlib1g-dev libboost-program-options-dev libm4ri-dev
 ```
 
-### BRiAl
+### Install BRiAl
 ```
 git clone --depth 1 https://github.com/BRiAl/BRiAl
 cd BRiAl
@@ -69,7 +69,7 @@ make -j4
 sudo make install
 ```
 
-### CryptoMiniSat
+### Install CryptoMiniSat
 ```
 git clone --depth 1 https://github.com/msoos/cryptominisat.git
 cd cryptominisat
@@ -81,7 +81,7 @@ sudo make install
 ```
 Note (For MacOS): If you encounter `cryptominisat.h:30:10: fatal error: 'atomic' file not found` in `#include <atomic>` during compilation, you may need to use `CFLAGS='-stdlib=libc++' make` instead of just `make`.
 
-### Bosphorus (this tool)
+### Build Bosphorus (this tool)
 ```
 git clone --depth 1 https://github.com/meelgroup/bosphorus
 cd bosphorus
