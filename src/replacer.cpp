@@ -21,10 +21,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include "replacer.h"
 #include <iostream>
+#include "replacer.h"
 #include "anf.h"
-#include "cryptominisat5/solvertypesmini.h"
+
 using CMSat::lbool;
 using CMSat::Lit;
 
