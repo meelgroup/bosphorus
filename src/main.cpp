@@ -642,6 +642,9 @@ void solve_by_sat(const ANF* anf, const vector<Clause>& cutting_clauses,
         ofs << endl;
     }
     ofs.close();
+    if (config.verbosity) {
+        cout << "c Wrote solution to '" << config.solutionOutput << "'" << endl;
+    }
 }
 #endif
 
