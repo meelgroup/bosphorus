@@ -233,7 +233,7 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
         cout << "c  Converted CNF has " << cnf.getNumVars() << " variables and "
              << cnf.getNumClauses() << " clause-sets to solve in increments of "
              << numConflinc << " conflicts until " << numConfl_lim
-             << " conflicts within " << time_left << " seconds" << endl;
+             << " conflicts within " << std::scientific << time_left << " seconds" << std::fixed << endl;
     }
 
     do {
@@ -267,7 +267,8 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
         if (config.verbosity >= 4)
             cout << "c ... " << solver->get_sum_conflicts() << '/'
                  << solver->get_sum_propagations() << '/'
-                 << solver->get_sum_decisions() << ' ' << time_left
+                 << solver->get_sum_decisions() << ' '
+                 << std::scientific << time_left << std::fixed
                  << " seconds" << endl;
     } while (ret == l_Undef && num_learnt == 0 && time_left > 0 &&
              numConfl_left > 0);
