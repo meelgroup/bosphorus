@@ -12,16 +12,25 @@ x1 ⊕ x2 ⊕ x3 = 0
 x1 \* x2 ⊕ x2 \* x3 + 1 = 0
 ```
 
-Put this in the ANF file `myeqs.anf` and run it:
+Put this in the ANF file `test.anf`:
 ```
-$ cat myeqs.anf
+$ cat test.anf
 x1 + x2 + x3
 x1*x2 + x2*x3 + 1
+```
+or, you can use the more detailed description:
+```
+$ cat test-detail.anf
+x(1) + x(2) + x(3)
+x(1)*x(2) + x(2)*x(3) + 1
+```
+
+Let's simplify, output a simplified ANF, a simplified CNF, solve it and write out the solution:
+```
 $ ./bosphorus --anfread test.anf --anfwrite out.anf --cnfwrite out.cnf -s --solvewrite solution
 ```
 
 The simplified ANF is in `out.anf`:
-
 ```
 $ cat out.anf
 c -------------
@@ -35,7 +44,7 @@ x(3) + x(1) + 1
 c UNSAT : false
 ```
 
-The CNF is in `out.cnf`:
+The simplified CNF is in `out.cnf`:
 ```
 3 0
 2 4 0
