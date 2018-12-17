@@ -30,7 +30,8 @@ std::vector<Clause> DIMACSCache::clauses;
 size_t DIMACSCache::maxVar;
 const char* DIMACSCache::fname = nullptr;
 
-DIMACSCache::DIMACSCache(const char* _fname) {
+DIMACSCache::DIMACSCache(const char* _fname)
+{
     if (_fname == fname)
         return;
     fname = _fname;

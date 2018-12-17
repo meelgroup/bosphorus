@@ -29,7 +29,8 @@ using std::cout;
 using std::endl;
 using std::map;
 
-vector<Clause> Karnaugh::getClauses() {
+vector<Clause> Karnaugh::getClauses()
+{
     vector<Clause> clauses;
     for (int i = 0; i < no_lines[1]; i++) {
         assert(output[i][0] == 1);
@@ -43,7 +44,8 @@ vector<Clause> Karnaugh::getClauses() {
     return clauses;
 }
 
-void Karnaugh::print() const {
+void Karnaugh::print() const
+{
     for (int i = 0; i < no_lines[0] + no_lines[1]; i++) {
         for (size_t i2 = 0; i2 < tableVars.size(); i2++) {
             cout << input[i][i2] << " ";
@@ -53,7 +55,8 @@ void Karnaugh::print() const {
     cout << "--------------" << endl;
 }
 
-bool Karnaugh::possibleToConv(const BoolePolynomial& eq) {
+bool Karnaugh::possibleToConv(const BoolePolynomial& eq)
+{
     tableVars.clear();
     BooleMonomial m = eq.usedVariables();
     for (BooleMonomial::const_iterator it = m.begin(), end = m.end(); it != end;
@@ -63,7 +66,8 @@ bool Karnaugh::possibleToConv(const BoolePolynomial& eq) {
     return (maxKarnTable >= tableVars.size());
 }
 
-void Karnaugh::evaluateIntoKarn(const BoolePolynomial& eq) {
+void Karnaugh::evaluateIntoKarn(const BoolePolynomial& eq)
+{
     // Move vars to tablevars
     tableVars.clear();
     for (const uint32_t v : eq.usedVariables()) {
@@ -110,7 +114,8 @@ void Karnaugh::evaluateIntoKarn(const BoolePolynomial& eq) {
     }
 }
 
-vector<Clause> Karnaugh::convert(const BoolePolynomial& eq) {
+vector<Clause> Karnaugh::convert(const BoolePolynomial& eq)
+{
     evaluateIntoKarn(eq);
     minimise_karnaugh(tableVars.size(), 1, input, output, no_lines, false);
     return getClauses();

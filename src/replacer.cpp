@@ -31,7 +31,8 @@ using CMSat::Lit;
 using std::cout;
 using std::endl;
 
-bool Replacer::evaluate(const vector<lbool>& vals) const {
+bool Replacer::evaluate(const vector<lbool>& vals) const
+{
     bool ret = true;
     size_t num = 0;
     for (vector<lbool>::const_iterator it = value.begin(), end = value.end();
@@ -76,7 +77,8 @@ bool Replacer::evaluate(const vector<lbool>& vals) const {
  *              = (1+d)*(e)*(1+f)
  *              = a*b*c
  */
-BoolePolynomial Replacer::update(const BooleMonomial& m) const {
+BoolePolynomial Replacer::update(const BooleMonomial& m) const
+{
     BoolePolynomial ret(true, m.ring());
 
     for (const uint32_t v : m) {
@@ -100,7 +102,8 @@ BoolePolynomial Replacer::update(const BooleMonomial& m) const {
     return ret;
 }
 
-BoolePolynomial Replacer::update(const BoolePolynomial& eq) const {
+BoolePolynomial Replacer::update(const BoolePolynomial& eq) const
+{
     BoolePolynomial ret = BoolePolynomial(eq.ring());
     for (const BooleMonomial& mono : eq) {
         ret += update(mono);
@@ -108,7 +111,8 @@ BoolePolynomial Replacer::update(const BoolePolynomial& eq) const {
     return ret;
 }
 
-bool Replacer::willUpdate(const BoolePolynomial& eq) const {
+bool Replacer::willUpdate(const BoolePolynomial& eq) const
+{
     for (const uint32_t v : eq.usedVariables()) {
         if (value[v] != l_Undef)
             return true;
@@ -118,7 +122,8 @@ bool Replacer::willUpdate(const BoolePolynomial& eq) const {
     return false;
 }
 
-vector<uint32_t> Replacer::setValue(uint32_t var, bool val) {
+vector<uint32_t> Replacer::setValue(uint32_t var, bool val)
+{
     vector<uint32_t> alsoUpdated;
     alsoUpdated.push_back(var);
 
@@ -156,7 +161,8 @@ vector<uint32_t> Replacer::setValue(uint32_t var, bool val) {
     return alsoUpdated;
 }
 
-vector<uint32_t> Replacer::setReplace(uint32_t var, Lit lit) {
+vector<uint32_t> Replacer::setReplace(uint32_t var, Lit lit)
+{
     assert(var < replaceTable.size());
     assert(lit.var() < replaceTable.size());
 
@@ -241,7 +247,8 @@ vector<uint32_t> Replacer::setReplace(uint32_t var, Lit lit) {
     return ret;
 }
 
-vector<lbool> Replacer::extendSolution(const vector<lbool>& solution) const {
+vector<lbool> Replacer::extendSolution(const vector<lbool>& solution) const
+{
     assert(solution.size() <= value.size());
     vector<lbool> sol2(solution);
     sol2.resize(value.size(), l_Undef);
@@ -296,6 +303,7 @@ vector<lbool> Replacer::extendSolution(const vector<lbool>& solution) const {
     return sol2;
 }
 
-bool Replacer::isReplaced(const uint32_t var) const {
+bool Replacer::isReplaced(const uint32_t var) const
+{
     return getReplaced(var).var() != var;
 }

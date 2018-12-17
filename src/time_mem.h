@@ -28,7 +28,8 @@ SOFTWARE.
 #include <sys/time.h>
 #include <unistd.h>
 
-static inline double cpuTime(void) {
+static inline double cpuTime(void)
+{
     struct rusage ru;
 #ifdef RUSAGE_THREAD
     getrusage(RUSAGE_THREAD, &ru);
@@ -38,7 +39,8 @@ static inline double cpuTime(void) {
     return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000.0;
 }
 
-static inline double cpuTimeTotal(void) {
+static inline double cpuTimeTotal(void)
+{
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
     return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000.0;
@@ -46,7 +48,8 @@ static inline double cpuTimeTotal(void) {
 
 #if defined(__linux__)
 #include <stdio.h>
-static inline int memReadStat(int field) {
+static inline int memReadStat(int field)
+{
     char name[256];
     pid_t pid = getpid();
     sprintf(name, "/proc/%d/statm", pid);
@@ -62,19 +65,22 @@ static inline int memReadStat(int field) {
     fclose(in);
     return value;
 }
-static inline uint64_t memUsed() {
+static inline uint64_t memUsed()
+{
     return (uint64_t)memReadStat(0) * (uint64_t)getpagesize();
 }
 
 #elif defined(__FreeBSD__)
-static inline uint64_t memUsed(void) {
+static inline uint64_t memUsed(void)
+{
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
     return ru.ru_maxrss * 1024;
 }
 
 #else
-static inline uint64_t memUsed() {
+static inline uint64_t memUsed()
+{
     return 0;
 }
 #endif

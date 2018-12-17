@@ -36,11 +36,13 @@ using std::make_pair;
 using std::unordered_map;
 using std::vector;
 
-class GaussJordan {
+class GaussJordan
+{
    public:
     GaussJordan(const vector<BoolePolynomial>& equations,
                 const BoolePolyRing& ring, uint32_t _verbosity)
-        : verbosity(_verbosity), ring(ring) {
+        : verbosity(_verbosity), ring(ring)
+    {
         // Initialize mapping
         buildMaps(equations);
 
@@ -72,15 +74,18 @@ class GaussJordan {
         }
     }
 
-    ~GaussJordan() {
+    ~GaussJordan()
+    {
         mzd_free(mat);
     }
 
-    const mzd_t* getMatrix() const {
+    const mzd_t* getMatrix() const
+    {
         return mat;
     }
 
-    void printMatrix() const {
+    void printMatrix() const
+    {
         for (int r = 0; r < mat->nrows; r++) {
             for (int c = 0; c < mat->ncols; c++) {
                 cout << mzd_read_bit(mat, r, c) << " ";
@@ -91,7 +96,8 @@ class GaussJordan {
     }
 
     size_t run(vector<BoolePolynomial>* all_equations,
-               vector<BoolePolynomial>* learnt_equations) {
+               vector<BoolePolynomial>* learnt_equations)
+    {
         double startTime = cpuTime();
         size_t num_linear = 0;
         if (all_equations != NULL) {
@@ -166,7 +172,8 @@ class GaussJordan {
     std::unordered_map<BooleMonomial::hash_type, uint32_t> monomMap;
     std::vector<BooleMonomial> revMonomMap;
 
-    void buildMaps(const vector<BoolePolynomial> equations) {
+    void buildMaps(const vector<BoolePolynomial> equations)
+    {
         // Gather all monomials
         for (const BoolePolynomial& poly : equations) {
             for (const BooleMonomial& mono : poly) {

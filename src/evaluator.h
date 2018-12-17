@@ -37,7 +37,8 @@ using std::vector;
 
 inline const lbool evaluatePoly(const BoolePolynomial& poly,
                                 const uint32_t setting,
-                                const map<uint32_t, uint32_t>& mapping) {
+                                const map<uint32_t, uint32_t>& mapping)
+{
     // Doesn't need to be set to 1 in case there is a '+1'
     // In that case, there is an empty monomial, which will flip it
     bool ret = false;
@@ -53,8 +54,8 @@ inline const lbool evaluatePoly(const BoolePolynomial& poly,
     return CMSat::boolToLBool(ret);
 }
 
-inline lbool evaluatePoly(const BoolePolynomial& poly,
-                          const vector<lbool>& sol) {
+inline lbool evaluatePoly(const BoolePolynomial& poly, const vector<lbool>& sol)
+{
     BoolePolynomial ret(poly.ring());
     for (const BooleMonomial& mono : poly) {
         BoolePolynomial thisSubPoly(true, poly.ring());

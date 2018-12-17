@@ -31,11 +31,11 @@ namespace po = boost::program_options;
 
 #include "GitSHA1.h"
 #include "anf.h"
-#include "satsolve.h"
 #include "cnf.h"
 #include "dimacscache.h"
 #include "gaussjordan.h"
 #include "replacer.h"
+#include "satsolve.h"
 #include "time_mem.h"
 
 // ALGOS
@@ -52,15 +52,18 @@ using std::string;
 ConfigData config;
 BoolePolyRing* polybori_ring = nullptr;
 
-void parseOptions(int argc, char* argv[]) {
+void parseOptions(int argc, char* argv[])
+{
     // Store executed arguments to print in output comments
     for (int i = 1; i < argc; i++) {
         config.executedArgs.append(string(argv[i]).append(" "));
     }
 
     std::ostringstream maxTime_str;
-    maxTime_str << std::scientific << std::setprecision(2) << config.maxTime << std::fixed;
+    maxTime_str << std::scientific << std::setprecision(2) << config.maxTime
+                << std::fixed;
 
+    /* clang-format off */
     // Declare the supported options.
     po::options_description generalOptions("Main options");
     generalOptions.add_options()
@@ -128,6 +131,7 @@ void parseOptions(int argc, char* argv[]) {
      "Solver executable for SAT solving CNF")
     ("solvewrite,o", po::value(&config.solutionOutput), "Write solver output to file")
     ;
+    /* clang-format on */
 
     po::variables_map vm;
     po::options_description cmdline_options;
@@ -144,11 +148,11 @@ void parseOptions(int argc, char* argv[]) {
             vm);
         if (vm.count("help")) {
             cout << generalOptions << endl;
-            cout <<  cnf_conv_options << endl;
-            cout <<  xl_options << endl;
-            cout <<  elimlin_options << endl;
-            cout <<  sat_options << endl;
-            cout <<  solving_processed_CNF_opts << endl;
+            cout << cnf_conv_options << endl;
+            cout << xl_options << endl;
+            cout << elimlin_options << endl;
+            cout << sat_options << endl;
+            cout << solving_processed_CNF_opts << endl;
             exit(0);
         }
         po::notify(vm);
@@ -255,7 +259,8 @@ void parseOptions(int argc, char* argv[]) {
     }
 }
 
-ANF* read_anf() {
+ANF* read_anf()
+{
     // Find out maxVar in input ANF file
     size_t maxVar = ANF::readFileForMaxVar(config.anfInput);
 
@@ -267,7 +272,8 @@ ANF* read_anf() {
     return anf;
 }
 
-ANF* read_cnf(vector<Clause>& extra_clauses) {
+ANF* read_cnf(vector<Clause>& extra_clauses)
+{
     DIMACSCache dimacs_cache(config.cnfInput.c_str());
     const vector<Clause>& orig_clauses(dimacs_cache.getClauses());
     size_t maxVar = dimacs_cache.getMaxVar();
@@ -355,7 +361,8 @@ ANF* read_cnf(vector<Clause>& extra_clauses) {
     return anf;
 }
 
-CNF* anf_to_cnf(const ANF* anf, const vector<Clause>& cutting_clauses) {
+CNF* anf_to_cnf(const ANF* anf, const vector<Clause>& cutting_clauses)
+{
     double convStartTime = cpuTime();
     CNF* cnf = new CNF(*anf, cutting_clauses, config);
     if (config.verbosity >= 2) {
@@ -366,7 +373,8 @@ CNF* anf_to_cnf(const ANF* anf, const vector<Clause>& cutting_clauses) {
     return cnf;
 }
 
-void write_anf(const ANF* anf) {
+void write_anf(const ANF* anf)
+{
     std::ofstream ofs;
     ofs.open(config.anfOutput.c_str());
     if (!ofs) {
@@ -381,7 +389,8 @@ void write_anf(const ANF* anf) {
 }
 
 void write_cnf(const ANF* anf, const vector<Clause>& cutting_clauses,
-               const vector<BoolePolynomial>& learnt) {
+               const vector<BoolePolynomial>& learnt)
+{
     CNF* cnf = anf_to_cnf(anf, cutting_clauses);
     std::ofstream ofs;
     ofs.open(config.cnfOutput.c_str());
@@ -424,7 +433,8 @@ void write_cnf(const ANF* anf, const vector<Clause>& cutting_clauses,
     ofs.close();
 }
 
-void deduplicate(vector<BoolePolynomial>& learnt) {
+void deduplicate(vector<BoolePolynomial>& learnt)
+{
     vector<BoolePolynomial> dedup;
     ANF::eqs_hash_t hash;
     for (const BoolePolynomial& p : learnt) {
@@ -438,7 +448,8 @@ void deduplicate(vector<BoolePolynomial>& learnt) {
 }
 
 void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
-              const ANF* orig_anf, const vector<Clause>& cutting_clauses) {
+              const ANF* orig_anf, const vector<Clause>& cutting_clauses)
+{
     bool timeout = (cpuTime() > config.maxTime);
     if (timeout) {
         if (config.verbosity >= 1) {
@@ -461,12 +472,11 @@ void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
     CNF* cnf = nullptr;
     SimplifyBySat* sbs = nullptr;
 
-    while (
-        !timeout && anf->getOK() &&
-        (!config.stopOnSolution || !foundSolution) &&
-        (std::accumulate(changes, changes + 3, false, std::logical_or<bool>())
-            || numIters < config.minIter)
-    ) {
+    while (!timeout && anf->getOK() &&
+           (!config.stopOnSolution || !foundSolution) &&
+           (std::accumulate(changes, changes + 3, false,
+                            std::logical_or<bool>()) ||
+            numIters < config.minIter)) {
         static const char* strategy_str[] = {"XL", "ElimLin", "SAT"};
         const double startTime = cpuTime();
         int num_learnt = 0;
@@ -576,7 +586,8 @@ void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
 }
 
 void addTrivialFromANF(ANF* anf, vector<BoolePolynomial>& all_learnt,
-                       const ANF::eqs_hash_t& orig_eqs_hash) {
+                       const ANF::eqs_hash_t& orig_eqs_hash)
+{
     // Add *NEW* assignments and equivalences
     for (uint32_t v = 0; v < anf->getRing().nVariables(); v++) {
         const lbool val = anf->value(v);
@@ -596,7 +607,8 @@ void addTrivialFromANF(ANF* anf, vector<BoolePolynomial>& all_learnt,
 }
 
 void solve_by_sat(const ANF* anf, const vector<Clause>& cutting_clauses,
-                  const ANF* orig_anf) {
+                  const ANF* orig_anf)
+{
     CNF* cnf = anf_to_cnf(anf, cutting_clauses);
     SATSolve solver(config.verbosity, !config.notparanoid, config.solverExe);
     vector<lbool> sol = solver.solveCNF(orig_anf, *anf, *cnf);
@@ -620,7 +632,8 @@ void solve_by_sat(const ANF* anf, const vector<Clause>& cutting_clauses,
     ofs.close();
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
     parseOptions(argc, argv);
     if (config.anfInput.length() == 0 && config.cnfInput.length() == 0) {
         cerr << "c ERROR: you must provide an ANF/CNF input file" << endl;

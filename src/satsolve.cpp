@@ -35,10 +35,12 @@ SATSolve::SATSolve(const int _verbosity, const bool _testsolution,
     : satisfiable(l_Undef),
       solverExecutable(_solverExecutable),
       verbosity(_verbosity),
-      testsolution(_testsolution) {
+      testsolution(_testsolution)
+{
 }
 
-void SATSolve::createChildProcess() {
+void SATSolve::createChildProcess()
+{
     pid = fork();
 
     if (pid == -1) {
@@ -76,7 +78,8 @@ void SATSolve::createChildProcess() {
     }
 }
 
-string SATSolve::readchild() {
+string SATSolve::readchild()
+{
     // Read back any output
     string str;
     char buf[255];
@@ -90,7 +93,8 @@ string SATSolve::readchild() {
 }
 
 vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf,
-                                 const CNF& cnf) {
+                                 const CNF& cnf)
+{
     /* In a pipe, xx[0] is for reading, xx[1] is for writing */
     if (pipe(in) < 0)
         error("pipe in");
@@ -259,7 +263,8 @@ vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf,
     return solution;
 }
 
-void SATSolve::error(const char* s) {
+void SATSolve::error(const char* s)
+{
     perror(s);
     exit(1);
 }

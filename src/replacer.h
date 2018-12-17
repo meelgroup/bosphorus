@@ -41,12 +41,15 @@ using std::vector;
 
 class ANF;
 
-class Replacer {
+class Replacer
+{
    public:
-    Replacer() : ok(true) {
+    Replacer() : ok(true)
+    {
     }
 
-    void newVar(const uint32_t var) {
+    void newVar(const uint32_t var)
+    {
         assert(value.size() == var);
         value.push_back(l_Undef);
 
@@ -88,21 +91,25 @@ class Replacer {
     friend std::ostream& operator<<(std::ostream& os, const Replacer& repl);
 };
 
-inline lbool Replacer::getValue(const uint32_t var) const {
+inline lbool Replacer::getValue(const uint32_t var) const
+{
     assert(value.size() > var);
     return value[var];
 }
 
-inline const vector<lbool>& Replacer::getValues() const {
+inline const vector<lbool>& Replacer::getValues() const
+{
     return value;
 }
 
-inline Lit Replacer::getReplaced(const uint32_t var) const {
+inline Lit Replacer::getReplaced(const uint32_t var) const
+{
     assert(replaceTable.size() > var);
     return replaceTable[var];
 }
 
-inline vector<uint32_t> Replacer::getReplacesVars(const uint32_t var) const {
+inline vector<uint32_t> Replacer::getReplacesVars(const uint32_t var) const
+{
     auto it = revReplaceTable.find(var);
     if (it == revReplaceTable.end()) {
         return vector<uint32_t>();
@@ -111,19 +118,23 @@ inline vector<uint32_t> Replacer::getReplacesVars(const uint32_t var) const {
     }
 }
 
-inline void Replacer::setNOTOK() {
+inline void Replacer::setNOTOK()
+{
     ok = false;
 }
 
-inline bool Replacer::getOK() const {
+inline bool Replacer::getOK() const
+{
     return ok;
 }
 
-inline size_t Replacer::getNumVars() const {
+inline size_t Replacer::getNumVars() const
+{
     return value.size();
 }
 
-inline size_t Replacer::getNumUnknownVars() const {
+inline size_t Replacer::getNumUnknownVars() const
+{
     size_t ret = 0;
     size_t num = 0;
     for (vector<Lit>::const_iterator it = replaceTable.begin(),
@@ -136,7 +147,8 @@ inline size_t Replacer::getNumUnknownVars() const {
     return ret;
 }
 
-inline size_t Replacer::getNumReplacedVars() const {
+inline size_t Replacer::getNumReplacedVars() const
+{
     size_t ret = 0;
     size_t num = 0;
     for (vector<Lit>::const_iterator it = replaceTable.begin(),
@@ -149,7 +161,8 @@ inline size_t Replacer::getNumReplacedVars() const {
     return ret;
 }
 
-inline size_t Replacer::getNumSetVars() const {
+inline size_t Replacer::getNumSetVars() const
+{
     size_t ret = 0;
     for (vector<lbool>::const_iterator it = value.begin(), end = value.end();
          it != end; it++) {
@@ -160,7 +173,8 @@ inline size_t Replacer::getNumSetVars() const {
     return ret;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Replacer& repl) {
+inline std::ostream& operator<<(std::ostream& os, const Replacer& repl)
+{
     //print values
     os << "c -------------" << std::endl;
     os << "c Fixed values" << std::endl;

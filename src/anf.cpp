@@ -37,7 +37,8 @@ ANF::ANF(const polybori::BoolePolyRing* _ring, ConfigData& _config)
     : ring(_ring),
       config(_config),
       replacer(new Replacer),
-      new_equations_begin(0) {
+      new_equations_begin(0)
+{
     //ensure that the variables are not new
     for (size_t i = 0; i < ring->nVariables(); i++) {
         replacer->newVar(i);
@@ -47,12 +48,14 @@ ANF::ANF(const polybori::BoolePolyRing* _ring, ConfigData& _config)
     occur.resize(ring->nVariables());
 }
 
-ANF::~ANF() {
+ANF::~ANF()
+{
     if (replacer != nullptr)
         delete replacer;
 }
 
-size_t ANF::readFileForMaxVar(const std::string& filename) {
+size_t ANF::readFileForMaxVar(const std::string& filename)
+{
     // Read in the file line by line
     size_t maxVar = 0;
 
@@ -87,7 +90,8 @@ size_t ANF::readFileForMaxVar(const std::string& filename) {
     return maxVar;
 }
 
-size_t ANF::readFile(const std::string& filename) {
+size_t ANF::readFile(const std::string& filename)
+{
     // Read in the file line by line
     vector<std::string> text_file;
 
@@ -279,7 +283,8 @@ size_t ANF::readFile(const std::string& filename) {
 
 // KMA Chai: Check if this polynomial can cause further ANF propagation
 bool ANF::check_if_need_update(const BoolePolynomial& poly,
-                               unordered_set<uint32_t>& updatedVars) {
+                               unordered_set<uint32_t>& updatedVars)
+{
     //
     // Assign values
     //
@@ -338,7 +343,8 @@ bool ANF::check_if_need_update(const BoolePolynomial& poly,
     return false;
 }
 
-bool ANF::addBoolePolynomial(const BoolePolynomial& poly) {
+bool ANF::addBoolePolynomial(const BoolePolynomial& poly)
+{
     // Don't add constants
     if (poly.isConstant()) {
         // Check UNSAT
@@ -360,7 +366,8 @@ bool ANF::addBoolePolynomial(const BoolePolynomial& poly) {
     return true;
 }
 
-bool ANF::addLearntBoolePolynomial(const BoolePolynomial& poly) {
+bool ANF::addLearntBoolePolynomial(const BoolePolynomial& poly)
+{
     // Contextualize it to existing knowledge
     BoolePolynomial contextualized_poly = replacer->update(poly);
     bool added = addBoolePolynomial(contextualized_poly);
@@ -372,7 +379,8 @@ bool ANF::addLearntBoolePolynomial(const BoolePolynomial& poly) {
     return added;
 }
 
-void ANF::learnSolution(const vector<lbool>& solution) {
+void ANF::learnSolution(const vector<lbool>& solution)
+{
     for (size_t i = 0; i < ring->nVariables(); ++i)
         if (solution[i] != l_Undef) {
             BoolePolynomial poly(solution[i] == l_True, *ring);
@@ -382,18 +390,21 @@ void ANF::learnSolution(const vector<lbool>& solution) {
 }
 
 // Slow. O(n^2) because cannot use set<> for BoolePolynomial; KMACHAI: don't understand this comment.....
-void ANF::contextualize(vector<BoolePolynomial>& learnt) const {
+void ANF::contextualize(vector<BoolePolynomial>& learnt) const
+{
     for (size_t i = 0; i < learnt.size(); ++i)
         learnt[i] = replacer->update(learnt[i]);
 }
 
-void ANF::addPolyToOccur(const BooleMonomial& mono, const size_t eq_idx) {
+void ANF::addPolyToOccur(const BooleMonomial& mono, const size_t eq_idx)
+{
     for (const uint32_t var_idx : mono) {
         occur[var_idx].push_back(eq_idx);
     }
 }
 
-void ANF::removePolyFromOccur(const BooleMonomial& mono, size_t eq_idx) {
+void ANF::removePolyFromOccur(const BooleMonomial& mono, size_t eq_idx)
+{
     //Remove from occur
     for (const uint32_t var_idx : mono) {
         vector<size_t>::iterator findIt =
@@ -407,16 +418,18 @@ void ANF::removePolyFromOccur(const BooleMonomial& mono, size_t eq_idx) {
 }
 
 inline void ANF::addPolyToOccur(const BoolePolynomial& poly,
-                                const size_t eq_idx) {
+                                const size_t eq_idx)
+{
     addPolyToOccur(poly.usedVariables(), eq_idx);
 }
 
-inline void ANF::removePolyFromOccur(const BoolePolynomial& poly,
-                                     size_t eq_idx) {
+inline void ANF::removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx)
+{
     removePolyFromOccur(poly.usedVariables(), eq_idx);
 }
 
-bool ANF::propagate() {
+bool ANF::propagate()
+{
     double myTime = cpuTime();
     if (config.verbosity) {
         cout << "c [ANF prop] Running ANF propagation..." << endl;
@@ -531,13 +544,14 @@ bool ANF::propagate() {
 
     if (config.verbosity) {
         cout << "c [ANF prop] removed " << empty_equations.size()
-             << " eqs. Left eqs: " << eqs.size()
-             << " T: " << std::fixed << std::setprecision(2) << (cpuTime() - myTime) << endl;
+             << " eqs. Left eqs: " << eqs.size() << " T: " << std::fixed
+             << std::setprecision(2) << (cpuTime() - myTime) << endl;
     }
     return true;
 }
 
-void ANF::checkSimplifiedPolysContainNoSetVars() const {
+void ANF::checkSimplifiedPolysContainNoSetVars() const
+{
     for (const BoolePolynomial& poly : eqs) {
         for (const uint32_t var_idx : poly.usedVariables()) {
             if (value(var_idx) != l_Undef) {
@@ -550,7 +564,8 @@ void ANF::checkSimplifiedPolysContainNoSetVars() const {
     }
 }
 
-void ANF::removeEquations(std::vector<size_t>& eq2r) {
+void ANF::removeEquations(std::vector<size_t>& eq2r)
+{
     vector<std::pair<size_t, size_t> > remap(eqs.size());
     for (size_t i = 0; i < remap.size(); ++i)
         remap[i] = std::make_pair(i, i);
@@ -580,7 +595,8 @@ void ANF::removeEquations(std::vector<size_t>& eq2r) {
     }
 }
 
-bool ANF::evaluate(const vector<lbool>& vals) const {
+bool ANF::evaluate(const vector<lbool>& vals) const
+{
     bool ret = true;
     for (const BoolePolynomial& poly : eqs) {
         lbool lret = evaluatePoly(poly, vals);
@@ -607,7 +623,8 @@ bool ANF::evaluate(const vector<lbool>& vals) const {
     return ret;
 }
 
-void ANF::checkOccur() const {
+void ANF::checkOccur() const
+{
     for (const vector<size_t>& var_occur : occur) {
         for (const size_t eq_idx : var_occur) {
             assert(eq_idx < eqs.size());

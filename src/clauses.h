@@ -32,24 +32,30 @@ using CMSat::lbool;
 using CMSat::Lit;
 using std::vector;
 
-class Clause {
+class Clause
+{
    public:
-    Clause(const vector<Lit>& _lits) : lits(_lits) {
+    Clause(const vector<Lit>& _lits) : lits(_lits)
+    {
     }
 
-    const vector<Lit>& getLits() const {
+    const vector<Lit>& getLits() const
+    {
         return lits;
     }
 
-    size_t size() const {
+    size_t size() const
+    {
         return lits.size();
     }
 
-    bool empty() const {
+    bool empty() const
+    {
         return lits.empty();
     }
 
-    vector<Lit> getClause() const {
+    vector<Lit> getClause() const
+    {
         assert(!lits.empty());
         return lits;
     }
@@ -60,7 +66,8 @@ class Clause {
     vector<Lit> lits;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Clause& cl) {
+inline std::ostream& operator<<(std::ostream& os, const Clause& cl)
+{
     for (vector<Lit>::const_iterator it = cl.lits.begin(), end = cl.lits.end();
          it != end; it++) {
         os << *it << " ";

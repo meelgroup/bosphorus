@@ -37,7 +37,8 @@ SOFTWARE.
 using boost::get;
 using boost::variant;
 
-class CNF {
+class CNF
+{
    public:
     CNF(const ANF& _anf, const vector<Clause>& cutting_clauses,
         const ConfigData& _config);
@@ -50,7 +51,8 @@ class CNF {
     void printStats() const;
 
     // Get functions
-    const BoolePolyRing& getANFRing(void) const {
+    const BoolePolyRing& getANFRing(void) const
+    {
         return anf.getRing();
     }
     bool varRepresentsMonomial(const uint32_t var) const;
@@ -114,8 +116,8 @@ class CNF {
     size_t addedAsCNF = 0;
 };
 
-inline std::ostream& operator<<(std::ostream& os,
-                                const vector<Clause>& clauses) {
+inline std::ostream& operator<<(std::ostream& os, const vector<Clause>& clauses)
+{
     for (vector<Clause>::const_iterator it2 = clauses.begin(),
                                         end2 = clauses.end();
          it2 != end2; it2++) {
@@ -124,7 +126,8 @@ inline std::ostream& operator<<(std::ostream& os,
     return os;
 }
 
-inline void CNF::print_without_header(std::ostream& os) const {
+inline void CNF::print_without_header(std::ostream& os) const
+{
     for (vector<pair<vector<Clause>, BoolePolynomial> >::const_iterator
              it = clauses.begin(),
              end = clauses.end();
@@ -137,47 +140,57 @@ inline void CNF::print_without_header(std::ostream& os) const {
     }
 }
 
-inline std::ostream& operator<<(std::ostream& os, const CNF& cnf) {
+inline std::ostream& operator<<(std::ostream& os, const CNF& cnf)
+{
     os << "p cnf " << cnf.getNumVars() << " " << cnf.getNumAllClauses()
        << std::endl;
     cnf.print_without_header(os);
     return os;
 }
 
-inline bool CNF::varRepresentsMonomial(const uint32_t var) const {
+inline bool CNF::varRepresentsMonomial(const uint32_t var) const
+{
     return revCombinedMap[var].which() == 0;
 }
 
-inline size_t CNF::getNumClauses() const {
+inline size_t CNF::getNumClauses() const
+{
     return clauses.size();
 }
 
-inline size_t CNF::getAddedAsCNF() const {
+inline size_t CNF::getAddedAsCNF() const
+{
     return addedAsCNF;
 }
 
-inline size_t CNF::getAddedAsANF() const {
+inline size_t CNF::getAddedAsANF() const
+{
     return addedAsANF;
 }
 
-inline size_t CNF::getAddedAsSimpleANF() const {
+inline size_t CNF::getAddedAsSimpleANF() const
+{
     return addedAsSimpleANF;
 }
 
-inline size_t CNF::getAddedAsComplexANF() const {
+inline size_t CNF::getAddedAsComplexANF() const
+{
     return addedAsComplexANF;
 }
 
 inline const vector<pair<vector<Clause>, BoolePolynomial> >& CNF::getClauses()
-    const {
+    const
+{
     return clauses;
 }
 
-inline uint32_t CNF::getNumVars() const {
+inline uint32_t CNF::getNumVars() const
+{
     return next_cnf_var;
 }
 
-inline void CNF::printStats() const {
+inline void CNF::printStats() const
+{
     cout << "c ---- CNF stats -----" << endl
          << "c Map sizes            : " << monomMap.size() << '/'
          << revCombinedMap.size() << endl

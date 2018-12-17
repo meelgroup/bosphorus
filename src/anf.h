@@ -57,9 +57,11 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-struct anf_no_replacer_tag {};
+struct anf_no_replacer_tag {
+};
 
-class ANF {
+class ANF
+{
    public:
     typedef unordered_set<BoolePolynomial::hash_type> eqs_hash_t;
 
@@ -145,18 +147,22 @@ inline ANF::ANF(const ANF& other, const anf_no_replacer_tag)
       eqs_hash(other.eqs_hash),
       replacer(nullptr),
       occur(other.occur),
-      new_equations_begin(other.new_equations_begin) {
+      new_equations_begin(other.new_equations_begin)
+{
 }
 
-inline size_t ANF::size() const {
+inline size_t ANF::size() const
+{
     return eqs.size();
 }
 
-inline const BoolePolyRing& ANF::getRing() const {
+inline const BoolePolyRing& ANF::getRing() const
+{
     return *ring;
 }
 
-inline size_t ANF::numMonoms() const {
+inline size_t ANF::numMonoms() const
+{
     size_t num = 0;
     for (const BoolePolynomial& poly : eqs) {
         num += poly.length();
@@ -165,11 +171,13 @@ inline size_t ANF::numMonoms() const {
 }
 
 inline bool ANF::containsMono(const BooleMonomial& mono1,
-                              const BooleMonomial& mono2) const {
+                              const BooleMonomial& mono2) const
+{
     return mono1.reducibleBy(mono2);
 }
 
-inline size_t ANF::deg() const {
+inline size_t ANF::deg() const
+{
     int deg = 0;
     for (const BoolePolynomial& poly : eqs) {
         deg = std::max(deg, poly.deg());
@@ -177,19 +185,23 @@ inline size_t ANF::deg() const {
     return deg;
 }
 
-inline const vector<BoolePolynomial>& ANF::getEqs() const {
+inline const vector<BoolePolynomial>& ANF::getEqs() const
+{
     return eqs;
 }
 
-inline const ANF::eqs_hash_t& ANF::getEqsHash(void) const {
+inline const ANF::eqs_hash_t& ANF::getEqsHash(void) const
+{
     return eqs_hash;
 }
 
-inline bool ANF::hasPolynomial(const BoolePolynomial& p) const {
+inline bool ANF::hasPolynomial(const BoolePolynomial& p) const
+{
     return eqs_hash.find(p.hash()) != eqs_hash.end();
 }
 
-inline size_t ANF::getNumSimpleXors() const {
+inline size_t ANF::getNumSimpleXors() const
+{
     size_t num = 0;
     for (const BoolePolynomial& poly : eqs) {
         num += (poly.deg() == 1);
@@ -197,11 +209,13 @@ inline size_t ANF::getNumSimpleXors() const {
     return num;
 }
 
-inline const vector<vector<size_t> >& ANF::getOccur() const {
+inline const vector<vector<size_t> >& ANF::getOccur() const
+{
     return occur;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const ANF& anf) {
+inline std::ostream& operator<<(std::ostream& os, const ANF& anf)
+{
     // Dump comments
     for (const string& comment : anf.comments) {
         os << comment << endl;
@@ -217,7 +231,8 @@ inline std::ostream& operator<<(std::ostream& os, const ANF& anf) {
     return os;
 }
 
-inline void ANF::printStats() const {
+inline void ANF::printStats() const
+{
     cout << "c ---- ANF stats -----" << endl
          << "c Num total vars: " << getNumVars() << endl
          << "c Num free vars: " << replacer->getNumUnknownVars() << endl
@@ -230,43 +245,53 @@ inline void ANF::printStats() const {
          << "c --------------------" << endl;
 }
 
-vector<lbool> ANF::extendSolution(const vector<lbool>& solution) const {
+vector<lbool> ANF::extendSolution(const vector<lbool>& solution) const
+{
     return replacer->extendSolution(solution);
 }
 
-size_t ANF::getNumVars() const {
+size_t ANF::getNumVars() const
+{
     return replacer->getNumVars();
 }
 
-size_t ANF::getNumReplacedVars() const {
+size_t ANF::getNumReplacedVars() const
+{
     return replacer->getNumReplacedVars();
 }
 
-size_t ANF::getNumSetVars() const {
+size_t ANF::getNumSetVars() const
+{
     return replacer->getNumSetVars();
 }
 
-bool ANF::getOK() const {
+bool ANF::getOK() const
+{
     return replacer->getOK();
 }
 
-void ANF::setNOTOK() {
+void ANF::setNOTOK()
+{
     replacer->setNOTOK();
 }
 
-lbool ANF::value(const uint32_t var) const {
+lbool ANF::value(const uint32_t var) const
+{
     return replacer->getValue(var);
 }
 
-Lit ANF::getReplaced(const uint32_t var) const {
+Lit ANF::getReplaced(const uint32_t var) const
+{
     return replacer->getReplaced(var);
 }
 
-const vector<lbool>& ANF::getFixedValues() const {
+const vector<lbool>& ANF::getFixedValues() const
+{
     return replacer->getValues();
 }
 
-ANF& ANF::operator=(const ANF& other) {
+ANF& ANF::operator=(const ANF& other)
+{
     //assert(updatedVars.empty() && other.updatedVars.empty());
     eqs = other.eqs;
     *replacer = *other.replacer;

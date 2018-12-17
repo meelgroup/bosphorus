@@ -26,13 +26,16 @@ SOFTWARE.
 #include <vector>
 #include "clauses.h"
 
-class DIMACSCache {
+class DIMACSCache
+{
    public:
     DIMACSCache(const char* _fname);
-    size_t getMaxVar(void) const {
+    size_t getMaxVar(void) const
+    {
         return maxVar;
     }
-    const std::vector<Clause>& getClauses(void) const {
+    const std::vector<Clause>& getClauses(void) const
+    {
         return clauses;
     }
 

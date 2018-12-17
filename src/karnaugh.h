@@ -37,9 +37,11 @@ extern void minimise_karnaugh(int no_inputs, int no_outputs, int** input,
                               int** output, int* no_lines, bool onlymerge);
 }
 
-class Karnaugh {
+class Karnaugh
+{
    public:
-    Karnaugh(uint32_t maxKarnTableSize) {
+    Karnaugh(uint32_t maxKarnTableSize)
+    {
         maxKarnTable = maxKarnTableSize;
         karnSize = (0x1UL) << maxKarnTable;
 
@@ -52,7 +54,8 @@ class Karnaugh {
             output[i] = new int[3];
     }
 
-    ~Karnaugh() {
+    ~Karnaugh()
+    {
         for (uint i = 0; i < karnSize; i++)
             delete[] input[i];
         delete[] input;

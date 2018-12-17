@@ -28,7 +28,8 @@ SOFTWARE.
 using std::cout;
 using std::endl;
 
-inline bool testSolution(const ANF& anf, const vector<lbool>& solution) {
+inline bool testSolution(const ANF& anf, const vector<lbool>& solution)
+{
     bool goodSol = anf.evaluate(solution);
     if (!goodSol) {
         cout << "ERROR! Solution found is incorrect!" << endl;
@@ -37,7 +38,8 @@ inline bool testSolution(const ANF& anf, const vector<lbool>& solution) {
     return goodSol;
 }
 
-inline void printSolution(const vector<lbool>& solution) {
+inline void printSolution(const vector<lbool>& solution)
+{
     size_t num = 0;
     std::stringstream toWrite;
     toWrite << "v ";
@@ -51,17 +53,20 @@ inline void printSolution(const vector<lbool>& solution) {
 }
 
 SimplifyBySat::SimplifyBySat(const CNF& _cnf, const ConfigData& _config)
-    : config(_config), cnf(_cnf) {
+    : config(_config), cnf(_cnf)
+{
     // Create SAT solver
     solver = new CMSat::SATSolver();
     solver->set_verbosity(config.verbosity >= 5 ? 1 : 0);
 }
 
-SimplifyBySat::~SimplifyBySat() {
+SimplifyBySat::~SimplifyBySat()
+{
     delete solver;
 }
 
-void SimplifyBySat::addClausesToSolver(size_t beg) {
+void SimplifyBySat::addClausesToSolver(size_t beg)
+{
     const auto& csets = cnf.getClauses();
     for (auto it = csets.begin() + beg; it != csets.end(); ++it) {
         for (const Clause& c : it->first) {
@@ -71,7 +76,8 @@ void SimplifyBySat::addClausesToSolver(size_t beg) {
     }
 }
 
-int SimplifyBySat::extractUnitaries(vector<BoolePolynomial>& loop_learnt) {
+int SimplifyBySat::extractUnitaries(vector<BoolePolynomial>& loop_learnt)
+{
     vector<Lit> units = solver->get_zero_assigned_lits();
     if (config.verbosity >= 3) {
         cout << units.size(); // "c Number of unit learnt clauses: " << << endl;
@@ -109,7 +115,8 @@ int SimplifyBySat::extractUnitaries(vector<BoolePolynomial>& loop_learnt) {
     return numVarLearnt;
 }
 
-int SimplifyBySat::extractBinaries(vector<BoolePolynomial>& loop_learnt) {
+int SimplifyBySat::extractBinaries(vector<BoolePolynomial>& loop_learnt)
+{
     vector<pair<Lit, Lit> > binXors = solver->get_all_binary_xors();
     if (config.verbosity >= 3) {
         cout << '/'
@@ -153,9 +160,9 @@ int SimplifyBySat::extractBinaries(vector<BoolePolynomial>& loop_learnt) {
     return numVarReplaced;
 }
 
-bool SimplifyBySat::addPolynomial(
-    vector<BoolePolynomial>& loop_learnt,
-    const pair<vector<uint32_t>, bool>& cnf_poly) {
+bool SimplifyBySat::addPolynomial(vector<BoolePolynomial>& loop_learnt,
+                                  const pair<vector<uint32_t>, bool>& cnf_poly)
+{
     BoolePolynomial new_poly(cnf_poly.second, cnf.getANFRing());
     for (const uint32_t& var_idx : cnf_poly.first) {
         if (!cnf.varRepresentsMonomial(var_idx)) {
@@ -173,7 +180,8 @@ bool SimplifyBySat::addPolynomial(
 
 int SimplifyBySat::process(
     vector<BoolePolynomial>& loop_learnt,
-    const vector<pair<vector<uint32_t>, bool> >& extracted) {
+    const vector<pair<vector<uint32_t>, bool> >& extracted)
+{
     int num_polys = 0;
     for (const pair<vector<uint32_t>, bool>& cnf_poly : extracted) {
         num_polys += addPolynomial(loop_learnt, cnf_poly);
@@ -181,7 +189,8 @@ int SimplifyBySat::process(
     return num_polys;
 }
 
-int SimplifyBySat::extractLinear(vector<BoolePolynomial>& loop_learnt) {
+int SimplifyBySat::extractLinear(vector<BoolePolynomial>& loop_learnt)
+{
     int num_polys = 0;
     num_polys += process(loop_learnt, solver->get_recovered_xors(false));
     num_polys += process(loop_learnt, solver->get_recovered_xors(true));
@@ -196,8 +205,8 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
                             const uint64_t numConflinc, const double time_limit,
                             const size_t cbeg,
                             vector<BoolePolynomial>& loop_learnt,
-                            bool& foundSolution, ANF& anf,
-                            const ANF* orig_anf) {
+                            bool& foundSolution, ANF& anf, const ANF* orig_anf)
+{
     if (!anf.getOK()) {
         cout << "c Nothing to simplify: UNSAT" << endl;
         return -1;

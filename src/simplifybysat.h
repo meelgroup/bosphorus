@@ -32,7 +32,8 @@ namespace CMSat {
 class SATSolver;
 }
 
-class SimplifyBySat {
+class SimplifyBySat
+{
    public:
     SimplifyBySat(const CNF& cnf, const ConfigData& _config);
     ~SimplifyBySat();
