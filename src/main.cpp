@@ -686,7 +686,10 @@ int main(int argc, char* argv[])
 
     // Perform simplifications
     vector<BoolePolynomial> learnt;
-    simplify(anf, learnt, orig_anf, cutting_clauses);
+
+    if (config.simplify) {
+        simplify(anf, learnt, orig_anf, cutting_clauses);
+    }
     if (config.printProcessedANF) {
         cout << *anf << endl;
     }

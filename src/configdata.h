@@ -43,6 +43,7 @@ struct ConfigData {
     bool writecomments = false;
     bool printProcessedANF;
     uint32_t verbosity;
+    int simplify = 1;
 
     // CNF conversion
     uint32_t cutNum = 5;
