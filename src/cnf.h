@@ -27,7 +27,6 @@ SOFTWARE.
 #include <fstream>
 #include <unordered_map>
 #include <vector>
-
 #include <boost/variant.hpp>
 
 #include "anf.h"
