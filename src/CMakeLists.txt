@@ -22,7 +22,7 @@
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/GitSHA1.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp" @ONLY)
 set(bosphorus_public_headers "")
 
-add_library(libbosphorus
+set(bosph_lib_files
     anf.cpp
     cnf.cpp
     karnaugh.cpp
@@ -32,9 +32,17 @@ add_library(libbosphorus
     extendedlinearization.cpp
     elimlin.cpp
     anfutils.cpp
-    satsolve.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp
 )
+
+if (SATSOLVE_ENABLED)
+    set(bosph_lib_files ${bosph_lib_files} satsolve.cpp)
+endif()
+
+add_library(libbosphorus
+    ${bosph_lib_files}
+)
+
 target_link_libraries(libbosphorus
   ${M4RI_LIBRARIES}
   ${BRiAl_LIBRARIES}

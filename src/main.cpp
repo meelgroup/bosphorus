@@ -35,7 +35,9 @@ namespace po = boost::program_options;
 #include "dimacscache.h"
 #include "gaussjordan.h"
 #include "replacer.h"
+#ifdef SATSOLVE_ENABLED
 #include "satsolve.h"
+#endif
 #include "time_mem.h"
 
 // ALGOS
@@ -122,6 +124,7 @@ void parseOptions(int argc, char* argv[])
      "Conflict limit for built-in SAT solver.")
     ;
 
+#ifdef SATSOLVE_ENABLED
     po::options_description solving_processed_CNF_opts("CNF solving");
     solving_processed_CNF_opts.add_options()
     ("learnsolution", po::bool_switch(&config.learnSolution),
@@ -131,6 +134,7 @@ void parseOptions(int argc, char* argv[])
      "Solver executable for SAT solving CNF")
     ("solvewrite,o", po::value(&config.solutionOutput), "Write solver output to file")
     ;
+#endif
     /* clang-format on */
 
     po::variables_map vm;
@@ -140,7 +144,9 @@ void parseOptions(int argc, char* argv[])
     cmdline_options.add(xl_options);
     cmdline_options.add(elimlin_options);
     cmdline_options.add(sat_options);
+#ifdef SATSOLVE_ENABLED
     cmdline_options.add(solving_processed_CNF_opts);
+#endif
 
     try {
         po::store(
@@ -152,7 +158,9 @@ void parseOptions(int argc, char* argv[])
             cout << xl_options << endl;
             cout << elimlin_options << endl;
             cout << sat_options << endl;
+#ifdef SATSOLVE_ENABLED
             cout << solving_processed_CNF_opts << endl;
+#endif
             exit(0);
         }
         po::notify(vm);
@@ -606,6 +614,7 @@ void addTrivialFromANF(ANF* anf, vector<BoolePolynomial>& all_learnt,
     }
 }
 
+#ifdef SATSOLVE_ENABLED
 void solve_by_sat(const ANF* anf, const vector<Clause>& cutting_clauses,
                   const ANF* orig_anf)
 {
@@ -631,6 +640,7 @@ void solve_by_sat(const ANF* anf, const vector<Clause>& cutting_clauses,
     }
     ofs.close();
 }
+#endif
 
 int main(int argc, char* argv[])
 {
@@ -684,10 +694,12 @@ int main(int argc, char* argv[])
         anf->printStats();
     }
 
+#ifdef SATSOLVE_ENABLED
     // Solve processed CNF
     if (config.doSolveSAT) {
         solve_by_sat(anf, cutting_clauses, orig_anf);
     }
+#endif
 
     // finish up the learnt polynomials
     if (orig_anf_hash != nullptr)

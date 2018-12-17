@@ -115,6 +115,12 @@ include_directories(${M4RI_INCLUDE_DIRS})
 find_package(BRiAl REQUIRED)
 include_directories(${BRiAl_INCLUDE_DIRS})
 
+option(SATSOLVE "Compile in mode to execute external solver" ON)
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND SATSOLVE)
+    add_definitions( -DSATSOLVE_ENABLED )
+    set(SATSOLVE_ENABLED ON)
+endif()
+
 link_directories(${bosphorus_BINARY_DIR}/espresso)
 
 set(BOSPHORUS_EXPORT_NAME "bosphorusTargets")
