@@ -40,19 +40,17 @@ c UNSAT : false
 
 A solution to the problem is in `solution`:
 ```
-cat solution
+$ cat solution
 v -0 1 2 -3
 ```
-Which solves satisfies the set of equations.
+
+This means x0 is `false`, x1 is `true`, x2 is `true` and x3 is `false`.
 
 
 Explanation of simplifications performed:
-* The first linear polynomial rearranged to `x1 = x2 + x3` to eliminate x1 from the other equations (in this case, there is only one other equation)
+* The first linear polynomial rearranged to `x1 = x2 + x3` to eliminate x1 from the other equations
 * The second polynomial becomes `(x2 + x3) * x2 + x2 * x3 + 1 = 0`, which simplifies to `x2 + 1 = 0`
-* Then, further simplification by substituting `x2 + 1 = 0` yields `x1 + x3 + 1 = 0`
-
-
-See `./bosphorus -h` for the full list of options.
+* Substituting `x2 + 1 = 0` yields `x1 + x3 + 1 = 0`
 
 ## CNF simplification and solving
 
