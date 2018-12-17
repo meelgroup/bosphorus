@@ -76,13 +76,16 @@ void parseOptions(int argc, char* argv[])
     ("cnfread", po::value(&config.cnfInput), "Read CNF from this file")
     ("anfwrite", po::value(&config.anfOutput), "Write ANF output to file")
     ("cnfwrite", po::value(&config.cnfOutput), "Write CNF output to file")
-    ("writecomments", po::bool_switch(&config.writecomments), "Do not write comments to output files")
-    ("verbosity,v", po::value<uint32_t>(&config.verbosity)->default_value(1),
-     "Verbosity setting (0 = silent); only levels 0 to 3 have been tested for sanity. Any higher may give you too much information.")
+    ("verb,v", po::value<uint32_t>(&config.verbosity)->default_value(1),
+     "Verbosity setting: 0(slient) - 10(noisy)")
+    ("simplify", po::value<int>(&config.simplify)->default_value(config.simplify),
+     "Simplify ANF")
+
+    //("writecomments", po::bool_switch(&config.writecomments), "Do not write comments to output files")
 
     // Processes
     ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
-     "Stop solving after this much time (s); Use 0 if you do not want to do fact-finding")
+     "Stop solving after this much time (s); Use 0 if you only want to propagate")
     // checks
     ("paranoid", po::value<int>(&config.paranoid), "Run sanity checks")
     ;
