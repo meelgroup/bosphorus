@@ -21,8 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef __GAUSSJORDAN_H__
-#define __GAUSSJORDAN_H__
+#ifndef GAUSSJORDAN_H__
+#define GAUSSJORDAN_H__
 
 #include <unordered_map>
 
