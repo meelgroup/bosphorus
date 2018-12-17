@@ -315,7 +315,7 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
             const bool ok = testSolution(*orig_anf, solution);
             assert(ok);
             if (config.verbosity >= 3) {
-                cout << "c  Solution found is correct." << endl;
+                cout << "c Solution found is correct." << endl;
             }
         }
 

@@ -50,7 +50,7 @@ struct ConfigData {
     uint32_t maxKarnTableSize;
 
     // Processes
-    double maxTime = std::numeric_limits<double>::max();
+    double maxTime = 1e20;
     uint32_t minIter = 0;
     bool noXL = false;
     bool noEL = false;

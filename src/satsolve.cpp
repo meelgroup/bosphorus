@@ -256,7 +256,7 @@ vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf,
         const bool ok = testSolution(*orig_anf, solution);
         assert(ok);
         if (verbosity) {
-            cout << "c  Solution found is correct." << endl;
+            cout << "c Solution found is correct." << endl;
         }
     }
 
