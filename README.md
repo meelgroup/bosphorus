@@ -7,17 +7,17 @@ The main use of the system is to simplify and solve ANF problems. It excels at t
 
 ## ANF simplification and solving
 Suppose we have a system of 2 equations:
-1. x1 ⊕ x2 ⊕ x3 = 0
-2. x1 \* x2 ⊕ x2 \* x3 + 1 = 0
+x1 ⊕ x2 ⊕ x3 = 0
+x1 \* x2 ⊕ x2 \* x3 + 1 = 0
 
-Write the ANF file `myeqs.anf`:
+Put this in the ANF file `myeqs.anf` and run it:
 ```
 echo "x1 + x2 + x3
 x1*x2 + x2*x3 + 1" > myeqs.anf
-./bosphorus --anfread test.anf --anfwrite out.anf -s --solvewrite solution
+./bosphorus --anfread test.anf --anfwrite out.anf --cnfwrite out.cnf -s --solvewrite solution
 ```
 
-The simplified ANF is in `out.anf`
+The simplified ANF is in `out.anf`:
 
 ```
 $ cat out.anf
@@ -32,12 +32,16 @@ x(3) + x(1) + 1
 c UNSAT : false
 ```
 
+The CNF is in `out.cnf`:
+```
+blah
+```
+
 A solution to the problem is in `solution`:
 ```
 $ cat solution
 v -0 1 2 -3
 ```
-
 This means x0 is `false`, x1 is `true`, x2 is `true` and x3 is `false`.
 
 
@@ -46,10 +50,37 @@ Explanation of simplifications performed:
 * The second polynomial becomes `(x2 + x3) * x2 + x2 * x3 + 1 = 0`, which simplifies to `x2 + 1 = 0`
 * Substituting `x2 + 1 = 0` yields `x1 + x3 + 1 = 0`
 
-## CNF simplification and solving
+## CNF simplification
 
-Blah
+Let's say you have the CNF:
 
+```
+$ cat test.cnf
+-2  3  4 0
+ 2 -3 0
+ 2  3 -4 0
+-2 -3 -4 0
+ 1  5 0
+-1 -5 0
+```
+
+Let's simplify and get the ANF:
+```
+./bosphorus --cnfread test.cnf --anfwrite out2.anf
+cat out2.anf
+x(1)*x(2)*x(3) + x(1)*x(2) + x(1)*x(3) + x(1)
+x(1)*x(2)*x(3) + x(1)*x(2) + x(2)*x(3) + x(2)
+x(1)*x(2) + x(1) + x(2) + 1
+x(1)*x(2)*x(3)
+x(1) + x(2) + x(3)
+c -------------
+c Equivalences
+c -------------
+x(4) + x(0) + 1
+
+```
+
+The system recovered XOR `x(1) + x(2) + x(3)` using ElimLin from the top 4 equations that encode the CNF's first 4 clauses. This resoution is in fact non-trivial, and can lead to interesting facts that can then be re-injected back into the CNF. Note that the first 4 clauses encode an XOR because the 2nd clause can be extended to the weaker clause `2 -3 4 0`, giving the trivial encoding of `x(1) + x(2) + x(3)` in CNF.
 
 # Building, Testing, Installing
 You must install M4RI, BriAl, and CryptoMiniSat to use compile Bosphorus. Below, we explain how to compile them all.
