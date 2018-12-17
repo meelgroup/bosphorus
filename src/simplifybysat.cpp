@@ -23,11 +23,32 @@ SOFTWARE.
 
 #include "simplifybysat.h"
 #include "cryptominisat5/cryptominisat.h"
-#include "satsolve.h"
 #include "time_mem.h"
 
 using std::cout;
 using std::endl;
+
+inline bool testSolution(const ANF& anf, const vector<lbool>& solution) {
+    bool goodSol = anf.evaluate(solution);
+    if (!goodSol) {
+        cout << "ERROR! Solution found is incorrect!" << endl;
+        exit(-1);
+    }
+    return goodSol;
+}
+
+inline void printSolution(const vector<lbool>& solution) {
+    size_t num = 0;
+    std::stringstream toWrite;
+    toWrite << "v ";
+    for (const lbool lit : solution) {
+        if (lit != l_Undef) {
+            toWrite << ((lit == l_True) ? "" : "-") << num << " ";
+        }
+        num++;
+    }
+    cout << toWrite.str() << endl;
+}
 
 SimplifyBySat::SimplifyBySat(const CNF& _cnf, const ConfigData& _config)
     : config(_config), cnf(_cnf) {

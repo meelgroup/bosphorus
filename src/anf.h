@@ -39,7 +39,6 @@ SOFTWARE.
 
 #include "configdata.h"
 #include "evaluator.h"
-#include "gaussjordan.h"
 #include "polybori.h"
 #include "replacer.h"
 
@@ -72,8 +71,6 @@ class ANF {
 
     size_t readFile(const string& filename);
     bool propagate();
-    int extendedLinearization(vector<BoolePolynomial>& truths);
-    int elimLin(vector<BoolePolynomial>& truths);
     inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
     void learnSolution(const vector<lbool>& solution);
     void printStats() const;
@@ -82,6 +79,9 @@ class ANF {
     bool addBoolePolynomial(const BoolePolynomial& poly);
     bool addLearntBoolePolynomial(const BoolePolynomial& poly);
     void contextualize(vector<BoolePolynomial>& learnt) const;
+
+    // others
+    inline void setNOTOK(void);
 
     // Query functions
     size_t size() const;
@@ -117,8 +117,6 @@ class ANF {
     void checkSimplifiedPolysContainNoSetVars() const;
     bool containsMono(const BooleMonomial& mono1,
                       const BooleMonomial& mono2) const;
-    double sample_and_clone(vector<BoolePolynomial>& equations,
-                            double log2size) const;
 
     //Config
     const polybori::BoolePolyRing* ring;
@@ -166,38 +164,9 @@ inline size_t ANF::numMonoms() const {
     return num;
 }
 
-//Prevent the use of this dangerously expensive operation
-/*
-inline size_t ANF::numUniqueMonoms(const vector<BoolePolynomial>& equations) const {
-    set<BooleMonomial> unique;
-    for (const BoolePolynomial& poly : equations) {
-        for (const BooleMonomial& mono : poly) {
-            unique.insert(mono);
-        }
-    }
-    return unique.size();
-}
-*/
-
 inline bool ANF::containsMono(const BooleMonomial& mono1,
                               const BooleMonomial& mono2) const {
     return mono1.reducibleBy(mono2);
-    /*
-  // Returns whether mono1 contains mono2
-    for (uint32_t v2 : mono2) {
-        bool has_var = false;
-        for (uint32_t v1 : mono1) {
-            if (v1 == v2) {
-                has_var = true;
-                break;
-            }
-        }
-        if (!has_var) {
-            return false;
-        }
-    }
-    return true;
-  */
 }
 
 inline size_t ANF::deg() const {
@@ -281,6 +250,10 @@ bool ANF::getOK() const {
     return replacer->getOK();
 }
 
+void ANF::setNOTOK() {
+    replacer->setNOTOK();
+}
+
 lbool ANF::value(const uint32_t var) const {
     return replacer->getValue(var);
 }
@@ -300,5 +273,9 @@ ANF& ANF::operator=(const ANF& other) {
     occur = other.occur;
     return *this;
 }
+
+bool extendedLinearization(const ConfigData& config,
+                           const vector<BoolePolynomial>& eqs,
+                           vector<BoolePolynomial>& loop_learnt);
 
 #endif //__ANF_H__

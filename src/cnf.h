@@ -77,7 +77,7 @@ class CNF {
     void addBoolePolynomial(const BoolePolynomial& eq);
     void addTrivialEquations();
     bool tryAddingPolyWithKarn(const BoolePolynomial& eq);
-    XorClause xorClauseFromPoly(const BoolePolynomial& eq);
+    void addMonomialsFromPoly(const BoolePolynomial& eq);
     set<uint32_t> getVarsInPoly(const BoolePolynomial& poly) const;
     vector<uint32_t> addToPolyVarsUntilCutoff(BoolePolynomial& thisPoly,
                                               set<uint32_t>& vars);
@@ -85,9 +85,8 @@ class CNF {
     //Main adders
     uint32_t addBooleMonomial(const BooleMonomial& m);
 
-    //Adding as non-xor clause
-    void addXorClauseAsNormals(const XorClause& cl,
-                               const BoolePolynomial& poly);
+    //Adding by enumeration (with cuts)
+    void addPolyWithCuts(const BoolePolynomial& poly);
     uint32_t hammingWeight(uint64_t num) const;
     void addEveryCombination(vector<uint32_t>& vars, bool isTrue,
                              vector<Clause>& thisClauses);

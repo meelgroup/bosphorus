@@ -31,13 +31,17 @@ namespace po = boost::program_options;
 
 #include "GitSHA1.h"
 #include "anf.h"
+#include "satsolve.h"
 #include "cnf.h"
 #include "dimacscache.h"
 #include "gaussjordan.h"
 #include "replacer.h"
-#include "satsolve.h"
-#include "simplifybysat.h"
 #include "time_mem.h"
+
+// ALGOS
+#include "elimlin.hpp"
+#include "extendedlinearization.hpp"
+#include "simplifybysat.h"
 
 using std::cerr;
 using std::cout;
@@ -228,7 +232,7 @@ void parseOptions(int argc, char* argv[]) {
         exit(-1);
     }
 
-    if (config.verbosity >= 1) {
+    if (config.verbosity) {
         cout << "c " << argv[0];
         for (int i = 1; i < argc; ++i)
             cout << ' ' << argv[i];
@@ -437,7 +441,7 @@ void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
               const ANF* orig_anf, const vector<Clause>& cutting_clauses) {
     bool timeout = (cpuTime() > config.maxTime);
     if (timeout) {
-        if (config.verbosity) {
+        if (config.verbosity >= 1) {
             cout << "c Timeout before learning" << endl;
         }
         return;
@@ -460,7 +464,8 @@ void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
     while (
         !timeout && anf->getOK() &&
         (!config.stopOnSolution || !foundSolution) &&
-        std::accumulate(changes, changes + 3, false, std::logical_or<bool>())
+        (std::accumulate(changes, changes + 3, false, std::logical_or<bool>())
+            || numIters < config.minIter)
     ) {
         static const char* strategy_str[] = {"XL", "ElimLin", "SAT"};
         const double startTime = cpuTime();
@@ -472,14 +477,30 @@ void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
                      << countdowns[subIters] << " iteration(s)." << endl;
             }
         } else {
+            size_t prevsz = loop_learnt.size();
             switch (subIters) {
                 case 0:
-                    if (!config.noXL)
-                        num_learnt = anf->extendedLinearization(loop_learnt);
+                    if (!config.noXL) {
+                        if (!extendedLinearization(config, anf->getEqs(),
+                                                   loop_learnt)) {
+                            anf->setNOTOK();
+                        } else {
+                            for (size_t i = prevsz; i < loop_learnt.size(); ++i)
+                                num_learnt +=
+                                    anf->addBoolePolynomial(loop_learnt[i]);
+                        }
+                    }
                     break;
                 case 1:
-                    if (!config.noEL)
-                        num_learnt = anf->elimLin(loop_learnt);
+                    if (!config.noEL) {
+                        if (!elimLin(config, anf->getEqs(), loop_learnt)) {
+                            anf->setNOTOK();
+                        } else {
+                            for (size_t i = prevsz; i < loop_learnt.size(); ++i)
+                                num_learnt +=
+                                    anf->addBoolePolynomial(loop_learnt[i]);
+                        }
+                    }
                     break;
                 case 2:
                     if (!config.noSAT) {

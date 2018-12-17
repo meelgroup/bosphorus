@@ -5,10 +5,13 @@ add_library(libbosphorus
     anf.cpp
     cnf.cpp
     karnaugh.cpp
-    satsolve.cpp
-    simplifybysat.cpp
     replacer.cpp
     dimacscache.cpp
+    simplifybysat.cpp
+    extendedlinearization.cpp
+    elimlin.cpp
+    anfutils.cpp
+    satsolve.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp
 )
 target_link_libraries(libbosphorus

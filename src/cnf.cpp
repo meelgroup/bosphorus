@@ -194,18 +194,15 @@ bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq) {
     return false;
 }
 
-XorClause CNF::xorClauseFromPoly(const BoolePolynomial& eq) {
-    XorClause cl(std::numeric_limits<uint32_t>::max(), eq.hasConstantPart());
+void CNF::addMonomialsFromPoly(const BoolePolynomial& eq) {
     for (BoolePolynomial::const_iterator it = eq.begin(), end = eq.end();
          it != end; it++) {
         if (it->isConstant()) {
             continue;
         } else {
-            uint32_t ret = addBooleMonomial(*it);
-            cl ^= XorClause(ret);
+            addBooleMonomial(*it);
         }
     }
-    return cl;
 }
 
 void CNF::addBoolePolynomial(const BoolePolynomial& poly) {
@@ -241,8 +238,8 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly) {
         addedAsComplexANF++;
     }
 
-    XorClause cl = xorClauseFromPoly(poly);
-    addXorClauseAsNormals(cl, poly);
+    addMonomialsFromPoly(poly);
+    addPolyWithCuts(poly);
 }
 
 set<uint32_t> CNF::getVarsInPoly(const BoolePolynomial& poly) const {
@@ -296,8 +293,7 @@ vector<uint32_t> CNF::addToPolyVarsUntilCutoff(BoolePolynomial& thisPoly,
     return vars_added;
 }
 
-void CNF::addXorClauseAsNormals(const XorClause& cl,
-                                const BoolePolynomial& poly) {
+void CNF::addPolyWithCuts(const BoolePolynomial& poly) {
     assert(config.cutNum > 1);
 
     set<uint32_t> vars = getVarsInPoly(poly);
@@ -327,7 +323,7 @@ void CNF::addXorClauseAsNormals(const XorClause& cl,
 
         bool result = false;
         if (varAdded == std::numeric_limits<uint32_t>::max()) {
-            result = cl.getConst();
+            result = poly.hasConstantPart();
         }
         addEveryCombination(vars_in_xor, result, thisClauses);
     }
