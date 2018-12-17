@@ -12,9 +12,10 @@ x1 \* x2 ⊕ x2 \* x3 + 1 = 0
 
 Put this in the ANF file `myeqs.anf` and run it:
 ```
-echo "x1 + x2 + x3
-x1*x2 + x2*x3 + 1" > myeqs.anf
-./bosphorus --anfread test.anf --anfwrite out.anf --cnfwrite out.cnf -s --solvewrite solution
+$ cat myeqs.anf
+x1 + x2 + x3
+x1*x2 + x2*x3 + 1
+$ ./bosphorus --anfread test.anf --anfwrite out.anf --cnfwrite out.cnf -s --solvewrite solution
 ```
 
 The simplified ANF is in `out.anf`:
@@ -70,8 +71,8 @@ $ cat test.cnf
 
 Let's simplify and get the ANF:
 ```
-./bosphorus --cnfread test.cnf --anfwrite out2.anf
-cat out2.anf
+$ ./bosphorus --cnfread test.cnf --anfwrite out2.anf
+$ cat out2.anf
 x(1)*x(2)*x(3) + x(1)*x(2) + x(1)*x(3) + x(1)
 x(1)*x(2)*x(3) + x(1)*x(2) + x(2)*x(3) + x(2)
 x(1)*x(2) + x(1) + x(2) + 1
