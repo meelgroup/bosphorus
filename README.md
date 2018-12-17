@@ -3,13 +3,7 @@ Bosphorus is an ANF simplification and solving tool. It takes as input an ANF ov
 If you use Bosphorus, please cite our [paper](https://www.comp.nus.edu.sg/~meel/Papers/date-cscm19.pdf) ([bibtex](https://www.comp.nus.edu.sg/~meel/bib/CSCM19.bib)) published at DATE 2019.
 
 # Usage
-The sytem can be used to:
-* Simplify ANF problems
-* Solve ANF problems
-* Simplify CNF problems
-* Solve CNF problems
-
-When simplifying or solving CNF problems, the CNF is (extremely) naively translated to ANF, then simplifications are applied, and a sophisticated system then translates the ANF back to CNF. This CNF can then be optinally solved.
+The main use of the system is to simplify and solve ANF problems. It excels at this and should give you highly optimised CNFs (and correspondigly good solving times) given any ANF. However, it can also simplify and solve CNF problems. When simplifying or solving CNF problems, the CNF is (extremely) naively translated to ANF, then simplifications are applied, and a sophisticated system then translates the ANF back to CNF. This CNF can then be optinally solved.
 
 ## ANF simplification and solving
 Suppose we have a system of 2 equations:
