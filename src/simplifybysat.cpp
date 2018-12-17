@@ -290,7 +290,7 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
         cout << "c [SAT] has found a solution" << endl;
     }
 
-    if (config.verbosity >= 5 || !config.notparanoid || config.learnSolution ||
+    if (config.verbosity >= 5 || config.paranoid || config.learnSolution ||
         (config.solutionOutput.length() > 0)) {
         // Do extra work only if the any of the above are true
         const size_t sz = solver->get_model().size();
@@ -311,7 +311,7 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
             printSolution(solution);
         }
 
-        if (!config.notparanoid) {
+        if (config.paranoid) {
             const bool ok = testSolution(*orig_anf, solution);
             assert(ok);
             if (config.verbosity >= 3) {

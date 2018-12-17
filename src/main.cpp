@@ -84,7 +84,7 @@ void parseOptions(int argc, char* argv[])
     ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
      "Stop solving after this much time (s); Use 0 if you do not want to do fact-finding")
     // checks
-    ("notparanoid", po::bool_switch(&config.notparanoid), "no sanity checks")
+    ("paranoid", po::value<int>(&config.paranoid), "Run sanity checks")
     ;
 
     po::options_description cnf_conv_options("CNF conversion");
@@ -260,7 +260,7 @@ void parseOptions(int argc, char* argv[])
              << config.numConfl_lim << "): " << !config.noSAT << endl
              << "c Stop simplifying if SAT finds solution? "
              << (config.stopOnSolution ? "Yes" : "No") << endl
-             << "c Paranoid: " << (config.notparanoid ? "No" : "Yes") << endl
+             << "c Paranoid: " << config.paranoid << endl
              << "c Cut num: " << config.cutNum << endl
              << "c Karnaugh size: " << config.maxKarnTableSize << endl
              << "c --------------------\n";
@@ -619,7 +619,7 @@ void solve_by_sat(const ANF* anf, const vector<Clause>& cutting_clauses,
                   const ANF* orig_anf)
 {
     CNF* cnf = anf_to_cnf(anf, cutting_clauses);
-    SATSolve solver(config.verbosity, !config.notparanoid, config.solverExe);
+    SATSolve solver(config.verbosity, config.paranoid, config.solverExe);
     vector<lbool> sol = solver.solveCNF(orig_anf, *anf, *cnf);
     std::ofstream ofs;
     ofs.open(config.solutionOutput.c_str());
@@ -679,7 +679,7 @@ int main(int argc, char* argv[])
     ANF* orig_anf = nullptr;
     ANF::eqs_hash_t* orig_anf_hash = nullptr;
 
-    if (!config.notparanoid)
+    if (config.paranoid)
         orig_anf = new ANF(*anf, anf_no_replacer_tag());
     else
         orig_anf_hash = new ANF::eqs_hash_t(anf->getEqsHash());

@@ -539,7 +539,7 @@ bool ANF::propagate()
     removeEquations(empty_equations);
     new_equations_begin = eqs.size();
 
-    if (!timeout && !config.notparanoid)
+    if (!timeout && config.paranoid)
         checkSimplifiedPolysContainNoSetVars(); // May not fully propagate due to timeout
 
     if (config.verbosity) {

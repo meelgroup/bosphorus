@@ -64,7 +64,7 @@ struct ConfigData {
     bool learnSolution = false;
 
     // checks
-    bool notparanoid = false; // the safer but slower option
+    bool paranoid = true; // the safer but slower option
 
     // Solve processed CNF
     bool doSolveSAT = false;
