@@ -248,12 +248,13 @@ void parseOptions(int argc, char* argv[])
     }
 
     if (config.verbosity) {
-        cout << "c " << argv[0];
+        cout << "c Bosphorus SHA revision " << get_version_sha1() << endl;
+        cout << "c Executed with command line: " << argv[0];
         for (int i = 1; i < argc; ++i)
             cout << ' ' << argv[i];
-        cout << "\nc Compilation env " << get_compilation_env() << endl;
+        cout << endl << "c Compilation env " << get_compilation_env() << endl;
         cout << "c --- Configuration --\n"
-             << "c maxTime = " << std::scientific << std::setprecision(2) <<  config.maxTime << '\n' << std::fixed
+             << "c maxTime = " << std::scientific << std::setprecision(2) << config.maxTime << std::fixed << endl
              << "c XL simp (deg = " << config.xlDeg
              << "; s = " << config.XLsample << '+' << config.XLsampleX
              << "): " << !config.noXL << endl
@@ -266,7 +267,7 @@ void parseOptions(int argc, char* argv[])
              << "c Paranoid: " << config.paranoid << endl
              << "c Cut num: " << config.cutNum << endl
              << "c Karnaugh size: " << config.maxKarnTableSize << endl
-             << "c --------------------\n";
+             << "c --------------------" << endl;
     }
 }
 
