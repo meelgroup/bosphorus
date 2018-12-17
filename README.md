@@ -34,8 +34,12 @@ c UNSAT : false
 
 The CNF is in `out.cnf`:
 ```
-blah
+3 0
+2 4 0
+-2 -4 0
 ```
+This CNF represents all the solutions to the ANF, i.e. it's equivalent to the ANF.
+
 
 A solution to the problem is in `solution`:
 ```
