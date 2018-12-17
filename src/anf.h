@@ -299,8 +299,4 @@ ANF& ANF::operator=(const ANF& other)
     return *this;
 }
 
-bool extendedLinearization(const ConfigData& config,
-                           const vector<BoolePolynomial>& eqs,
-                           vector<BoolePolynomial>& loop_learnt);
-
 #endif //ANF_H__
