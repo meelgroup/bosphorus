@@ -7,8 +7,10 @@ The main use of the system is to simplify and solve ANF problems. It excels at t
 
 ## ANF simplification and solving
 Suppose we have a system of 2 equations:
+```
 x1 ⊕ x2 ⊕ x3 = 0
 x1 \* x2 ⊕ x2 \* x3 + 1 = 0
+```
 
 Put this in the ANF file `myeqs.anf` and run it:
 ```
