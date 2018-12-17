@@ -21,8 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef __CNF_H__
-#define __CNF_H__
+#ifndef CNF_H__
+#define CNF_H__
 
 #include <fstream>
 #include <unordered_map>
@@ -201,4 +201,4 @@ inline void CNF::printStats() const
          << "c --------------------" << endl;
 }
 
-#endif //__CNF_H__
+#endif //CNF_H__

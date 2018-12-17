@@ -21,8 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef __REPLACER_H__
-#define __REPLACER_H__
+#ifndef REPLACER_H__
+#define REPLACER_H__
 
 #include <map>
 #include <set>

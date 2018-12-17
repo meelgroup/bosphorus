@@ -21,8 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef __EVALUATOR_H__
-#define __EVALUATOR_H__
+#ifndef EVALUATOR_H__
+#define EVALUATOR_H__
 
 #include "cryptominisat5/solvertypesmini.h"
 #include "polybori.h"

@@ -21,8 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef __ANF_H__
-#define __ANF_H__
+#ifndef ANF_H__
+#define ANF_H__
 
 #include <assert.h>
 #include <stdint.h>
@@ -303,4 +303,4 @@ bool extendedLinearization(const ConfigData& config,
                            const vector<BoolePolynomial>& eqs,
                            vector<BoolePolynomial>& loop_learnt);
 
-#endif //__ANF_H__
+#endif //ANF_H__
