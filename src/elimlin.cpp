@@ -9,8 +9,9 @@ USING_NAMESPACE_PBORI
 bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
              vector<BoolePolynomial>& loop_learnt)
 {
+    //don't run if empty
     if (eqs.empty()) {
-        return 0;
+        return true;
     }
 
     double myTime = cpuTime();
