@@ -34,7 +34,7 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
 
         // Perform Gauss Jordan
         GaussJordan gj(all_equations, ring, config.verbosity);
-        size_t num_linear = gj.run(&all_equations, NULL);
+        const long num_linear = gj.run(&all_equations, NULL);
         if (num_linear == GaussJordan::BAD)
             return false;
 

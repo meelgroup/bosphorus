@@ -25,6 +25,7 @@ SOFTWARE.
 #define GAUSSJORDAN_H__
 
 #include <unordered_map>
+#include <limits>
 
 #include "anf.h"
 #include "m4ri.h"
@@ -95,11 +96,11 @@ class GaussJordan
         cout << endl;
     }
 
-    size_t run(vector<BoolePolynomial>* all_equations,
+    long run(vector<BoolePolynomial>* all_equations,
                vector<BoolePolynomial>* learnt_equations)
     {
         double startTime = cpuTime();
-        size_t num_linear = 0;
+        long num_linear = 0;
         if (all_equations != NULL) {
             all_equations->clear();
         }
@@ -163,7 +164,7 @@ class GaussJordan
         return num_linear;
     }
 
-    static const size_t BAD = static_cast<size_t>(-1);
+    static const long BAD = std::numeric_limits<long>::min();
 
    private:
     uint32_t verbosity;

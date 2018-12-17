@@ -134,5 +134,6 @@ bool extendedLinearization(const ConfigData& config,
     // Run GJE after expansion
 
     GaussJordan gj(equations, ring, config.verbosity);
-    return gj.run(NULL, &loop_learnt) != GaussJordan::BAD;
+    long num = gj.run(NULL, &loop_learnt);
+    return num != GaussJordan::BAD;
 }
