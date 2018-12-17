@@ -21,7 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include "simplifybysat.h"
+#include "simplifybysat.hpp"
 #include "cryptominisat5/cryptominisat.h"
 #include "time_mem.h"
 

@@ -25,7 +25,7 @@ SOFTWARE.
 
 #include <vector>
 
-#include "configdata.h"
+#include "configdata.hpp"
 #include "polybori.h"
 
 USING_NAMESPACE_PBORI

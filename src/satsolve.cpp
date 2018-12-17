@@ -22,10 +22,10 @@ SOFTWARE.
 ***********************************************/
 
 #include <sstream>
+#include <cerrno>
+#include <string>
 
-#include "errno.h"
-#include "satsolve.h"
-#include "string.h"
+#include "satsolve.hpp"
 
 using std::cout;
 using std::endl;

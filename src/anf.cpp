@@ -21,12 +21,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include "anf.h"
+#include "anf.hpp"
 #include <boost/lexical_cast.hpp>
 #include <cctype>
 #include <fstream>
 #include <string>
-#include "replacer.h"
+#include "replacer.hpp"
 #include "time_mem.h"
 
 using boost::lexical_cast;

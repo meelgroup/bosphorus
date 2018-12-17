@@ -27,7 +27,7 @@ SOFTWARE.
 #include <unordered_map>
 #include <limits>
 
-#include "anf.h"
+#include "anf.hpp"
 #include "m4ri.h"
 #include "time_mem.h"
 

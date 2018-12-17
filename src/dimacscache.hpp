@@ -1,5 +1,4 @@
 /*****************************************************************************
-Copyright (C) 2016  Security Research Labs
 Copyright (C) 2018  Mate Soos, Davin Choo, Kian Ming A. Chai, DSO National Laboratories
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,41 +20,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef SIMPLIFYBYSAT_H
-#define SIMPLIFYBYSAT_H
+#ifndef DIMACSCACHE_H__
+#define DIMACSCACHE_H__
 
-#include <fstream>
-#include "anf.h"
-#include "cnf.h"
+#include <vector>
+#include "clauses.hpp"
 
-namespace CMSat {
-class SATSolver;
-}
-
-class SimplifyBySat
+class DIMACSCache
 {
    public:
-    SimplifyBySat(const CNF& cnf, const ConfigData& _config);
-    ~SimplifyBySat();
-
-    int simplify(const uint64_t numConfl_lim, const uint64_t numConfl_inc,
-                 const double time_limit, const size_t cbeg,
-                 vector<BoolePolynomial>& loop_learnt, bool& foundSolution,
-                 ANF& anf, const ANF* orig_anf);
+    DIMACSCache(const char* _fname);
+    size_t getMaxVar(void) const
+    {
+        return maxVar;
+    }
+    const std::vector<Clause>& getClauses(void) const
+    {
+        return clauses;
+    }
 
    private:
-    const ConfigData& config;
-    const CNF& cnf;
-    CMSat::SATSolver* solver;
-
-    void addClausesToSolver(size_t beg);
-    int extractUnitaries(vector<BoolePolynomial>& loop_learnt);
-    int extractBinaries(vector<BoolePolynomial>& loop_learnt);
-    int extractLinear(vector<BoolePolynomial>& loop_learnt);
-    bool addPolynomial(vector<BoolePolynomial>& loop_learnt,
-                       const pair<vector<uint32_t>, bool>& cnf_poly);
-    int process(vector<BoolePolynomial>& loop_learnt,
-                const vector<pair<vector<uint32_t>, bool> >& extracted);
+    static std::vector<Clause> clauses;
+    static size_t maxVar;
+    static const char* fname;
 };
 
-#endif //SIMPLIFYBYSAT_H
+#endif

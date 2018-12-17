@@ -25,7 +25,7 @@ SOFTWARE.
 
 #include <vector>
 
-#include "configdata.h"
+#include "configdata.hpp"
 #include "polybori.h"
 
 bool elimLin(const ConfigData& config,

@@ -22,7 +22,7 @@ SOFTWARE.
 
 #include "extendedlinearization.hpp"
 #include "anfutils.hpp"
-#include "gaussjordan.h"
+#include "gaussjordan.hpp"
 
 using std::vector;
 

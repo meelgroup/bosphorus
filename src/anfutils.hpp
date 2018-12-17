@@ -25,7 +25,7 @@ SOFTWARE.
 
 #include <vector>
 
-#include "configdata.h"
+#include "configdata.hpp"
 #include "polybori.h"
 
 double sample_and_clone(const ConfigData& config,

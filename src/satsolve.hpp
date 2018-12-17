@@ -28,8 +28,8 @@ SOFTWARE.
 #include <boost/lexical_cast.hpp>
 #include <string>
 
-#include "anf.h"
-#include "cnf.h"
+#include "anf.hpp"
+#include "cnf.hpp"
 
 using std::cout;
 using std::endl;

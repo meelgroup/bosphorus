@@ -29,9 +29,9 @@ SOFTWARE.
 #include <vector>
 #include <boost/variant.hpp>
 
-#include "anf.h"
-#include "clauses.h"
-#include "karnaugh.h"
+#include "anf.hpp"
+#include "clauses.hpp"
+#include "karnaugh.hpp"
 
 using boost::get;
 using boost::variant;

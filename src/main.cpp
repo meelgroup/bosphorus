@@ -30,20 +30,20 @@ namespace po = boost::program_options;
 #include <memory>
 
 #include "GitSHA1.h"
-#include "anf.h"
-#include "cnf.h"
-#include "dimacscache.h"
-#include "gaussjordan.h"
-#include "replacer.h"
+#include "anf.hpp"
+#include "cnf.hpp"
+#include "dimacscache.hpp"
+#include "gaussjordan.hpp"
+#include "replacer.hpp"
 #ifdef SATSOLVE_ENABLED
-#include "satsolve.h"
+#include "satsolve.hpp"
 #endif
 #include "time_mem.h"
 
 // ALGOS
 #include "elimlin.hpp"
 #include "extendedlinearization.hpp"
-#include "simplifybysat.h"
+#include "simplifybysat.hpp"
 
 using std::cerr;
 using std::cout;

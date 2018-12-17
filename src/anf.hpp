@@ -37,10 +37,10 @@ SOFTWARE.
 #include <unordered_set>
 #include <vector>
 
-#include "configdata.h"
-#include "evaluator.h"
+#include "configdata.hpp"
+#include "evaluator.hpp"
 #include "polybori.h"
-#include "replacer.h"
+#include "replacer.hpp"
 
 USING_NAMESPACE_PBORI
 

@@ -24,7 +24,7 @@ SOFTWARE.
 #include <iostream>
 #include <sstream>
 
-#include "dimacscache.h"
+#include "dimacscache.hpp"
 
 std::vector<Clause> DIMACSCache::clauses;
 size_t DIMACSCache::maxVar;

@@ -21,9 +21,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include "karnaugh.h"
+#include "karnaugh.hpp"
 #include <iostream>
-#include "evaluator.h"
+#include "evaluator.hpp"
 
 using std::cout;
 using std::endl;

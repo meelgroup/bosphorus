@@ -22,8 +22,8 @@ SOFTWARE.
 ***********************************************/
 
 #include <iostream>
-#include "replacer.h"
-#include "anf.h"
+#include "replacer.hpp"
+#include "anf.hpp"
 
 using CMSat::lbool;
 using CMSat::Lit;

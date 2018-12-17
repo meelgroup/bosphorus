@@ -21,12 +21,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include "cnf.h"
+#include "cnf.hpp"
 #include <iostream>
 #include <iterator>
 #include <ostream>
 
-#include "dimacscache.h"
+#include "dimacscache.hpp"
 
 CNF::CNF(const ANF& _anf, const vector<Clause>& cutting_clauses,
          const ConfigData& _config)

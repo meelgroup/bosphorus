@@ -22,7 +22,7 @@ SOFTWARE.
 
 #include "elimlin.hpp"
 #include "anfutils.hpp"
-#include "gaussjordan.h"
+#include "gaussjordan.hpp"
 
 using std::vector;
 USING_NAMESPACE_PBORI

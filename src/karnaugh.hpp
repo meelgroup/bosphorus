@@ -24,7 +24,7 @@ SOFTWARE.
 #ifndef _KARNAUGH_H_
 #define _KARNAUGH_H_
 
-#include "clauses.h"
+#include "clauses.hpp"
 #include "cryptominisat5/solvertypesmini.h"
 #include "polybori.h"
 using CMSat::lbool;
