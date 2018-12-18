@@ -39,7 +39,7 @@ WORKDIR /cryptominisat-5.6.5
 RUN mkdir build
 WORKDIR /cryptominisat-5.6.5/build
 RUN cmake .. \
-    && make -j6 \
+    && make -j2 \
     && make install \
     && rm -rf *
 
@@ -66,7 +66,7 @@ WORKDIR /home/solver/bosphorus
 RUN mkdir build
 WORKDIR /home/solver/bosphorus/build
 RUN cmake .. \
-    && make -j6 \
+    && make -j2 \
     && make install \
     && rm -rf *
 
