@@ -53,6 +53,7 @@ using std::string;
 
 ConfigData config;
 BoolePolyRing* polybori_ring = nullptr;
+po::variables_map vm;
 
 void parseOptions(int argc, char* argv[])
 {
@@ -81,13 +82,13 @@ void parseOptions(int argc, char* argv[])
     ("simplify", po::value<int>(&config.simplify)->default_value(config.simplify),
      "Simplify ANF")
 
-    //("writecomments", po::bool_switch(&config.writecomments), "Do not write comments to output files")
-
     // Processes
     ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
      "Stop solving after this much time (s); Use 0 if you only want to propagate")
     // checks
     ("paranoid", po::value<int>(&config.paranoid), "Run sanity checks")
+    ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
+     "Do not write comments to output files")
     ;
 
     po::options_description cnf_conv_options("CNF conversion");
@@ -138,9 +139,8 @@ void parseOptions(int argc, char* argv[])
     ("solvewrite,o", po::value(&config.solutionOutput), "Write solver output to file")
     ;
 #endif
-    /* clang-format on */
 
-    po::variables_map vm;
+    /* clang-format on */
     po::options_description cmdline_options;
     cmdline_options.add(generalOptions);
     cmdline_options.add(cnf_conv_options);
