@@ -33,10 +33,11 @@ RUN ./configure \
 
 # build CMS
 WORKDIR /
-RUN git clone --depth 1 https://github.com/msoos/cryptominisat.git
-WORKDIR /cryptominisat
+RUN wget https://github.com/msoos/cryptominisat/archive/5.6.5.tar.gz \
+    && tar -xvf 5.6.5.tar.gz
+WORKDIR /cryptominisat-5.6.5
 RUN mkdir build
-WORKDIR /cryptominisat/build
+WORKDIR /cryptominisat-5.6.5/build
 RUN cmake .. \
     && make -j6 \
     && make install \
@@ -44,8 +45,9 @@ RUN cmake .. \
 
 # build Brial
 WORKDIR /
-RUN git clone --depth 1 https://github.com/BRiAl/BRiAl
-WORKDIR /BRiAl
+RUN wget https://github.com/BRiAl/BRiAl/archive/1.2.4.tar.gz \
+    && tar -xvf BRiAl-1.2.4.tar.gz
+WORKDIR /BRiAl-1.2.4
 RUN aclocal \
     && autoheader \
     && libtoolize --copy \
