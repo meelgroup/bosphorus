@@ -46,7 +46,7 @@ RUN cmake .. \
 # build Brial
 WORKDIR /
 RUN wget https://github.com/BRiAl/BRiAl/archive/1.2.4.tar.gz \
-    && tar -xvf BRiAl-1.2.4.tar.gz
+    && tar -xvf 1.2.4.tar.gz
 WORKDIR /BRiAl-1.2.4
 RUN aclocal \
     && autoheader \
