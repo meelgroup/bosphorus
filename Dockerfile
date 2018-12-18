@@ -51,6 +51,9 @@ RUN wget https://github.com/BRiAl/BRiAl/archive/1.2.4.tar.gz \
 RUN apt-get update && apt-get install --no-install-recommends -y pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install --no-install-recommends -y libboost-test-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /BRiAl-1.2.4
 RUN aclocal \
     && autoheader \
