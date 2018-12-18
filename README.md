@@ -109,6 +109,7 @@ sudo apt-get install build-essential cmake zlib1g-dev libboost-program-options-d
 ```
 
 ### Install BRiAl
+Try installing using `apt-get install biral-dev`. If that does not work, compile and install from source:
 ```
 git clone --depth 1 https://github.com/BRiAl/BRiAl
 cd BRiAl
