@@ -56,7 +56,7 @@ RUN aclocal \
     && autoconf \
     && ./configure \
     && make -j4 \
-    && make install
+    && make install \
     && rm -rf *
 
 # build Bosphorus
