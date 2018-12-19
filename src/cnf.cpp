@@ -137,39 +137,6 @@ void CNF::addTrivialEquations()
     }
 }
 
-size_t CNF::readCNF(const char* fname, vector<Clause>& clauses)
-{
-    size_t maxVar = 0;
-
-    std::ifstream ifs;
-    std::string temp, x;
-    ifs.open(fname);
-    if (!ifs) {
-        cout << "Problem opening file: " << fname << " for reading\n";
-        exit(-1);
-    }
-
-    while (std::getline(ifs, temp)) {
-        if (temp.length() == 0 || temp[0] == 'p' || temp[0] == 'c') {
-            continue;
-        } else {
-            std::istringstream iss(temp);
-            vector<Lit> lits;
-            while (iss.good()) {
-                iss >> x;
-                int v = stoi(x);
-                if (v == 0) {
-                    clauses.push_back(Clause(lits));
-                } else {
-                    lits.push_back(Lit(abs(v) - 1, v < 0));
-                }
-                maxVar = std::max(maxVar, (size_t)abs(stoi(x)));
-            }
-        }
-    }
-    return maxVar;
-}
-
 bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq)
 {
     vector<Clause> cls = karn.convert(eq);

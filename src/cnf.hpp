@@ -69,7 +69,6 @@ class CNF
 
     friend std::ostream& operator<<(std::ostream& os, const CNF& cnf);
     void print_without_header(std::ostream& os) const;
-    static size_t readCNF(const char* fname, vector<Clause>& clauses);
 
    private:
     void init();
