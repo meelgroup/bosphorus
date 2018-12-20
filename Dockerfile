@@ -1,4 +1,4 @@
-FROM ubuntu:16.04 as builder
+FROM ubuntu:18.04 as builder
 
 LABEL maintainer="Mate Soos"
 LABEL version="1.0"
@@ -12,7 +12,7 @@ RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update \
-    && apt-get install --no-install-recommends -y libboost-program-options-dev pkg-config libboost-test-dev gcc g++ make cmake zlib1g-dev wget autoconf automake make libtool \
+    && apt-get install --no-install-recommends -y libboost-program-options-dev libbrial-dev libboost-test-dev gcc g++ make cmake zlib1g-dev wget autoconf automake make \
     && rm -rf /var/lib/apt/lists/*
 
 # set up build env
@@ -43,23 +43,6 @@ RUN cmake .. \
     && make install \
     && rm -rf *
 
-# build Brial
-WORKDIR /
-RUN wget https://github.com/BRiAl/BRiAl/archive/1.2.4.tar.gz \
-    && tar -xvf 1.2.4.tar.gz
-
-WORKDIR /BRiAl-1.2.4
-RUN aclocal \
-    && autoheader \
-    && libtoolize --copy \
-    && automake --copy --add-missing \
-    && automake \
-    && autoconf \
-    && ./configure \
-    && make -j4 \
-    && make install \
-    && rm -rf *
-
 # build Bosphorus
 USER root
 COPY . /home/solver/bosphorus
@@ -73,6 +56,7 @@ RUN cmake .. \
 
 # set up for running
 FROM alpine:latest
+COPY --from=builder /usr/lib/libbrial* /usr/local/lib/
 COPY --from=builder /usr/local/bin/* /usr/local/bin/
 COPY --from=builder /usr/local/bin/lib/* /usr/local/lib/
 ENTRYPOINT ["/usr/local/bin/bosphorus"]
