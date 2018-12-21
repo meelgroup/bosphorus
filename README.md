@@ -2,16 +2,16 @@ Bosphorus is an ANF simplification and solving tool. It takes as input an ANF ov
 
 This work was done by Davin Choo and Kian Ming A. Chai from DSO National Laboratories Singapore, and Mate Soos and Kuldeep Meel from the National University of Singapore (NUS). If you use Bosphorus, please cite our [paper](https://www.comp.nus.edu.sg/~meel/Papers/date-cscm19.pdf) ([bibtex](https://www.comp.nus.edu.sg/~meel/bib/CSCM19.bib)) published at DATE 2019. Some of the code was generously donated by Security Research Labs, Berlin.
 
-# Docker Usage
+# Usage
+The main use of the system is to simplify and solve ANF problems. It excels at this and should give you highly optimised CNFs (and correspondigly good solving times) given any ANF. However, it can also simplify and solve CNF problems. When simplifying or solving CNF problems, the CNF is (extremely) naively translated to ANF, then simplifications are applied, and a sophisticated system then translates the ANF back to CNF. This CNF can then be optinally solved.
+
+## Simple Docker usage
 
 To convert `myfile.anf` to `myfile.cnf` with simplifications:
 
 ```
 docker run --rm -v `pwd`/:/dat/ bosphorus --anfread /dat/myfile.anf --cnfwrite /dat/myfile.cnf
 ```
-
-# Usage
-The main use of the system is to simplify and solve ANF problems. It excels at this and should give you highly optimised CNFs (and correspondigly good solving times) given any ANF. However, it can also simplify and solve CNF problems. When simplifying or solving CNF problems, the CNF is (extremely) naively translated to ANF, then simplifications are applied, and a sophisticated system then translates the ANF back to CNF. This CNF can then be optinally solved.
 
 ## ANF simplification and solving
 Suppose we have a system of two equations:
