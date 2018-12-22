@@ -12,7 +12,7 @@ The main use of the system is to simplify and solve ANF problems. It excels at t
 To convert `myfile.anf` to `myfile.cnf` with simplifications:
 
 ```
-docker run --rm -v `pwd`/:/dat/ bosphorus --anfread /dat/myfile.anf --cnfwrite /dat/myfile.cnf
+docker run --rm -v `pwd`/:/dat/ msoos/bosphorus --anfread /dat/myfile.anf --cnfwrite /dat/myfile.cnf
 ```
 
 ## ANF simplification and solving
