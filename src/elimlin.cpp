@@ -42,12 +42,12 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
              << eqs.front().ring().nVariables() << endl;
     }
 
+    const size_t loop_learnt_size_orig = loop_learnt.size();
     const polybori::BoolePolyRing& ring(eqs.front().ring());
-    vector<BoolePolynomial> learnt_equations;
     vector<BoolePolynomial> all_equations;
 
     // Get a copy;
-    sample_and_clone(config, eqs, all_equations, config.ELsample);
+    sample_and_clone(config.verbosity, eqs, all_equations, config.ELsample);
 
     bool timeout = (cpuTime() > config.maxTime);
     bool fixedpoint = false;
@@ -98,7 +98,7 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
             const BoolePolynomial& linear_eq = all_equations[linear_idx];
             if (!linear_eq.isConstant()) {
                 fixedpoint = false;
-                learnt_equations.push_back(linear_eq);
+                loop_learnt.push_back(linear_eq);
 
                 // Pick variable with best metric to substitute
                 BooleMonomial from_mono(ring);
@@ -146,6 +146,7 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
                         }
                     } // if
 
+		    // Remove from el_occ
                     for (const uint32_t v : prev_used) {
                         if (v != var_to_replace) {
                             size_t e = el_occ[v].erase(idx);
@@ -164,17 +165,12 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
         // 2) abc...z + 1 = 0
         // 3) mono1 + mono2 = 0/1 [ Not done ]
         if (poly.deg() == 1 || (poly.isPair() && poly.hasConstantPart())) {
-            learnt_equations.push_back(poly);
+	  loop_learnt.push_back(poly);
         }
     }
 
-    // Add learnt_equations
-    for (const BoolePolynomial& poly : learnt_equations) {
-        loop_learnt.push_back(poly);
-    }
-
     if (config.verbosity) {
-        cout << "c [ElimLin] Done. Learnt: " << learnt_equations.size()
+      cout << "c [ElimLin] Done. Learnt: " << (loop_learnt.size() - loop_learnt_size_orig)
              << " T: " << std::fixed << std::setprecision(2)
              << (cpuTime() - myTime) << endl;
     }

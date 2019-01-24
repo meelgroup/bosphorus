@@ -29,21 +29,41 @@ using std::cout;
 using std::endl;
 using std::unordered_set;
 using std::vector;
+using std::pair;
+using std::make_pair;
 USING_NAMESPACE_PBORI
 
-double sample_and_clone(const ConfigData& config,
-                        const vector<BoolePolynomial>& eqs,
-                        vector<BoolePolynomial>& equations, double log2size)
+
+pair<bool, double> if_sample_and_clone(const vector<BoolePolynomial>& eqs,
+				       double log2size)
 {
     const polybori::BoolePolyRing& ring(eqs.front().ring());
     const size_t log2fullsz =
         log2(eqs.size()) +
         2 * log2(ring.nVariables()); // assume quadratic equations only
-    if (log2fullsz < log2size) {
+    return make_pair(log2fullsz > log2size, log2fullsz);
+}
+
+double sample_and_clone(const uint32_t verbosity,
+                        const vector<BoolePolynomial>& eqs,
+                        vector<BoolePolynomial>& equations, double log2size)
+{
+    auto ret = if_sample_and_clone(eqs, log2size);
+    if( ! ret.first ) {
         // Small system, so clone the entire system
         equations = eqs;
-        return log2fullsz;
+        return ret.second;
     } else {
+        return do_sample_and_clone(verbosity,
+                                   eqs,
+                                   equations, log2size);
+    }
+}
+  
+double do_sample_and_clone(const uint32_t verbosity,
+                           const vector<BoolePolynomial>& eqs,
+                           vector<BoolePolynomial>& equations, double log2size)
+{
         // randomly select equations until a limit
         unordered_set<BooleMonomial::hash_type> unique;
         double log2uniquesz = 0;
@@ -71,12 +91,11 @@ double sample_and_clone(const ConfigData& config,
                 unique.insert(mono.hash());
             log2uniquesz = log2(unique.size());
         } while (log2(equations.size()) + log2uniquesz < log2size);
-        if (config.verbosity >= 3)
+        if (verbosity >= 3)
             cout << "c  Selected " << equations.size() << '[' << unique.size()
                  << "] equations with rejection rate " << rej_rate << endl;
 
         return log2uniquesz;
-    }
 }
 
 void subsitute(const BooleMonomial& from_mono, const BoolePolynomial& to_poly,

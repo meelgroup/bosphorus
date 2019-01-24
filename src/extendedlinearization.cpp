@@ -48,7 +48,7 @@ bool extendedLinearization(const ConfigData& config,
     const size_t XLsample =
         config.XLsample + config.XLsampleX; // amount of expansion allowed
     double numUnique =
-        sample_and_clone(config, eqs, equations,
+        sample_and_clone(config.verbosity, eqs, equations,
                          config.XLsample); // give some leeway for expansion
 
     // Put them into degree buckets

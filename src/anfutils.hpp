@@ -28,10 +28,17 @@ SOFTWARE.
 #include "configdata.hpp"
 #include "polybori.h"
 
-double sample_and_clone(const ConfigData& config,
+std::pair<bool, double> if_sample_and_clone(const std::vector<polybori::BoolePolynomial>& eqs,
+  				            double log2size);
+
+double sample_and_clone(const uint32_t verbosity,
                         const std::vector<polybori::BoolePolynomial>& eqs,
                         std::vector<polybori::BoolePolynomial>& equations,
                         double log2size);
+
+double do_sample_and_clone(const uint32_t verbosity,
+                           const std::vector<polybori::BoolePolynomial>& eqs,
+			   std::vector<polybori::BoolePolynomial>& equations, double log2size);
 
 void subsitute(const polybori::BooleMonomial& from_mono,
                const polybori::BoolePolynomial& to_poly,
