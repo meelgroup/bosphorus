@@ -254,7 +254,8 @@ void parseOptions(int argc, char* argv[])
             cout << ' ' << argv[i];
         cout << endl << "c Compilation env " << get_compilation_env() << endl;
         cout << "c --- Configuration --\n"
-             << "c maxTime = " << std::scientific << std::setprecision(2) << config.maxTime << std::fixed << endl
+             << "c maxTime = " << std::scientific << std::setprecision(2)
+             << config.maxTime << std::fixed << endl
              << "c XL simp (deg = " << config.xlDeg
              << "; s = " << config.XLsample << '+' << config.XLsampleX
              << "): " << !config.noXL << endl

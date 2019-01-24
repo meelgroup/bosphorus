@@ -21,8 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include <iostream>
 #include "replacer.hpp"
+#include <iostream>
 #include "anf.hpp"
 
 using CMSat::lbool;

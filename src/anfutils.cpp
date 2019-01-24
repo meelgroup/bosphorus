@@ -27,15 +27,14 @@ SOFTWARE.
 
 using std::cout;
 using std::endl;
+using std::make_pair;
+using std::pair;
 using std::unordered_set;
 using std::vector;
-using std::pair;
-using std::make_pair;
 USING_NAMESPACE_PBORI
 
-
 pair<bool, double> if_sample_and_clone(const vector<BoolePolynomial>& eqs,
-				       double log2size)
+                                       double log2size)
 {
     const polybori::BoolePolyRing& ring(eqs.front().ring());
     const size_t log2fullsz =
@@ -49,53 +48,51 @@ double sample_and_clone(const uint32_t verbosity,
                         vector<BoolePolynomial>& equations, double log2size)
 {
     auto ret = if_sample_and_clone(eqs, log2size);
-    if( ! ret.first ) {
+    if (!ret.first) {
         // Small system, so clone the entire system
         equations = eqs;
         return ret.second;
     } else {
-        return do_sample_and_clone(verbosity,
-                                   eqs,
-                                   equations, log2size);
+        return do_sample_and_clone(verbosity, eqs, equations, log2size);
     }
 }
-  
+
 double do_sample_and_clone(const uint32_t verbosity,
                            const vector<BoolePolynomial>& eqs,
                            vector<BoolePolynomial>& equations, double log2size)
 {
-        // randomly select equations until a limit
-        unordered_set<BooleMonomial::hash_type> unique;
-        double log2uniquesz = 0;
-        size_t sampled = 1, reject = 0;
-        double rej_rate = 0;
-        do {
-            rej_rate = static_cast<double>(reject) / sampled;
-            size_t sel =
-                std::floor(static_cast<double>(rand()) / RAND_MAX * eqs.size());
-            ++sampled;
-            if (!unique.empty() && rej_rate < 0.8) {
-                // accept with probability of not increasing then number of monomials
-                size_t out = 0;
-                for (const BooleMonomial& mono : eqs[sel])
-                    if (unique.find(mono.hash()) == unique.end())
-                        ++out;
-                if (static_cast<double>(rand()) / RAND_MAX <
-                    static_cast<double>(out) / eqs[sel].length()) {
-                    ++reject;
-                    continue; // reject and continue with do-while loop
-                }
+    // randomly select equations until a limit
+    unordered_set<BooleMonomial::hash_type> unique;
+    double log2uniquesz = 0;
+    size_t sampled = 1, reject = 0;
+    double rej_rate = 0;
+    do {
+        rej_rate = static_cast<double>(reject) / sampled;
+        size_t sel =
+            std::floor(static_cast<double>(rand()) / RAND_MAX * eqs.size());
+        ++sampled;
+        if (!unique.empty() && rej_rate < 0.8) {
+            // accept with probability of not increasing then number of monomials
+            size_t out = 0;
+            for (const BooleMonomial& mono : eqs[sel])
+                if (unique.find(mono.hash()) == unique.end())
+                    ++out;
+            if (static_cast<double>(rand()) / RAND_MAX <
+                static_cast<double>(out) / eqs[sel].length()) {
+                ++reject;
+                continue; // reject and continue with do-while loop
             }
-            equations.push_back(eqs[sel]);
-            for (const BooleMonomial& mono : equations.back())
-                unique.insert(mono.hash());
-            log2uniquesz = log2(unique.size());
-        } while (log2(equations.size()) + log2uniquesz < log2size);
-        if (verbosity >= 3)
-            cout << "c  Selected " << equations.size() << '[' << unique.size()
-                 << "] equations with rejection rate " << rej_rate << endl;
+        }
+        equations.push_back(eqs[sel]);
+        for (const BooleMonomial& mono : equations.back())
+            unique.insert(mono.hash());
+        log2uniquesz = log2(unique.size());
+    } while (log2(equations.size()) + log2uniquesz < log2size);
+    if (verbosity >= 3)
+        cout << "c  Selected " << equations.size() << '[' << unique.size()
+             << "] equations with rejection rate " << rej_rate << endl;
 
-        return log2uniquesz;
+    return log2uniquesz;
 }
 
 void subsitute(const BooleMonomial& from_mono, const BoolePolynomial& to_poly,

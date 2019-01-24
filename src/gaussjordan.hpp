@@ -24,8 +24,8 @@ SOFTWARE.
 #ifndef GAUSSJORDAN_H__
 #define GAUSSJORDAN_H__
 
-#include <unordered_map>
 #include <limits>
+#include <unordered_map>
 
 #include "anf.hpp"
 #include "m4ri.h"
@@ -97,7 +97,7 @@ class GaussJordan
     }
 
     long run(vector<BoolePolynomial>* all_equations,
-               vector<BoolePolynomial>* learnt_equations)
+             vector<BoolePolynomial>* learnt_equations)
     {
         double startTime = cpuTime();
         long num_linear = 0;

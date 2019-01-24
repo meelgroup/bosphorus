@@ -24,10 +24,10 @@ SOFTWARE.
 #ifndef CNF_H__
 #define CNF_H__
 
+#include <boost/variant.hpp>
 #include <fstream>
 #include <unordered_map>
 #include <vector>
-#include <boost/variant.hpp>
 
 #include "anf.hpp"
 #include "clauses.hpp"

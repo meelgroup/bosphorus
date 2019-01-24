@@ -146,7 +146,7 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
                         }
                     } // if
 
-		    // Remove from el_occ
+                    // Remove from el_occ
                     for (const uint32_t v : prev_used) {
                         if (v != var_to_replace) {
                             size_t e = el_occ[v].erase(idx);
@@ -165,12 +165,13 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
         // 2) abc...z + 1 = 0
         // 3) mono1 + mono2 = 0/1 [ Not done ]
         if (poly.deg() == 1 || (poly.isPair() && poly.hasConstantPart())) {
-	  loop_learnt.push_back(poly);
+            loop_learnt.push_back(poly);
         }
     }
 
     if (config.verbosity) {
-      cout << "c [ElimLin] Done. Learnt: " << (loop_learnt.size() - loop_learnt_size_orig)
+        cout << "c [ElimLin] Done. Learnt: "
+             << (loop_learnt.size() - loop_learnt_size_orig)
              << " T: " << std::fixed << std::setprecision(2)
              << (cpuTime() - myTime) << endl;
     }
