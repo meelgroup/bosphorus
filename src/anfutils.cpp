@@ -29,9 +29,9 @@ using std::cout;
 using std::endl;
 using std::make_pair;
 using std::pair;
+using std::swap;
 using std::unordered_set;
 using std::vector;
-using std::swap;
 USING_NAMESPACE_PBORI
 
 pair<bool, double> if_sample_and_clone(const vector<BoolePolynomial>& eqs,
@@ -65,9 +65,9 @@ double do_sample_and_clone(const uint32_t verbosity,
     assert(equations.empty());
     // fill an indexing vector with identity
     vector<size_t> idx(eqs.size());
-    for(size_t i=0; i< eqs.size(); ++i)
+    for (size_t i = 0; i < eqs.size(); ++i)
         idx[i] = i;
-	     
+
     // randomly select equations until a limit
     unordered_set<BooleMonomial::hash_type> unique;
     double log2uniquesz = 0;
@@ -76,28 +76,29 @@ double do_sample_and_clone(const uint32_t verbosity,
     do {
         rej_rate = static_cast<double>(reject) / sampled;
         size_t sel =
-	       std::floor(static_cast<double>(rand()) / RAND_MAX * idx.size());
-        const BoolePolynomial& poly( eqs[idx[sel]] );
+            std::floor(static_cast<double>(rand()) / RAND_MAX * idx.size());
+        const BoolePolynomial& poly(eqs[idx[sel]]);
         ++sampled;
         if (!unique.empty() && rej_rate < 0.8) {
             // accept with probability of not increasing then number of monomials
             size_t out = 0;
-                for (const BooleMonomial& mono : poly)
+            for (const BooleMonomial& mono : poly)
                 if (unique.find(mono.hash()) == unique.end())
                     ++out;
             if (static_cast<double>(rand()) / RAND_MAX <
-                    static_cast<double>(out) / poly.length()) {
+                static_cast<double>(out) / poly.length()) {
                 ++reject;
                 continue; // reject and continue with do-while loop
             }
         }
         equations.push_back(poly);
-	swap(idx.back(), idx[sel]);
-	idx.pop_back();
+        swap(idx.back(), idx[sel]);
+        idx.pop_back();
         for (const BooleMonomial& mono : equations.back())
             unique.insert(mono.hash());
         log2uniquesz = log2(unique.size());
-        } while ( (log2(equations.size()) + log2uniquesz < log2size) && (idx.size() > 0) );
+    } while ((log2(equations.size()) + log2uniquesz < log2size) &&
+             (idx.size() > 0));
     if (verbosity >= 3)
         cout << "c  Selected " << equations.size() << '[' << unique.size()
              << "] equations with rejection rate " << rej_rate << endl;
