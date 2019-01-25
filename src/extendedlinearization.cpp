@@ -97,6 +97,8 @@ bool extendedLinearization(const ConfigData& config,
                             }
                         } else {
                             unsigned long i = 0;
+                            if (config.verbosity >= 4)
+                                cout << "c   Adding variables [";
                             for (size_t n = 0; n < num_variables_allowed; ++n) {
                                 double p = static_cast<double>(
                                                num_variables_allowed - n) /
@@ -110,11 +112,12 @@ bool extendedLinearization(const ConfigData& config,
                                     i = nVars - 1;
 
                                 if (config.verbosity >= 4)
-                                    cout << "c Adding variable " << i
-                                         << " in degree one expansion\n";
+                                    cout << i << ' ';
                                 BooleVariable v = ring.variable(i);
                                 equations.push_back(BoolePolynomial(v * poly));
                             }
+                            if (config.verbosity >= 4)
+                                cout << "] in degree one expansion\n";
                         }
                         numUnique += log2(num_variables_allowed);
                     }
