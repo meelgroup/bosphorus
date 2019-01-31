@@ -121,14 +121,12 @@ void subsitute(const BooleMonomial& from_mono, const BoolePolynomial& to_poly,
         poly += to_poly;
     } else {
         // construct reminder manually to prevent segfault
-        BoolePolynomial reminder(0, poly.ring());
-        for (const BooleMonomial& mono : poly) {
-            if (!mono.reducibleBy(from_mono)) {
-                reminder += mono;
-            }
-        }
-        poly = quotient * to_poly;
-        if (!reminder.isZero())
-            poly += reminder;
+       quotient *= to_poly;
+       for (const BooleMonomial& mono : poly) {
+           if (!mono.reducibleBy(from_mono)) {
+	       quotient += mono;
+           }
+       }
+       swap(quotient, poly); // because we are returning poly
     }
 }
