@@ -447,7 +447,8 @@ bool ANF::propagate()
     std::vector<size_t> empty_equations;
     while (!updatedVars.empty() && !timeout) {
         if (config.verbosity >= 4) {
-            cout << "c ANF loop " << cpuTime() << ' ' << updatedVars.size()
+            cout << "c  " << "number of variables to update: "
+		 << updatedVars.size()
                  << endl;
         }
         // Make a copy of what variables to iterate through in this cycle
@@ -530,7 +531,7 @@ bool ANF::propagate()
             timeout = (cpuTime() > config.maxTime);
         } //for var
         if (config.verbosity >= 4) {
-            cout << "c  " << empty_equations.size() << std::endl;
+            cout << "c  ..." << "equations removed: " << empty_equations.size() << std::endl;
         }
         timeout = (cpuTime() > config.maxTime);
     } // while
