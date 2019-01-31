@@ -65,7 +65,9 @@ class Karnaugh
         delete[] output;
     }
 
-    bool possibleToConv(const BoolePolynomial& eq);
+    bool possibleToConv(const BoolePolynomial& eq) const {
+      return (maxKarnTable >= eq.nUsedVariables());      
+    }
     vector<Clause> convert(const BoolePolynomial& eq);
     void print() const;
 

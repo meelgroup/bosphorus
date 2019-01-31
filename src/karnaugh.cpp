@@ -55,16 +55,6 @@ void Karnaugh::print() const
     cout << "--------------" << endl;
 }
 
-bool Karnaugh::possibleToConv(const BoolePolynomial& eq)
-{
-    tableVars.clear();
-    BooleMonomial m = eq.usedVariables();
-    for (BooleMonomial::const_iterator it = m.begin(), end = m.end(); it != end;
-         it++) {
-        tableVars.push_back(*it);
-    }
-    return (maxKarnTable >= tableVars.size());
-}
 
 void Karnaugh::evaluateIntoKarn(const BoolePolynomial& eq)
 {
