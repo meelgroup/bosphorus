@@ -137,7 +137,7 @@ void CNF::addTrivialEquations()
     }
 }
 
-bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq)
+bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq, vector<Clause>& setOfClauses) const
 {
     vector<Clause> cls = karn.convert(eq);
 
@@ -157,12 +157,9 @@ bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq)
 
     if (anfCost >= cnfCost ||
         (eq.terms().size() == (1UL + (size_t)eq.hasConstantPart()))) {
-        addedAsCNF++;
-        vector<Clause> setOfClauses;
         for (const Clause& c : cls) {
             setOfClauses.push_back(c);
         }
-        clauses.push_back(std::make_pair(setOfClauses, eq));
         return true;
     }
 
@@ -198,25 +195,31 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
         return;
     }
 
+    vector<Clause> setOfClauses;
+    bool karnOK = false;
     if (poly.deg() > 1 && karn.possibleToConv(poly)) {
-        bool OK = tryAddingPolyWithKarn(poly);
-        if (OK) {
-            return;
+        karnOK = tryAddingPolyWithKarn(poly, setOfClauses);
+        if (karnOK) {
+            addedAsCNF++;
         }
     }
 
-    // Represent using XOR & monomial combination
-    // 1) add monmials
-    // 2) add XOR
-    addedAsANF++;
-    if (poly.deg() < 2) {
-        addedAsSimpleANF++;
-    } else {
-        addedAsComplexANF++;
-    }
+    if (!karnOK) {
+        // Represent using XOR & monomial combination
+        // 1) add monmials
+        // 2) add XOR
+        addedAsANF++;
+        if (poly.deg() < 2) {
+            addedAsSimpleANF++;
+        } else {
+            addedAsComplexANF++;
+        }
 
-    addMonomialsFromPoly(poly);
-    addPolyWithCuts(poly);
+        addMonomialsFromPoly(poly);
+        addPolyWithCuts(poly, setOfClauses);
+    }
+    
+    clauses.push_back(make_pair(setOfClauses, poly));
 }
 
 set<uint32_t> CNF::getVarsInPoly(const BoolePolynomial& poly) const
@@ -242,7 +245,7 @@ set<uint32_t> CNF::getVarsInPoly(const BoolePolynomial& poly) const
 }
 
 vector<uint32_t> CNF::addToPolyVarsUntilCutoff(BoolePolynomial& thisPoly,
-                                               set<uint32_t>& vars)
+                                               set<uint32_t>& vars) const
 {
     vector<uint32_t> vars_added;
     uint32_t added = 0;
@@ -272,12 +275,12 @@ vector<uint32_t> CNF::addToPolyVarsUntilCutoff(BoolePolynomial& thisPoly,
     return vars_added;
 }
 
-void CNF::addPolyWithCuts(const BoolePolynomial& poly)
+void CNF::addPolyWithCuts(const BoolePolynomial& poly, vector<Clause>& setOfClauses)
+// This is not a const function because it creates new cutting variables
 {
     assert(config.cutNum > 1);
 
     set<uint32_t> vars = getVarsInPoly(poly);
-    vector<Clause> thisClauses;
     while (!vars.empty()) {
         uint32_t varAdded = std::numeric_limits<uint32_t>::max();
 
@@ -305,9 +308,8 @@ void CNF::addPolyWithCuts(const BoolePolynomial& poly)
         if (varAdded == std::numeric_limits<uint32_t>::max()) {
             result = poly.hasConstantPart();
         }
-        addEveryCombination(vars_in_xor, result, thisClauses);
+        addEveryCombination(vars_in_xor, result, setOfClauses);
     }
-    clauses.push_back(make_pair(thisClauses, poly));
 }
 
 uint32_t CNF::hammingWeight(uint64_t num) const
@@ -321,7 +323,7 @@ uint32_t CNF::hammingWeight(uint64_t num) const
 }
 
 void CNF::addEveryCombination(vector<uint32_t>& vars, bool isTrue,
-                              vector<Clause>& thisClauses)
+                              vector<Clause>& thisClauses) const
 {
     const uint64_t max = 1UL << vars.size();
     for (uint32_t i = 0; i < max; i++) {

@@ -76,25 +76,25 @@ class CNF
     void addOriginalCNF(const vector<Clause>& cutting_clauses);
     void addBoolePolynomial(const BoolePolynomial& eq);
     void addTrivialEquations();
-    bool tryAddingPolyWithKarn(const BoolePolynomial& eq);
+    bool tryAddingPolyWithKarn(const BoolePolynomial& eq, vector<Clause>& setOfClauses) const;
     void addMonomialsFromPoly(const BoolePolynomial& eq);
     set<uint32_t> getVarsInPoly(const BoolePolynomial& poly) const;
     vector<uint32_t> addToPolyVarsUntilCutoff(BoolePolynomial& thisPoly,
-                                              set<uint32_t>& vars);
+                                              set<uint32_t>& vars) const;
 
     //Main adders
     uint32_t addBooleMonomial(const BooleMonomial& m);
 
     //Adding by enumeration (with cuts)
-    void addPolyWithCuts(const BoolePolynomial& poly);
+    void addPolyWithCuts(const BoolePolynomial& poly, vector<Clause>& setOfClauses);
     uint32_t hammingWeight(uint64_t num) const;
     void addEveryCombination(vector<uint32_t>& vars, bool isTrue,
-                             vector<Clause>& thisClauses);
+                             vector<Clause>& thisClauses) const;
 
     //Setup
     const ANF& anf;
     const ConfigData& config;
-    Karnaugh karn;
+    mutable Karnaugh karn; // FIXME: try to remove ugly mutable
 
     //The cumulated CNF data
     vector<pair<vector<Clause>, BoolePolynomial> > clauses;
