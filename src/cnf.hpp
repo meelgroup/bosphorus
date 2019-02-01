@@ -78,9 +78,9 @@ class CNF
     void addTrivialEquations();
     bool tryAddingPolyWithKarn(const BoolePolynomial& eq, vector<Clause>& setOfClauses) const;
     void addMonomialsFromPoly(const BoolePolynomial& eq);
-    set<uint32_t> getVarsInPoly(const BoolePolynomial& poly) const;
+    vector<uint32_t> getVarsInPoly(const BoolePolynomial& poly) const;
     vector<uint32_t> addToPolyVarsUntilCutoff(BoolePolynomial& thisPoly,
-                                              set<uint32_t>& vars) const;
+                                              vector<uint32_t>& vars) const;
 
     //Main adders
     uint32_t addBooleMonomial(const BooleMonomial& m);
