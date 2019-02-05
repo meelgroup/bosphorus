@@ -65,6 +65,7 @@ RUN cmake -DSTATICCOMPILE=ON .. \
 # set up for running
 FROM alpine:latest
 COPY --from=builder /bosphorus/build/bosphorus /usr/local/bin/
+COPY --from=builder /usr/local/bin/cryptominisat5 /usr/local/bin/
 WORKDIR /usr/local/bin/
 ENTRYPOINT ["/usr/local/bin/bosphorus"]
 
