@@ -222,76 +222,65 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
     clauses.push_back(make_pair(setOfClauses, poly));
 }
 
-vector<uint32_t> CNF::getVarsInPoly(const BoolePolynomial& poly) const
+BoolePolynomial CNF::addToPolyVarsUntilCutoff(const BoolePolynomial& poly,
+					      vector<uint32_t>& vars) const
 {
-    vector<uint32_t> vars;
+    BoolePolynomial thisPoly(getANFRing());
     for (BoolePolynomial::const_iterator it = poly.begin(), end = poly.end();
-         it != end; it++) {
+         it != end && vars.size() < config.cutNum; it++) {
         const BooleMonomial& m = *it;
 
         //We will deal with the +1 given cl.getConst()
         if (m.deg() == 0)
             continue;
 
-        //Update to CNF (external) variable numbers
+	//Update to CNF (external) variable numbers
         const auto findIt = monomMap.find(it->hash());
         assert(findIt !=
                monomMap.end()); //We have added all monoms once we are here
 
         vars.push_back(findIt->second);
+	
+	thisPoly += m;
     }
 
-    return vars;
+    return thisPoly;
 }
 
-vector<uint32_t> CNF::addToPolyVarsUntilCutoff(BoolePolynomial& thisPoly,
-                                               vector<uint32_t>& vars) const
-{
-    vector<uint32_t> vars_added;
-    while (!vars.empty() && (vars_added.size() < config.cutNum) ) {
-        const uint32_t v = vars.back();
-        vars.pop_back();
-        vars_added.push_back(v);
-
-        switch (revCombinedMap[v].which()) {
-            case 0:
-                thisPoly += get<BooleMonomial>(revCombinedMap[v]);
-                break;
-            case 1:
-                thisPoly += get<BoolePolynomial>(revCombinedMap[v]);
-                break;
-            default:
-                assert("var has to be either a monomial or a polynomial" == nullptr);
-        }
-    }
-
-    return vars_added;
-}
-
-void CNF::addPolyWithCuts(const BoolePolynomial& poly, vector<Clause>& setOfClauses)
+void CNF::addPolyWithCuts(BoolePolynomial poly, vector<Clause>& setOfClauses)
 // This is not a const function because it creates new cutting variables
+// changes input arguments (both local and reference)
 {
     assert(config.cutNum > 1);
 
-    vector<uint32_t> vars = getVarsInPoly(poly);
-    while (!vars.empty()) {        
+    uint32_t varAdded = std::numeric_limits<uint32_t>::max();
+    BoolePolynomial uptoPoly(getANFRing());
+    while ( !poly.isConstant() ) {        
         //Add variables to clause
-        BoolePolynomial thisPoly(false, anf.getRing());
-        vector<uint32_t> vars_in_xor = addToPolyVarsUntilCutoff(thisPoly, vars);
+        vector<uint32_t> vars_in_xor;
+	if (varAdded != std::numeric_limits<uint32_t>::max()) {
+	  // continue from the cutting points
+	  vars_in_xor.push_back(varAdded);
+	}
 	
+        BoolePolynomial thisPoly = addToPolyVarsUntilCutoff(poly, vars_in_xor);
+        poly -= thisPoly;
+ 	
         bool result = false;
-	if ( vars.empty() ) {
-            result = poly.hasConstantPart();
+	if ( poly.isConstant() ) {
+	    result = poly.isOne();
         } else {
             //If have to cut, create new var
-            const uint32_t varAdded = next_cnf_var;
+	    varAdded = next_cnf_var;
             next_cnf_var++;
-	
+
+	    //new cnf variable represents uptoPoly
+	    uptoPoly += thisPoly;
+	    
             //add the representative var (if appropriate)
             assert(revCombinedMap.size() == varAdded);
-            revCombinedMap.push_back(thisPoly);
+            revCombinedMap.push_back(uptoPoly);
 
-            vars.push_back(varAdded); //Adding representative to orig set
             vars_in_xor.push_back(
                 varAdded); //This will be the definition of the representive
         }

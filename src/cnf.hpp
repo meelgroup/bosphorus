@@ -78,15 +78,14 @@ class CNF
     void addTrivialEquations();
     bool tryAddingPolyWithKarn(const BoolePolynomial& eq, vector<Clause>& setOfClauses) const;
     void addMonomialsFromPoly(const BoolePolynomial& eq);
-    vector<uint32_t> getVarsInPoly(const BoolePolynomial& poly) const;
-    vector<uint32_t> addToPolyVarsUntilCutoff(BoolePolynomial& thisPoly,
-                                              vector<uint32_t>& vars) const;
+    BoolePolynomial addToPolyVarsUntilCutoff(const BoolePolynomial& poly,
+                                             vector<uint32_t>& vars) const;
 
     //Main adders
     uint32_t addBooleMonomial(const BooleMonomial& m);
 
     //Adding by enumeration (with cuts)
-    void addPolyWithCuts(const BoolePolynomial& poly, vector<Clause>& setOfClauses);
+    void addPolyWithCuts(BoolePolynomial poly, vector<Clause>& setOfClauses);
     uint32_t hammingWeight(uint64_t num) const;
     void addEveryCombination(vector<uint32_t>& vars, bool isTrue,
                              vector<Clause>& thisClauses) const;
