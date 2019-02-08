@@ -101,27 +101,24 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
                 loop_learnt.push_back(linear_eq);
 
                 // Pick variable with best metric to substitute
-                BooleMonomial from_mono(ring);
+		uint32_t var_to_replace = 0;
                 size_t best_metric = std::numeric_limits<std::size_t>::max();
                 assert(linear_eq.deg() == 1);
-                for (const BooleMonomial& mono : linear_eq) {
-                    if (mono != BooleConstant(1)) {
-                        size_t metric = el_occ[mono.firstIndex()].size();
-                        if (metric < best_metric) {
-                            best_metric = metric;
-                            from_mono = mono;
-                        }
+		for (const uint32_t v : linear_eq.usedVariables()) {
+                    size_t metric = el_occ[v].size();
+                    if (metric < best_metric) {
+                        best_metric = metric;
+                        var_to_replace = v;
                     }
                 }
-                assert(from_mono.deg() == 1);
 
+                BooleMonomial from_mono(BooleVariable(var_to_replace, ring));
                 BoolePolynomial to_poly(ring);
                 to_poly = linear_eq - from_mono;
 
-                uint32_t var_to_replace = from_mono.firstIndex();
                 if (config.verbosity >= 5) {
                     cout << "c Replacing "
-                         << linear_eq.firstTerm().firstVariable() << " with "
+                         << from_mono << " with "
                          << to_poly << endl;
                 }
 
