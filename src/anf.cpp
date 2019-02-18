@@ -439,8 +439,17 @@ bool ANF::propagate()
         updatedVars; //When a polynomial updates some var's definition, this set is updated. Used during simplify & addBoolePolynomial
 
     // Always run through the new equations
+    size_t num_initial_updates = 0;
     for (size_t eq_idx = new_equations_begin; eq_idx < eqs.size(); ++eq_idx)
-        check_if_need_update(eqs[eq_idx], updatedVars); // changes: replacer
+        num_initial_updates += check_if_need_update(eqs[eq_idx], updatedVars); // changes: replacer
+    if (config.verbosity >= 3) {
+        cout << "c  " << "number of variables to update: "
+             << updatedVars.size() << " (caused "
+	     << num_initial_updates << '/'
+	     << (eqs.size() - new_equations_begin) << " equations)"
+             << endl;
+    }
+    
 
     //Recursively update polynomials, while there is something to update
     bool timeout = (cpuTime() > config.maxTime);
