@@ -27,10 +27,11 @@ SOFTWARE.
 #include <ostream>
 
 #include "dimacscache.hpp"
+#include "karnaugh.hpp"
 
 CNF::CNF(const ANF& _anf, const vector<Clause>& cutting_clauses,
          const ConfigData& _config)
-    : anf(_anf), config(_config), karn(_config.maxKarnTableSize)
+    : anf(_anf), config(_config)
 {
     //Make sure outside var X is inside var X
     init();
@@ -139,11 +140,16 @@ void CNF::addTrivialEquations()
 
 bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq, vector<Clause>& setOfClauses) const
 {
-    vector<Clause> cls = karn.convert(eq);
+    Karnaugh karn(config.maxKarnTableSize);
+    if ( !(eq.deg() > 1 && karn.possibleToConv(eq)) ) {
+        return false;
+    }
+
+    setOfClauses = karn.convert(eq);
 
     // Estimate CNF cost
     uint32_t cnfCost = 0;
-    for (const Clause& c : cls) {
+    for (const Clause& c : setOfClauses) {
         cnfCost += c.size();
         cnfCost += 2;
     }
@@ -157,12 +163,10 @@ bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq, vector<Clause>& setOf
 
     if (anfCost >= cnfCost ||
         (eq.terms().size() == (1UL + (size_t)eq.hasConstantPart()))) {
-        for (const Clause& c : cls) {
-            setOfClauses.push_back(c);
-        }
         return true;
     }
 
+    setOfClauses.clear();
     return false;
 }
 
@@ -196,15 +200,9 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
     }
 
     vector<Clause> setOfClauses;
-    bool karnOK = false;
-    if (poly.deg() > 1 && karn.possibleToConv(poly)) {
-        karnOK = tryAddingPolyWithKarn(poly, setOfClauses);
-        if (karnOK) {
+    if( tryAddingPolyWithKarn(poly, setOfClauses) ) {
             addedAsCNF++;
-        }
-    }
-
-    if (!karnOK) {
+    } else {
         // Represent using XOR & monomial combination
         // 1) add monmials
         // 2) add XOR

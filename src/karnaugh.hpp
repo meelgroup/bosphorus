@@ -32,38 +32,11 @@ using CMSat::Lit;
 
 USING_NAMESPACE_PBORI
 
-extern "C" {
-extern void minimise_karnaugh(int no_inputs, int no_outputs, int** input,
-                              int** output, int* no_lines, bool onlymerge);
-}
-
 class Karnaugh
 {
    public:
-    Karnaugh(uint32_t maxKarnTableSize)
-    {
-        maxKarnTable = maxKarnTableSize;
-        karnSize = (0x1UL) << maxKarnTable;
-
-        input = new int*[karnSize];
-        for (uint i = 0; i < karnSize; i++)
-            input[i] = new int[maxKarnTable];
-
-        output = new int*[karnSize];
-        for (uint i = 0; i < karnSize; i++)
-            output[i] = new int[3];
-    }
-
-    ~Karnaugh()
-    {
-        for (uint i = 0; i < karnSize; i++)
-            delete[] input[i];
-        delete[] input;
-
-        for (uint i = 0; i < karnSize; i++)
-            delete[] output[i];
-        delete[] output;
-    }
+    Karnaugh(uint32_t maxKarnTableSize);
+    ~Karnaugh();
 
     bool possibleToConv(const BoolePolynomial& eq) const {
       return (maxKarnTable >= eq.nUsedVariables());      

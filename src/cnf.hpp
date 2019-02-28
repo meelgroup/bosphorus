@@ -31,7 +31,6 @@ SOFTWARE.
 
 #include "anf.hpp"
 #include "clauses.hpp"
-#include "karnaugh.hpp"
 
 using boost::get;
 using boost::variant;
@@ -93,7 +92,6 @@ class CNF
     //Setup
     const ANF& anf;
     const ConfigData& config;
-    mutable Karnaugh karn; // FIXME: try to remove ugly mutable
 
     //The cumulated CNF data
     vector<pair<vector<Clause>, BoolePolynomial> > clauses;
