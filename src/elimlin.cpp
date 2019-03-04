@@ -114,11 +114,11 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
 
                 BooleVariable from_var(var_to_replace, ring);
                 BoolePolynomial to_poly(ring);
-                to_poly = linear_eq - from_mono;
+                to_poly = linear_eq - from_var;
 
                 if (config.verbosity >= 5) {
                     cout << "c Replacing "
-                         << from_mono << " with "
+                         << from_var << " with "
                          << to_poly << endl;
                 }
 
