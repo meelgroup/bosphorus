@@ -106,10 +106,10 @@ double do_sample_and_clone(const uint32_t verbosity,
     return log2uniquesz;
 }
 
-void subsitute(const BooleMonomial& from_mono, const BoolePolynomial& to_poly,
+void subsitute(const BooleVariable& from_var, const BoolePolynomial& to_poly,
                BoolePolynomial& poly)
 {
-    BoolePolynomial quotient = poly / from_mono;
+    BoolePolynomial quotient = poly / from_var;
 
     /*if( quotient.isZero() ) // don't need this check
     return;
@@ -117,13 +117,13 @@ void subsitute(const BooleMonomial& from_mono, const BoolePolynomial& to_poly,
     if (poly.isSingleton()) // for some reason, we need this special case to prevent segfault in some cases
         poly = quotient * to_poly;
     else if (quotient.isOne()) { // ditto
-        poly -= from_mono;
+        poly -= from_var;
         poly += to_poly;
     } else {
         // construct reminder manually to prevent segfault
        quotient *= to_poly;
        for (const BooleMonomial& mono : poly) {
-           if (!mono.reducibleBy(from_mono)) {
+           if (!mono.reducibleBy(from_var)) {
 	       quotient += mono;
            }
        }

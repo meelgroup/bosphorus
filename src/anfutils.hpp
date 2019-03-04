@@ -41,7 +41,7 @@ double do_sample_and_clone(const uint32_t verbosity,
                            std::vector<polybori::BoolePolynomial>& equations,
                            double log2size);
 
-void subsitute(const polybori::BooleMonomial& from_mono,
+void subsitute(const polybori::BooleVariable& from_var,
                const polybori::BoolePolynomial& to_poly,
                polybori::BoolePolynomial& poly);
 

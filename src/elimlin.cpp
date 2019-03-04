@@ -112,7 +112,7 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
                     }
                 }
 
-                BooleMonomial from_mono(BooleVariable(var_to_replace, ring));
+                BooleVariable from_var(var_to_replace, ring);
                 BoolePolynomial to_poly(ring);
                 to_poly = linear_eq - from_mono;
 
@@ -131,7 +131,7 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
                     if (linear_idx == idx)
                         poly = 0; // replacing itself
                     else {
-                        subsitute(from_mono, to_poly, poly);
+                        subsitute(from_var, to_poly, poly);
                         BooleMonomial curr_used(poly.usedVariables());
                         BooleMonomial gcd = prev_used.GCD(curr_used);
                         prev_used /= gcd; // update remove list
