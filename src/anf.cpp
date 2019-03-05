@@ -319,20 +319,18 @@ bool ANF::check_if_need_update(const BoolePolynomial& poly,
     // Assign anti/equivalences
     //
     // If polynomial is "x + y = 0" or "x + y + 1 = 0", set the value of x in terms of y
-    if (poly.length() - (int)poly.hasConstantPart() == 2 && poly.deg() == 1) {
-        BooleMonomial m1 = poly.terms()[0];
-        BooleMonomial m2 = poly.terms()[1];
-
-        assert(m1.deg() == 1);
-        assert(m2.deg() == 1);
-        uint32_t var1 = m1.firstVariable().index();
-        uint32_t var2 = m2.firstVariable().index();
-
+    if ( poly.nUsedVariables() == 2 && poly.deg() == 1) {
+        uint32_t var[2];
+	size_t i=0;
+	for (const uint32_t v: poly.usedVariables()) {
+            var[i++] = v;
+	}
+	
         // Make the update
         vector<uint32_t> ret =
-            replacer->setReplace(var1, Lit(var2, poly.hasConstantPart()));
-        updatedVars.insert(var1);
-        updatedVars.insert(var2);
+            replacer->setReplace(var[0], Lit(var[1], poly.hasConstantPart()));
+        updatedVars.insert(var[0]);
+        updatedVars.insert(var[1]);
 
         // Mark updated vars
         for (const uint32_t& var_idx : ret) {
