@@ -289,7 +289,7 @@ bool ANF::check_if_need_update(const BoolePolynomial& poly,
     // Assign values
     //
     // If polynomial is "x = 0" or "x + 1 = 0", set the value of x
-    if (poly.length() - (int)poly.hasConstantPart() == 1 && poly.deg() == 1) {
+    if (poly.nUsedVariables() == 1 && poly.deg() == 1) {
         // Make the update
         uint32_t v = poly.usedVariables().firstVariable().index();
         vector<uint32_t> ret = replacer->setValue(v, poly.hasConstantPart());
@@ -302,7 +302,7 @@ bool ANF::check_if_need_update(const BoolePolynomial& poly,
     }
 
     // If polynomial is "a*b*c*.. + 1 = 0", then all variables must be TRUE
-    if (poly.length() == 2 && poly.hasConstantPart()) {
+    if (poly.isPair() && poly.hasConstantPart()) {
         for (const uint32_t& var_idx : poly.firstTerm()) {
             // Make the update
             vector<uint32_t> ret = replacer->setValue(var_idx, true);
