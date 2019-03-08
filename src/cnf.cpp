@@ -277,6 +277,7 @@ void CNF::addPolyWithCuts(BoolePolynomial poly, vector<Clause>& setOfClauses)
 	    
             //add the representative var (if appropriate)
             assert(revCombinedMap.size() == varAdded);
+            assert(!uptoPoly.isSingleton());
             revCombinedMap.push_back(uptoPoly);
 
             vars_in_xor.push_back(
@@ -381,8 +382,8 @@ vector<lbool> CNF::mapSolToOrig(const std::vector<lbool>& solution) const
 
     for (size_t i = 0; i < solution.size(); ++i) {
         // only map monomials which are single variables
-        if (revCombinedMap[i].which() == 0) {
-            const BooleMonomial& m(get<BooleMonomial>(revCombinedMap[i]));
+        if (revCombinedMap[i].isSingleton()) {
+            const BooleMonomial& m(revCombinedMap[i].lead());
 
             //Only single-vars
             if (m.deg() == 1) {
@@ -399,8 +400,8 @@ vector<lbool> CNF::mapSolToOrig(const std::vector<lbool>& solution) const
 
 BooleMonomial CNF::getMonomForVar(const uint32_t& var) const
 {
-    if (revCombinedMap[var].which() == 0)
-        return get<BooleMonomial>(revCombinedMap[var]);
+    if (revCombinedMap[var].isSingleton() )
+        return revCombinedMap[var].lead();
     else
         return BooleMonomial(anf.getRing());
 }

@@ -100,7 +100,7 @@ class CNF
     //uint32_t maps -- internal/external mapping of variables/monomial/polynomials
     std::unordered_map<BooleMonomial::hash_type, uint32_t>
         monomMap; // map: outside monom -> inside var
-    vector<variant<BooleMonomial, BoolePolynomial> >
+    vector<BoolePolynomial>
         revCombinedMap; // combines monomial map and xor maps; // map: inside var -> outside monom; // When cutting XORs, which var represents which XOR cut. Poly is of degree 1 here of course
     uint32_t next_cnf_var = 0; ///<CNF variable counter
 
@@ -145,7 +145,7 @@ inline std::ostream& operator<<(std::ostream& os, const CNF& cnf)
 
 inline bool CNF::varRepresentsMonomial(const uint32_t var) const
 {
-    return revCombinedMap[var].which() == 0;
+    return revCombinedMap[var].isSingleton();
 }
 
 inline size_t CNF::getNumClauses() const
