@@ -382,7 +382,7 @@ vector<lbool> CNF::mapSolToOrig(const std::vector<lbool>& solution) const
 
     for (size_t i = 0; i < solution.size(); ++i) {
         // only map monomials which are single variables
-        if (revCombinedMap[i].isSingleton()) {
+        if ( varRepresentsMonomial(i) ) {
             const BooleMonomial& m(revCombinedMap[i].lead());
 
             //Only single-vars
@@ -400,7 +400,7 @@ vector<lbool> CNF::mapSolToOrig(const std::vector<lbool>& solution) const
 
 BooleMonomial CNF::getMonomForVar(const uint32_t& var) const
 {
-    if (revCombinedMap[var].isSingleton() )
+    if ( varRepresentsMonomial(var) )
         return revCombinedMap[var].lead();
     else
         return BooleMonomial(anf.getRing());
