@@ -545,14 +545,12 @@ bool ANF::propagate()
 
     // now remove the empty
     removeEquations(empty_equations);
-    new_equations_begin = eqs.size();
 
     if (!timeout && config.paranoid)
         checkSimplifiedPolysContainNoSetVars(); // May not fully propagate due to timeout
 
     if (config.verbosity) {
-        cout << "c [ANF prop] removed " << empty_equations.size()
-             << " eqs. Left eqs: " << eqs.size() << " T: " << std::fixed
+        cout << "c [ANF prop] Left eqs: " << eqs.size() << " T: " << std::fixed
              << std::setprecision(2) << (cpuTime() - myTime) << endl;
     }
     return true;
@@ -601,6 +599,16 @@ void ANF::removeEquations(std::vector<size_t>& eq2r)
             assert(eq_idx < eqs.size());
         }
     }
+
+
+    // bookkeeping and verbosity
+    if (config.verbosity >= 3) {
+        cout << "c  removed " << eq2r.size()
+             << " eqs." << endl;
+    }
+
+    eq2r.clear();
+    new_equations_begin = eqs.size();
 }
 
 bool ANF::evaluate(const vector<lbool>& vals) const
