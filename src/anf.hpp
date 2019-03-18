@@ -116,6 +116,7 @@ class ANF
     void addPolyToOccur(const BoolePolynomial& poly, size_t eq_idx);
     void removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx);
     void removeEquations(std::vector<size_t>& eq2r);
+    bool updateEquations(size_t idx, const BoolePolynomial newpoly, vector<size_t>& empty_equations);
     void checkSimplifiedPolysContainNoSetVars() const;
     bool containsMono(const BooleMonomial& mono1,
                       const BooleMonomial& mono2) const;

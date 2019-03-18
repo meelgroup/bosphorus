@@ -426,6 +426,48 @@ inline void ANF::removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx)
     removePolyFromOccur(poly.usedVariables(), eq_idx);
 }
 
+bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly, vector<size_t>& empty_equations)
+{		
+    BoolePolynomial& poly = eqs[eq_idx];
+    BooleMonomial prev_used = poly.usedVariables();
+    
+    const size_t check = eqs_hash.erase(poly.hash());
+    assert(check == 1);
+    poly = newpoly;
+
+    if (poly.isConstant()) {
+        //Check UNSAT
+        if (poly.isOne()) {
+            replacer->setNOTOK();
+            cout << "Replacer NOT OK" << endl;
+            return false;
+        }
+        empty_equations.push_back(eq_idx);
+        if (config.verbosity >= 4) {
+            cout << "c    update remove equation " << eq_idx
+                 << endl;
+        }
+    } else {
+        auto ins = eqs_hash.insert(poly.hash());
+        if (!ins.second) { // already exist
+            poly = 0;      // remove it using empty
+            empty_equations.push_back(eq_idx);
+            if (config.verbosity >= 4) {
+                cout << "c [ANF propagation remove equation] "
+                     << eq_idx << endl;
+            }
+        }
+    } // if ... else
+
+    BooleMonomial curr_used(poly.usedVariables());
+    BooleMonomial gcd = prev_used.GCD(curr_used);
+    prev_used /= gcd; // update remove list
+    curr_used /= gcd; // update insert list
+    removePolyFromOccur(prev_used, eq_idx);
+    addPolyToOccur(curr_used, eq_idx);
+    return true;
+}
+
 bool ANF::propagate()
 {
     double myTime = cpuTime();
@@ -442,7 +484,7 @@ bool ANF::propagate()
         num_initial_updates += check_if_need_update(eqs[eq_idx], updatedVars); // changes: replacer
     if (config.verbosity >= 3) {
         cout << "c  " << "number of variables to update: "
-             << updatedVars.size() << " (caused "
+             << updatedVars.size() << " (caused by "
 	     << num_initial_updates << '/'
 	     << (eqs.size() - new_equations_begin) << " equations)"
              << endl;
@@ -488,53 +530,19 @@ bool ANF::propagate()
                     cout << "c equation: " << poly << endl;
                 }
 
-                const bool willUpdate = replacer->willUpdate(poly);
-                BooleMonomial prev_used(*ring);
-                if (willUpdate) {
-                    prev_used = poly.usedVariables();
-                    const size_t check = eqs_hash.erase(poly.hash());
-                    assert(check == 1);
-                    poly = replacer->update(poly);
+                if ( !(replacer->willUpdate(poly)) ) {
+                    continue;
                 }
-
-                if (poly.isConstant()) {
-                    //Check UNSAT
-                    if (poly.isOne()) {
-                        replacer->setNOTOK();
-                        cout << "Replacer NOT OK" << endl;
-                        return false;
-                    }
-                    empty_equations.push_back(eq_idx);
-                    if (config.verbosity >= 4) {
-                        cout << "c [ANF propagation remove equation] " << eq_idx
-                             << endl;
-                    }
-                } else {
-                    check_if_need_update(poly,
-                                         updatedVars); // changes: replacer
-                                                       // Add back to occur
-                    if (willUpdate) {
-                        auto ins = eqs_hash.insert(poly.hash());
-                        if (!ins.second) { // already exist
-                            poly = 0;      // remove it using empty
-                            empty_equations.push_back(eq_idx);
-                            if (config.verbosity >= 4) {
-                                cout << "c [ANF propagation remove equation] "
-                                     << eq_idx << endl;
-                            }
-                        }
-                    }
-                } // if ... else
-
-                if (willUpdate) {
-                    BooleMonomial curr_used(poly.usedVariables());
-                    BooleMonomial gcd = prev_used.GCD(curr_used);
-                    prev_used /= gcd; // update remove list
-                    curr_used /= gcd; // update insert list
-                    removePolyFromOccur(prev_used, eq_idx);
-                    addPolyToOccur(curr_used, eq_idx);
+		
+                if ( !updateEquations(eq_idx, replacer->update(poly), empty_equations) ) {
+                    return false;
                 }
-            }
+		
+                if (!poly.isConstant()) {
+                    check_if_need_update(poly,         // changes: replacer
+                                         updatedVars); // Add back to occur
+                }
+	    } // for eq_idx
             timeout = (cpuTime() > config.maxTime);
         } //for var
         if (config.verbosity >= 4) {
