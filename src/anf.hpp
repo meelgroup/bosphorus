@@ -109,6 +109,7 @@ class ANF
     static size_t readFileForMaxVar(const std::string& filename);
 
    private:
+    bool propagate_iteratively(unordered_set<uint32_t>& updatedVars, std::vector<size_t>& empty_equations);
     bool check_if_need_update(const BoolePolynomial& poly,
                               unordered_set<uint32_t>& updatedVars);
     void addPolyToOccur(const BooleMonomial& mono, size_t eq_idx);

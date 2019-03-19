@@ -489,11 +489,21 @@ bool ANF::propagate()
 	     << (eqs.size() - new_equations_begin) << " equations)"
              << endl;
     }
-    
 
+    std::vector<size_t> empty_equations;
+    const bool ret = propagate_iteratively(updatedVars, empty_equations);
+
+    if (config.verbosity) {
+        cout << "c [ANF prop] Left eqs: " << eqs.size() << " T: " << std::fixed
+             << std::setprecision(2) << (cpuTime() - myTime) << endl;
+    }
+    return ret;
+}    
+
+bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars, std::vector<size_t>& empty_equations)
+{
     //Recursively update polynomials, while there is something to update
     bool timeout = (cpuTime() > config.maxTime);
-    std::vector<size_t> empty_equations;
     while (!updatedVars.empty() && !timeout) {
         if (config.verbosity >= 4) {
             cout << "c  " << "number of variables to update: "
@@ -557,10 +567,6 @@ bool ANF::propagate()
     if (!timeout && config.paranoid)
         checkSimplifiedPolysContainNoSetVars(); // May not fully propagate due to timeout
 
-    if (config.verbosity) {
-        cout << "c [ANF prop] Left eqs: " << eqs.size() << " T: " << std::fixed
-             << std::setprecision(2) << (cpuTime() - myTime) << endl;
-    }
     return true;
 }
 

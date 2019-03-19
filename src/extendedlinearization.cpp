@@ -30,13 +30,20 @@ bool extendedLinearization(const ConfigData& config,
                            const vector<BoolePolynomial>& eqs,
                            vector<BoolePolynomial>& loop_learnt)
 {
-    if (eqs.size() == 0) {
+    if (eqs.empty()) {
         if (config.verbosity >= 3) {
             cout << "c System is empty. Skip XL\n";
         }
         return true;
     }
 
+    double myTime = cpuTime();
+    if (config.verbosity) {
+        cout << "c [XL] Running XL... ring size: "
+             << eqs.front().ring().nVariables() << endl;
+    }
+
+    const size_t loop_learnt_size_orig = loop_learnt.size();
     const polybori::BoolePolyRing& ring(eqs.front().ring());
 
     vector<BoolePolynomial> equations;
@@ -160,5 +167,13 @@ bool extendedLinearization(const ConfigData& config,
 
     GaussJordan gj(equations, ring, config.verbosity);
     long num = gj.run(NULL, &loop_learnt);
+
+    if (config.verbosity) {
+        cout << "c [XL] Done. Learnt: "
+             << (loop_learnt.size() - loop_learnt_size_orig)
+             << " T: " << std::fixed << std::setprecision(2)
+             << (cpuTime() - myTime) << endl;
+    }
+    
     return num != GaussJordan::BAD;
 }
