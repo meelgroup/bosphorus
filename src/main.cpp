@@ -549,14 +549,21 @@ void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
             }
         }
 
-        changes[subIters] = (num_learnt > 0);
-        if (changes[subIters]) {
-            waits[subIters] = 0;
+        // Determine if there are any changes to the system
+        if (num_learnt <= 0) {
+            changes[subIters] = false;
+        } else {
+            changes[subIters] = true;
             bool ok = anf->propagate();
             if (!ok) {
                 if (config.verbosity >= 1)
                     cout << "c [ANF Propagation] is false\n";
             }
+        }
+
+        // Scheduling strategies
+        if (changes[subIters]) {
+            waits[subIters] = 0;
         } else {
             if (countdowns[subIters] > 0)
                 --countdowns[subIters];
