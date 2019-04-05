@@ -75,7 +75,8 @@ class CNF
     void addOriginalCNF(const vector<Clause>& cutting_clauses);
     void addBoolePolynomial(const BoolePolynomial& eq);
     void addTrivialEquations();
-    bool tryAddingPolyWithKarn(const BoolePolynomial& eq, vector<Clause>& setOfClauses) const;
+    bool tryAddingPolyWithKarn(const BoolePolynomial& eq,
+                               vector<Clause>& setOfClauses) const;
     void addMonomialsFromPoly(const BoolePolynomial& eq);
     BoolePolynomial addToPolyVarsUntilCutoff(const BoolePolynomial& poly,
                                              vector<uint32_t>& vars) const;

@@ -174,6 +174,6 @@ bool extendedLinearization(const ConfigData& config,
              << " T: " << std::fixed << std::setprecision(2)
              << (cpuTime() - myTime) << endl;
     }
-    
+
     return num != GaussJordan::BAD;
 }

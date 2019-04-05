@@ -138,10 +138,11 @@ void CNF::addTrivialEquations()
     }
 }
 
-bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq, vector<Clause>& setOfClauses) const
+bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq,
+                                vector<Clause>& setOfClauses) const
 {
     Karnaugh karn(config.maxKarnTableSize);
-    if ( !(eq.deg() > 1 && karn.possibleToConv(eq)) ) {
+    if (!(eq.deg() > 1 && karn.possibleToConv(eq))) {
         return false;
     }
 
@@ -200,8 +201,8 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
     }
 
     vector<Clause> setOfClauses;
-    if( tryAddingPolyWithKarn(poly, setOfClauses) ) {
-            addedAsCNF++;
+    if (tryAddingPolyWithKarn(poly, setOfClauses)) {
+        addedAsCNF++;
     } else {
         // Represent using XOR & monomial combination
         // 1) add monmials
@@ -216,12 +217,12 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
         addMonomialsFromPoly(poly);
         addPolyWithCuts(poly, setOfClauses);
     }
-    
+
     clauses.push_back(make_pair(setOfClauses, poly));
 }
 
 BoolePolynomial CNF::addToPolyVarsUntilCutoff(const BoolePolynomial& poly,
-					      vector<uint32_t>& vars) const
+                                              vector<uint32_t>& vars) const
 {
     BoolePolynomial thisPoly(getANFRing());
     for (BoolePolynomial::const_iterator it = poly.begin(), end = poly.end();
@@ -232,14 +233,14 @@ BoolePolynomial CNF::addToPolyVarsUntilCutoff(const BoolePolynomial& poly,
         if (m.deg() == 0)
             continue;
 
-	//Update to CNF (external) variable numbers
+        //Update to CNF (external) variable numbers
         const auto findIt = monomMap.find(it->hash());
         assert(findIt !=
                monomMap.end()); //We have added all monoms once we are here
 
         vars.push_back(findIt->second);
-	
-	thisPoly += m;
+
+        thisPoly += m;
     }
 
     return thisPoly;
@@ -253,28 +254,28 @@ void CNF::addPolyWithCuts(BoolePolynomial poly, vector<Clause>& setOfClauses)
 
     uint32_t varAdded = std::numeric_limits<uint32_t>::max();
     BoolePolynomial uptoPoly(getANFRing());
-    while ( !poly.isConstant() ) {        
+    while (!poly.isConstant()) {
         //Add variables to clause
         vector<uint32_t> vars_in_xor;
-	if (varAdded != std::numeric_limits<uint32_t>::max()) {
-	  // continue from the cutting points
-	  vars_in_xor.push_back(varAdded);
-	}
-	
+        if (varAdded != std::numeric_limits<uint32_t>::max()) {
+            // continue from the cutting points
+            vars_in_xor.push_back(varAdded);
+        }
+
         BoolePolynomial thisPoly = addToPolyVarsUntilCutoff(poly, vars_in_xor);
         poly -= thisPoly;
- 	
+
         bool result = false;
-	if ( poly.isConstant() ) {
-	    result = poly.isOne();
+        if (poly.isConstant()) {
+            result = poly.isOne();
         } else {
             //If have to cut, create new var
-	    varAdded = next_cnf_var;
+            varAdded = next_cnf_var;
             next_cnf_var++;
 
-	    //new cnf variable represents uptoPoly
-	    uptoPoly += thisPoly;
-	    
+            //new cnf variable represents uptoPoly
+            uptoPoly += thisPoly;
+
             //add the representative var (if appropriate)
             assert(revCombinedMap.size() == varAdded);
             assert(!uptoPoly.isSingleton());
@@ -283,7 +284,7 @@ void CNF::addPolyWithCuts(BoolePolynomial poly, vector<Clause>& setOfClauses)
             vars_in_xor.push_back(
                 varAdded); //This will be the definition of the representive
         }
-	
+
         addEveryCombination(vars_in_xor, result, setOfClauses);
     }
 }
@@ -382,7 +383,7 @@ vector<lbool> CNF::mapSolToOrig(const std::vector<lbool>& solution) const
 
     for (size_t i = 0; i < solution.size(); ++i) {
         // only map monomials which are single variables
-        if ( varRepresentsMonomial(i) ) {
+        if (varRepresentsMonomial(i)) {
             const BooleMonomial& m(revCombinedMap[i].lead());
 
             //Only single-vars
@@ -400,7 +401,7 @@ vector<lbool> CNF::mapSolToOrig(const std::vector<lbool>& solution) const
 
 BooleMonomial CNF::getMonomForVar(const uint32_t& var) const
 {
-    if ( varRepresentsMonomial(var) )
+    if (varRepresentsMonomial(var))
         return revCombinedMap[var].lead();
     else
         return BooleMonomial(anf.getRing());

@@ -38,8 +38,9 @@ class Karnaugh
     Karnaugh(uint32_t maxKarnTableSize);
     ~Karnaugh();
 
-    bool possibleToConv(const BoolePolynomial& eq) const {
-      return (maxKarnTable >= eq.nUsedVariables());      
+    bool possibleToConv(const BoolePolynomial& eq) const
+    {
+        return (maxKarnTable >= eq.nUsedVariables());
     }
     vector<Clause> convert(const BoolePolynomial& eq);
     void print() const;

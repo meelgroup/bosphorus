@@ -109,7 +109,8 @@ class ANF
     static size_t readFileForMaxVar(const std::string& filename);
 
    private:
-    bool propagate_iteratively(unordered_set<uint32_t>& updatedVars, std::vector<size_t>& empty_equations);
+    bool propagate_iteratively(unordered_set<uint32_t>& updatedVars,
+                               std::vector<size_t>& empty_equations);
     bool check_if_need_update(const BoolePolynomial& poly,
                               unordered_set<uint32_t>& updatedVars);
     void addPolyToOccur(const BooleMonomial& mono, size_t eq_idx);
@@ -117,7 +118,8 @@ class ANF
     void addPolyToOccur(const BoolePolynomial& poly, size_t eq_idx);
     void removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx);
     void removeEquations(std::vector<size_t>& eq2r);
-    bool updateEquations(size_t idx, const BoolePolynomial newpoly, vector<size_t>& empty_equations);
+    bool updateEquations(size_t idx, const BoolePolynomial newpoly,
+                         vector<size_t>& empty_equations);
     void checkSimplifiedPolysContainNoSetVars() const;
     bool containsMono(const BooleMonomial& mono1,
                       const BooleMonomial& mono2) const;

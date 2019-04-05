@@ -319,13 +319,13 @@ bool ANF::check_if_need_update(const BoolePolynomial& poly,
     // Assign anti/equivalences
     //
     // If polynomial is "x + y = 0" or "x + y + 1 = 0", set the value of x in terms of y
-    if ( poly.nUsedVariables() == 2 && poly.deg() == 1) {
+    if (poly.nUsedVariables() == 2 && poly.deg() == 1) {
         uint32_t var[2];
-	size_t i=0;
-	for (const uint32_t v: poly.usedVariables()) {
+        size_t i = 0;
+        for (const uint32_t v : poly.usedVariables()) {
             var[i++] = v;
-	}
-	
+        }
+
         // Make the update
         vector<uint32_t> ret =
             replacer->setReplace(var[0], Lit(var[1], poly.hasConstantPart()));
@@ -426,11 +426,12 @@ inline void ANF::removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx)
     removePolyFromOccur(poly.usedVariables(), eq_idx);
 }
 
-bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly, vector<size_t>& empty_equations)
-{		
+bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
+                          vector<size_t>& empty_equations)
+{
     BoolePolynomial& poly = eqs[eq_idx];
     BooleMonomial prev_used = poly.usedVariables();
-    
+
     const size_t check = eqs_hash.erase(poly.hash());
     assert(check == 1);
     poly = newpoly;
@@ -444,8 +445,7 @@ bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly, vector<s
         }
         empty_equations.push_back(eq_idx);
         if (config.verbosity >= 4) {
-            cout << "c    update remove equation " << eq_idx
-                 << endl;
+            cout << "c    update remove equation " << eq_idx << endl;
         }
     } else {
         auto ins = eqs_hash.insert(poly.hash());
@@ -453,8 +453,8 @@ bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly, vector<s
             poly = 0;      // remove it using empty
             empty_equations.push_back(eq_idx);
             if (config.verbosity >= 4) {
-                cout << "c [ANF propagation remove equation] "
-                     << eq_idx << endl;
+                cout << "c [ANF propagation remove equation] " << eq_idx
+                     << endl;
             }
         }
     } // if ... else
@@ -481,13 +481,13 @@ bool ANF::propagate()
     // Always run through the new equations
     size_t num_initial_updates = 0;
     for (size_t eq_idx = new_equations_begin; eq_idx < eqs.size(); ++eq_idx)
-        num_initial_updates += check_if_need_update(eqs[eq_idx], updatedVars); // changes: replacer
+        num_initial_updates +=
+            check_if_need_update(eqs[eq_idx], updatedVars); // changes: replacer
     if (config.verbosity >= 3) {
-        cout << "c  " << "number of variables to update: "
-             << updatedVars.size() << " (caused by "
-	     << num_initial_updates << '/'
-	     << (eqs.size() - new_equations_begin) << " equations)"
-             << endl;
+        cout << "c  "
+             << "number of variables to update: " << updatedVars.size()
+             << " (caused by " << num_initial_updates << '/'
+             << (eqs.size() - new_equations_begin) << " equations)" << endl;
     }
 
     std::vector<size_t> empty_equations;
@@ -498,16 +498,17 @@ bool ANF::propagate()
              << std::setprecision(2) << (cpuTime() - myTime) << endl;
     }
     return ret;
-}    
+}
 
-bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars, std::vector<size_t>& empty_equations)
+bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars,
+                                std::vector<size_t>& empty_equations)
 {
     //Recursively update polynomials, while there is something to update
     bool timeout = (cpuTime() > config.maxTime);
     while (!updatedVars.empty() && !timeout) {
         if (config.verbosity >= 4) {
-            cout << "c  " << "number of variables to update: "
-		 << updatedVars.size()
+            cout << "c  "
+                 << "number of variables to update: " << updatedVars.size()
                  << endl;
         }
         // Make a copy of what variables to iterate through in this cycle
@@ -540,23 +541,26 @@ bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars, std::vecto
                     cout << "c equation: " << poly << endl;
                 }
 
-                if ( !(replacer->willUpdate(poly)) ) {
+                if (!(replacer->willUpdate(poly))) {
                     continue;
                 }
-		
-                if ( !updateEquations(eq_idx, replacer->update(poly), empty_equations) ) {
+
+                if (!updateEquations(eq_idx, replacer->update(poly),
+                                     empty_equations)) {
                     return false;
                 }
-		
+
                 if (!poly.isConstant()) {
                     check_if_need_update(poly,         // changes: replacer
                                          updatedVars); // Add back to occur
                 }
-	    } // for eq_idx
+            } // for eq_idx
             timeout = (cpuTime() > config.maxTime);
         } //for var
         if (config.verbosity >= 4) {
-            cout << "c  ..." << "equations removed: " << empty_equations.size() << std::endl;
+            cout << "c  ..."
+                 << "equations removed: " << empty_equations.size()
+                 << std::endl;
         }
         timeout = (cpuTime() > config.maxTime);
     } // while
@@ -614,11 +618,9 @@ void ANF::removeEquations(std::vector<size_t>& eq2r)
         }
     }
 
-
     // bookkeeping and verbosity
     if (config.verbosity >= 3) {
-        cout << "c  removed " << eq2r.size()
-             << " eqs." << endl;
+        cout << "c  removed " << eq2r.size() << " eqs." << endl;
     }
 
     eq2r.clear();

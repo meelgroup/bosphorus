@@ -38,16 +38,16 @@ Karnaugh::Karnaugh(uint32_t maxKarnTableSize)
 {
     maxKarnTable = maxKarnTableSize;
     karnSize = (0x1UL) << maxKarnTable;
-    
-    input = new int*[2*karnSize]; // Do bulk allocation for input and output
-    input[0] = new int[(3+maxKarnTable) * karnSize];
+
+    input = new int*[2 * karnSize]; // Do bulk allocation for input and output
+    input[0] = new int[(3 + maxKarnTable) * karnSize];
     for (uint i = 1; i < karnSize; i++)
-       input[i] = input[i-1] + maxKarnTable;
-    
+        input[i] = input[i - 1] + maxKarnTable;
+
     output = input + karnSize;
-    output[0] = input[karnSize-1] + maxKarnTable;
+    output[0] = input[karnSize - 1] + maxKarnTable;
     for (uint i = 1; i < karnSize; i++)
-        output[i] = output[i-1] + 3;
+        output[i] = output[i - 1] + 3;
 }
 
 Karnaugh::~Karnaugh()
@@ -55,8 +55,6 @@ Karnaugh::~Karnaugh()
     delete[] input[0];
     delete[] input;
 }
-
-
 
 vector<Clause> Karnaugh::getClauses()
 {
@@ -83,7 +81,6 @@ void Karnaugh::print() const
     }
     cout << "--------------" << endl;
 }
-
 
 void Karnaugh::evaluateIntoKarn(const BoolePolynomial& eq)
 {

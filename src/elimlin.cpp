@@ -101,10 +101,10 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
                 loop_learnt.push_back(linear_eq);
 
                 // Pick variable with best metric to substitute
-		uint32_t var_to_replace = 0;
+                uint32_t var_to_replace = 0;
                 size_t best_metric = std::numeric_limits<std::size_t>::max();
                 assert(linear_eq.deg() == 1);
-		for (const uint32_t v : linear_eq.usedVariables()) {
+                for (const uint32_t v : linear_eq.usedVariables()) {
                     size_t metric = el_occ[v].size();
                     if (metric < best_metric) {
                         best_metric = metric;
@@ -117,9 +117,8 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
                 to_poly = linear_eq - from_var;
 
                 if (config.verbosity >= 5) {
-                    cout << "c Replacing "
-                         << from_var << " with "
-                         << to_poly << endl;
+                    cout << "c Replacing " << from_var << " with " << to_poly
+                         << endl;
                 }
 
                 // Eliminate variable from these polynomials
