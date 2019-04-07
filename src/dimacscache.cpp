@@ -40,7 +40,8 @@ DIMACSCache::DIMACSCache(const char* _fname)
     clauses.clear();
 
     std::ifstream ifs;
-    std::string temp, x;
+    std::string temp;
+    std::string x;
     ifs.open(fname);
     if (!ifs) {
         std::cout << "Problem opening file: " << fname << " for reading\n";
