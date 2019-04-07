@@ -47,6 +47,7 @@ DIMACSCache::DIMACSCache(const char* _fname)
         exit(-1);
     }
 
+    vector<Lit> lits;
     while (std::getline(ifs, temp)) {
         if (temp.length() == 0 || temp[0] == 'p' || temp[0] == 'c') {
             continue;
@@ -55,7 +56,7 @@ DIMACSCache::DIMACSCache(const char* _fname)
             exit(-1);
         } else {
             std::istringstream iss(temp);
-            vector<Lit> lits;
+            lits.clear();
             while (iss.good() && !iss.eof()) {
                 iss >> x;
                 int v = stoi(x);
