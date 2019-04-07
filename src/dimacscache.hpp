@@ -40,9 +40,9 @@ class DIMACSCache
     }
 
    private:
-    static std::vector<Clause> clauses;
-    static size_t maxVar;
-    static const char* fname;
+    std::vector<Clause> clauses;
+    size_t maxVar;
+    const char* fname = nullptr;
 };
 
 #endif

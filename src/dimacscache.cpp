@@ -26,9 +26,6 @@ SOFTWARE.
 
 #include "dimacscache.hpp"
 
-std::vector<Clause> DIMACSCache::clauses;
-size_t DIMACSCache::maxVar;
-const char* DIMACSCache::fname = nullptr;
 using std::cout;
 using std::endl;
 
