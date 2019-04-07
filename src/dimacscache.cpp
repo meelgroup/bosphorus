@@ -37,7 +37,7 @@ DIMACSCache::DIMACSCache(const char* _fname)
     fname = _fname;
 
     maxVar = 0;
-    clauses.empty();
+    clauses.clear();
 
     std::ifstream ifs;
     std::string temp, x;
