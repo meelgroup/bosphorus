@@ -463,9 +463,10 @@ void deduplicate(vector<BoolePolynomial>& learnt)
 void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
               const ANF* orig_anf, const vector<Clause>& cutting_clauses)
 {
+    cout << "c [boshp] Running iterative simplification..." << endl;
     bool timeout = (cpuTime() > config.maxTime);
     if (timeout) {
-        if (config.verbosity >= 1) {
+        if (config.verbosity) {
             cout << "c Timeout before learning" << endl;
         }
         return;
@@ -669,20 +670,20 @@ int main(int argc, char* argv[])
     if (config.readANF) {
         double parseStartTime = cpuTime();
         anf = read_anf();
-        if (config.verbosity >= 2) {
-            cout << "c [ANF Input] in " << (cpuTime() - parseStartTime)
-                 << " seconds.\n";
+        if (config.verbosity) {
+            cout << "c [ANF Input] read in T: " << (cpuTime() - parseStartTime)
+            << endl;
         }
     }
 
-    vector<Clause>
-        cutting_clauses; // in case we cut up the CNFs in the process, we must let the world know
+    vector<Clause> cutting_clauses; ///<if we cut up the CNFs in the process, we must let the world know
+
     if (config.readCNF) {
         double parseStartTime = cpuTime();
         anf = read_cnf(cutting_clauses);
-        if (config.verbosity >= 2) {
-            cout << "c [CNF Input] in " << (cpuTime() - parseStartTime)
-                 << " seconds.\n";
+        if (config.verbosity) {
+            cout << "c [CNF Input] read in T: " << (cpuTime() - parseStartTime)
+            << endl;
         }
     }
     assert(anf != NULL);
@@ -691,6 +692,10 @@ int main(int argc, char* argv[])
     }
 
     // this is needed to check for test solution and the check if it is really a new learnt fact
+    double myTime = cpuTime();
+    if (config.verbosity) {
+        cout << "c [ANF hash] Calculating ANF hash..." << endl;
+    }
     ANF* orig_anf = nullptr;
     ANF::eqs_hash_t* orig_anf_hash = nullptr;
 
@@ -698,6 +703,9 @@ int main(int argc, char* argv[])
         orig_anf = new ANF(*anf, anf_no_replacer_tag());
     else
         orig_anf_hash = new ANF::eqs_hash_t(anf->getEqsHash());
+    if (config.verbosity) {
+        cout << "c [ANF hash] Done. T: " << (cpuTime() - myTime) << endl;
+    }
 
     // Perform simplifications
     vector<BoolePolynomial> learnt;
