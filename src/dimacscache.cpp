@@ -29,6 +29,8 @@ SOFTWARE.
 std::vector<Clause> DIMACSCache::clauses;
 size_t DIMACSCache::maxVar;
 const char* DIMACSCache::fname = nullptr;
+using std::cout;
+using std::endl;
 
 DIMACSCache::DIMACSCache(const char* _fname)
 {
@@ -44,13 +46,16 @@ DIMACSCache::DIMACSCache(const char* _fname)
     std::string x;
     ifs.open(fname);
     if (!ifs) {
-        std::cout << "Problem opening file: " << fname << " for reading\n";
+        cout << "ERROR: Problem opening file '" << fname << "' for reading\n";
         exit(-1);
     }
 
     while (std::getline(ifs, temp)) {
         if (temp.length() == 0 || temp[0] == 'p' || temp[0] == 'c') {
             continue;
+        } else if (temp[0] == 'x') {
+            cout << "ERROR: xor clause found in CNF, we cannot deal with that" << endl;
+            exit(-1);
         } else {
             std::istringstream iss(temp);
             vector<Lit> lits;
