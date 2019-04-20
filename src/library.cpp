@@ -397,10 +397,8 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
          << " seconds.]\n";
     }
 
-    if (sbs != nullptr)
-        delete sbs;
-    if (cnf != nullptr)
-        delete cnf;
+    delete sbs;
+    delete cnf;
     anf->contextualize(loop_learnt);
 }
 
