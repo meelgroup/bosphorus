@@ -279,15 +279,16 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
                             std::logical_or<bool>()) ||
             numIters < config.minIter))
     {
+        cout << "c [iter-simp] ------ Iteration "
+        << std::fixed << std::dec << (int)numIters << endl;
+
         static const char* strategy_str[] = {"XL", "ElimLin", "SAT"};
         const double startTime = cpuTime();
         int num_learnt = 0;
 
         if (countdowns[subIters] > 0) {
-            if (config.verbosity >= 2) {
-                cout << "c [" << strategy_str[subIters] << "] waiting for "
-                     << countdowns[subIters] << " iteration(s)." << endl;
-            }
+            cout << "c [" << strategy_str[subIters] << "] waiting for "
+                 << countdowns[subIters] << " iteration(s)." << endl;
         } else {
             const size_t prevsz = loop_learnt.size();
             switch (subIters) {
@@ -384,7 +385,7 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
         timeout = (cpuTime() > config.maxTime);
     }
 
-    if (config.verbosity >= 2) {
+    if (config.verbosity) {
         cout << "c [";
         if (timeout) {
              cout << "Timeout";
