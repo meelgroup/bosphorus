@@ -47,8 +47,15 @@ using std::deque;
 using std::endl;
 using std::string;
 
-ConfigData config;
+//inputs and outputs
+string anfInput;
+string anfOutput;
+string cnfInput;
+string cnfOutput;
+string solutionOutput;
+
 po::variables_map vm;
+ConfigData config;
 
 void parseOptions(int argc, char* argv[])
 {
@@ -68,10 +75,10 @@ void parseOptions(int argc, char* argv[])
     ("help,h", "produce help message")
     ("version", "print version number and exit")
     // Input/Output
-    ("anfread", po::value(&config.anfInput), "Read ANF from this file")
-    ("cnfread", po::value(&config.cnfInput), "Read CNF from this file")
-    ("anfwrite", po::value(&config.anfOutput), "Write ANF output to file")
-    ("cnfwrite", po::value(&config.cnfOutput), "Write CNF output to file")
+    ("anfread", po::value(&anfInput), "Read ANF from this file")
+    ("cnfread", po::value(&cnfInput), "Read CNF from this file")
+    ("anfwrite", po::value(&anfOutput), "Write ANF output to file")
+    ("cnfwrite", po::value(&cnfOutput), "Write CNF output to file")
     ("verb,v", po::value<uint32_t>(&config.verbosity)->default_value(1),
      "Verbosity setting: 0(slient) - 3(noisy)")
     ("simplify", po::value<int>(&config.simplify)->default_value(config.simplify),
@@ -81,7 +88,6 @@ void parseOptions(int argc, char* argv[])
     ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
      "Stop solving after this much time (s); Use 0 if you only want to propagate")
     // checks
-    ("paranoid", po::value<int>(&config.paranoid), "Run sanity checks")
     ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
      "Do not write comments to output files")
     ;
@@ -131,7 +137,7 @@ void parseOptions(int argc, char* argv[])
     ("solvesat,s", po::bool_switch(&config.doSolveSAT), "Solve with SAT solver as per '--solverexe")
     ("solverexe,e", po::value(&config.solverExe)->default_value("/usr/local/bin/cryptominisat5"),
      "Solver executable for SAT solving CNF")
-    ("solvewrite,o", po::value(&config.solutionOutput), "Write solver output to file")
+    ("solvewrite,o", po::value(&solutionOutput), "Write solver output to file")
     ;
 #endif
 
@@ -260,7 +266,6 @@ void parseOptions(int argc, char* argv[])
              << config.numConfl_lim << "): " << !config.noSAT << endl
              << "c Stop simplifying if SAT finds solution? "
              << (config.stopOnSolution ? "Yes" : "No") << endl
-             << "c Paranoid: " << config.paranoid << endl
              << "c Cut num: " << config.cutNum << endl
              << "c Karnaugh size: " << config.maxKarnTableSize << endl
              << "c --------------------" << endl;
@@ -288,10 +293,76 @@ void addTrivialFromANF(ANF* anf, vector<BoolePolynomial>& all_learnt,
     }
 }
 
+void write_solution_to_file(const char* fname, const Solution& solution)
+{
+    std::ofstream ofs;
+    ofs.open(fname);
+    if (!ofs) {
+        std::cerr << "c Error opening file \"" << fname
+                  << "\" for writing\n";
+        exit(-1);
+    }
+
+    if (solution.ret == l_False) {
+        ofs << "s UNSATISFIABLE" << endl;
+    } else if (solution.ret == l_True) {
+        ofs << "s SATISFIABLE" << endl;
+
+        size_t num = 0;
+        ofs << "v ";
+        for (const lbool lit : solution.sol) {
+            if (lit != l_Undef) {
+                ofs << ((lit == l_True) ? "" : "-") << num << " ";
+            }
+            num++;
+        }
+        ofs << endl;
+    } else {
+        assert(false);
+        exit(-1);
+    }
+
+    if (config.verbosity >= 2) {
+        cout << "c [SAT] Solution written to " << fname << endl;
+    }
+    ofs.close();
+}
+
+inline void print_solution(Solution& solution)
+{
+    assert(solution.ret != l_Undef);
+    cout << "Solution ";
+    cout << ((solution.ret == l_True) ? "SAT" : "UNSAT");
+
+    size_t num = 0;
+    std::stringstream toWrite;
+    toWrite << "v ";
+    for (const lbool lit : solution.sol) {
+        if (lit != l_Undef) {
+            toWrite << ((lit == l_True) ? "" : "-") << num << " ";
+        }
+        num++;
+    }
+    cout << toWrite.str() << endl;
+}
+
+void check_solution(ANF* anf, vector<lbool> * solution)
+{
+    //Checking
+    bool goodSol = anf->evaluate(*solution);
+    if (!goodSol) {
+        cout << "ERROR! Solution found is incorrect!" << endl;
+        exit(-1);
+    }
+    if (config.verbosity >= 3) {
+        cout << "c Solution found is correct." << endl;
+    }
+}
+
 int main(int argc, char* argv[])
 {
     parseOptions(argc, argv);
-    if (config.anfInput.length() == 0 && config.cnfInput.length() == 0) {
+    if (anfInput.length() == 0 && cnfInput.length() == 0) {
         cerr << "c ERROR: you must provide an ANF/CNF input file" << endl;
     }
 
@@ -302,18 +373,16 @@ int main(int argc, char* argv[])
     ANF* anf = nullptr;
     if (config.readANF) {
         double parseStartTime = cpuTime();
-        anf = mylib.read_anf();
+        anf = mylib.read_anf(anfInput.c_str());
         if (config.verbosity) {
             cout << "c [ANF Input] read in T: " << (cpuTime() - parseStartTime)
             << endl;
         }
     }
 
-    vector<Clause> cutting_clauses; ///<if we cut up the CNFs in the process, we must let the world know
-
     if (config.readCNF) {
         double parseStartTime = cpuTime();
-        anf = mylib.read_cnf(cutting_clauses);
+        anf = mylib.read_cnf(cnfInput.c_str());
         if (config.verbosity) {
             cout << "c [CNF Input] read in T: " << (cpuTime() - parseStartTime)
             << endl;
@@ -329,13 +398,8 @@ int main(int argc, char* argv[])
     if (config.verbosity) {
         cout << "c [ANF hash] Calculating ANF hash..." << endl;
     }
-    ANF* orig_anf = nullptr;
-    ANF::eqs_hash_t* orig_anf_hash = nullptr;
 
-    if (config.paranoid)
-        orig_anf = new ANF(*anf, anf_no_replacer_tag());
-    else
-        orig_anf_hash = new ANF::eqs_hash_t(anf->getEqsHash());
+    ANF* orig_anf = new ANF(*anf, anf_no_replacer_tag());
     if (config.verbosity) {
         cout << "c [ANF hash] Done. T: " << (cpuTime() - myTime) << endl;
     }
@@ -344,7 +408,18 @@ int main(int argc, char* argv[])
     vector<BoolePolynomial> learnt;
 
     if (config.simplify) {
-        mylib.simplify(anf, learnt, orig_anf, cutting_clauses);
+        const char* cnf_orig = NULL;
+        if (cnfInput.length() > 0) {
+            cnf_orig = cnfInput.c_str();
+        }
+        Solution solution = mylib.simplify(anf, cnf_orig, learnt);
+
+        if (solution.ret != l_Undef) {
+            print_solution(solution);
+            if (solutionOutput.length() > 0) {
+                write_solution_to_file(solutionOutput.c_str(), solution);
+            }
+        }
     }
     if (config.printProcessedANF) {
         cout << *anf << endl;
@@ -353,34 +428,20 @@ int main(int argc, char* argv[])
         anf->printStats();
     }
 
-#ifdef SATSOLVE_ENABLED
-    // Solve processed CNF
-    if (config.doSolveSAT) {
-        mylib.solve_by_sat(anf, cutting_clauses, orig_anf);
-    }
-#endif
-
     // finish up the learnt polynomials
-    if (orig_anf_hash != nullptr)
-        addTrivialFromANF(anf, learnt, *orig_anf_hash);
-    else
-        addTrivialFromANF(anf, learnt, orig_anf->getEqsHash());
-
-    // Free some space in case wee need the memory later
-    if (orig_anf != nullptr)
-        delete orig_anf;
-    if (orig_anf_hash != nullptr)
-        delete orig_anf_hash;
+    addTrivialFromANF(anf, learnt, orig_anf->getEqsHash());
+    delete orig_anf;
 
     // remove duplicates from learnt clauses
     mylib.deduplicate(learnt);
 
     // Write to file
     if (config.writeANF) {
-        mylib.write_anf(anf);
+        mylib.write_anf(anfOutput.c_str(), anf);
     }
-    if (config.writeCNF)
-        mylib.write_cnf(anf, cutting_clauses, learnt);
+    if (config.writeCNF) {
+        mylib.write_cnf(cnfInput.c_str(), cnfOutput.c_str(), anf, learnt);
+    }
 
     if (config.verbosity >= 1) {
         cout << "c Learnt " << learnt.size() << " fact(s) in " << cpuTime()

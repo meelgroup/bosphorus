@@ -377,16 +377,6 @@ bool ANF::addLearntBoolePolynomial(const BoolePolynomial& poly)
     return added;
 }
 
-void ANF::learnSolution(const vector<lbool>& solution)
-{
-    for (size_t i = 0; i < ring->nVariables(); ++i)
-        if (solution[i] != l_Undef) {
-            BoolePolynomial poly(solution[i] == l_True, *ring);
-            poly += BooleVariable(i, *ring);
-            addLearntBoolePolynomial(poly);
-        }
-}
-
 // Slow. O(n^2) because cannot use set<> for BoolePolynomial; KMACHAI: don't understand this comment.....
 void ANF::contextualize(vector<BoolePolynomial>& learnt) const
 {
@@ -568,7 +558,7 @@ bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars,
     // now remove the empty
     removeEquations(empty_equations);
 
-    if (!timeout && config.paranoid)
+    if (!timeout)
         checkSimplifiedPolysContainNoSetVars(); // May not fully propagate due to timeout
 
     return true;

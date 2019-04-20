@@ -74,7 +74,6 @@ class ANF
     size_t readFile(const string& filename);
     bool propagate();
     inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
-    void learnSolution(const vector<lbool>& solution);
     void printStats() const;
 
     // Returns true if polynomial is new and has been added

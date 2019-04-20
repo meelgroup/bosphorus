@@ -1,6 +1,5 @@
 /*****************************************************************************
-Copyright (C) 2016  Security Research Labs
-Copyright (C) 2018  Mate Soos, Davin Choo, Kian Ming A. Chai, DSO National Laboratories
+Copyright (C) 2019  Mate Soos
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,47 +20,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef CONFIGDATA__H
-#define CONFIGDATA__H
+#ifndef SOLUTION_H_
+#define SOLUTION_H_
 
-#include <limits>
-#include "polybori.h"
+#include <vector>
+#include "cryptominisat5/solvertypesmini.h"
 
-using std::string;
+using std::vector;
 
-struct ConfigData {
-    // Input/Output
-    string executedArgs = "";
-    bool readANF;
-    bool readCNF;
-    bool writeANF;
-    bool writeCNF;
-    bool writecomments = false;
-    bool printProcessedANF;
-    uint32_t verbosity;
-    int simplify = 1;
-
-    // CNF conversion
-    uint32_t cutNum = 5;
-    uint32_t maxKarnTableSize;
-
-    // Processes
-    double maxTime = 1e20;
-    uint32_t minIter = 0;
-    bool noXL = false;
-    bool noEL = false;
-    bool noSAT = false;
-    double XLsample = 30.0;
-    double XLsampleX = 4.0;
-    double ELsample = 30.0;
-    uint32_t xlDeg;
-    uint64_t numConfl_inc = 10000;
-    uint64_t numConfl_lim = 100000;
-    bool stopOnSolution = false;
-
-    // Solve processed CNF
-    bool doSolveSAT = false;
-    string solverExe;
+class Solution
+{
+public:
+    vector<lbool> sol;
+    lbool ret = l_Undef;
 };
 
-#endif //CONFIGDATA__H
+#endif

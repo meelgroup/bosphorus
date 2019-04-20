@@ -37,11 +37,14 @@ using boost::variant;
 
 class CNF
 {
-   public:
-    CNF(const ANF& _anf, const vector<Clause>& cutting_clauses,
-        const ConfigData& _config);
-    size_t update(
-        void); // update CNF with new equations and facts from the anf-sibling; returns the previous number of clause-sets
+public:
+    CNF(const ANF& _anf, const ConfigData& _config);
+    CNF(const char* fname, const ANF& _anf,
+        const vector<Clause>& extra_clauses, const ConfigData& _config);
+
+    /// update CNF with new equations and facts from the anf-sibling;
+    /// @returns the previous number of clause-sets
+    size_t update();
 
     // Remap solution to CNF to a solution for the original ANF
     vector<lbool> mapSolToOrig(const std::vector<lbool>& solution) const;
@@ -72,7 +75,6 @@ class CNF
    private:
     void init();
     void addAllEquations();
-    void addOriginalCNF(const vector<Clause>& cutting_clauses);
     void addBoolePolynomial(const BoolePolynomial& eq);
     void addTrivialEquations();
     bool tryAddingPolyWithKarn(const BoolePolynomial& eq,

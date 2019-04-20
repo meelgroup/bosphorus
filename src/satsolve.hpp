@@ -35,16 +35,6 @@ using std::cout;
 using std::endl;
 using std::string;
 
-inline bool testSolution(const ANF& anf, const vector<lbool>& solution)
-{
-    bool goodSol = anf.evaluate(solution);
-    if (!goodSol) {
-        cout << "ERROR! Solution found is incorrect!" << endl;
-        exit(-1);
-    }
-    return goodSol;
-}
-
 inline void printSolution(const vector<lbool>& solution)
 {
     size_t num = 0;
@@ -62,8 +52,7 @@ inline void printSolution(const vector<lbool>& solution)
 class SATSolve
 {
    public:
-    SATSolve(const int verbosity, const bool testsolution,
-             string solverExecutable);
+    SATSolve(const int verbosity, string solverExecutable);
 
     vector<lbool> solveCNF(const ANF* orig_anf, const ANF& anf, const CNF& cnf);
     const vector<lbool>& getSolution() const

@@ -33,22 +33,42 @@ Library::~Library()
         delete polybori_ring;
 }
 
-ANF* Library::read_anf()
+void Library::check_library_in_use()
 {
+    if (read_in_data) {
+        cout << "ERROR: data already read in."
+        << " You can only read in *one* ANF or CNF per library creation"
+        << endl;
+        exit(-1);
+    }
+    read_in_data = true;
+
+    assert(extra_clauses.empty());
+//     assert(anf == nullptr);
+//     assert(cnf = nullptr);
+    assert(polybori_ring == nullptr);
+}
+
+ANF* Library::read_anf(const char* fname)
+{
+    check_library_in_use();
+
     // Find out maxVar in input ANF file
-    size_t maxVar = ANF::readFileForMaxVar(config.anfInput);
+    size_t maxVar = ANF::readFileForMaxVar(fname);
 
     // Construct ANF
     // ring size = maxVar + 1, because ANF variables start from x0
     polybori_ring = new BoolePolyRing(maxVar + 1);
     ANF* anf = new ANF(polybori_ring, config);
-    anf->readFile(config.anfInput);
+    anf->readFile(fname);
     return anf;
 }
 
-ANF* Library::read_cnf(vector<Clause>& extra_clauses)
+ANF* Library::read_cnf(const char* fname)
 {
-    DIMACSCache dimacs_cache(config.cnfInput.c_str());
+    check_library_in_use();
+
+    DIMACSCache dimacs_cache(fname);
     const vector<Clause>& orig_clauses(dimacs_cache.getClauses());
     size_t maxVar = dimacs_cache.getMaxVar();
 
@@ -135,24 +155,12 @@ ANF* Library::read_cnf(vector<Clause>& extra_clauses)
     return anf;
 }
 
-CNF* Library::anf_to_cnf(const ANF* anf, const vector<Clause>& cutting_clauses)
-{
-    double convStartTime = cpuTime();
-    CNF* cnf = new CNF(*anf, cutting_clauses, config);
-    if (config.verbosity >= 2) {
-        cout << "c [CNF conversion] in " << (cpuTime() - convStartTime)
-             << " seconds.\n";
-        cnf->printStats();
-    }
-    return cnf;
-}
-
-void Library::write_anf(const ANF* anf)
+void Library::write_anf(const char* fname, const ANF* anf)
 {
     std::ofstream ofs;
-    ofs.open(config.anfOutput.c_str());
+    ofs.open(fname);
     if (!ofs) {
-        std::cerr << "c Error opening file \"" << config.anfOutput
+        std::cerr << "c Error opening file \"" << fname
                   << "\" for writing\n";
         exit(-1);
     } else {
@@ -162,14 +170,22 @@ void Library::write_anf(const ANF* anf)
     ofs.close();
 }
 
-void Library::write_cnf(const ANF* anf, const vector<Clause>& cutting_clauses,
-               const vector<BoolePolynomial>& learnt)
+void Library::write_cnf(const char* input_cnf_fname,
+                        const char* output_cnf_fname,
+                        const ANF* anf,
+                        const vector<BoolePolynomial>& learnt)
 {
-    CNF* cnf = anf_to_cnf(anf, cutting_clauses);
+    CNF* cnf = NULL;
+    if (input_cnf_fname == NULL) {
+        cnf = cnf_from_anf_and_cnf(input_cnf_fname, anf);
+    } else {
+        cnf = anf_to_cnf(anf);
+    }
+
     std::ofstream ofs;
-    ofs.open(config.cnfOutput.c_str());
+    ofs.open(output_cnf_fname);
     if (!ofs) {
-        std::cerr << "c Error opening file \"" << config.cnfOutput
+        std::cerr << "c Error opening file \"" << output_cnf_fname
                   << "\" for writing\n";
         exit(-1);
     } else {
@@ -207,8 +223,32 @@ void Library::write_cnf(const ANF* anf, const vector<Clause>& cutting_clauses,
     ofs.close();
 }
 
-void Library::simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
-              const ANF* orig_anf, const vector<Clause>& cutting_clauses)
+CNF* Library::anf_to_cnf(const ANF* anf)
+{
+    double convStartTime = cpuTime();
+    CNF* cnf = new CNF(*anf, config);
+    if (config.verbosity >= 2) {
+        cout << "c [CNF conversion] in " << (cpuTime() - convStartTime)
+             << " seconds.\n";
+        cnf->printStats();
+    }
+    return cnf;
+}
+
+CNF* Library::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf)
+{
+    double convStartTime = cpuTime();
+    CNF* cnf = new CNF(cnf_fname, *anf, extra_clauses, config);
+    if (config.verbosity >= 2) {
+        cout << "c [CNF enhancing] in " << (cpuTime() - convStartTime)
+             << " seconds.\n";
+        cnf->printStats();
+    }
+    return cnf;
+}
+
+Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
+                       vector<BoolePolynomial>& loop_learnt)
 {
     cout << "c [boshp] Running iterative simplification..." << endl;
     bool timeout = (cpuTime() > config.maxTime);
@@ -216,7 +256,7 @@ void Library::simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
         if (config.verbosity) {
             cout << "c Timeout before learning" << endl;
         }
-        return;
+        return Solution();
     }
 
     double loopStartTime = cpuTime();
@@ -224,7 +264,7 @@ void Library::simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
     anf->propagate();
     timeout = (cpuTime() > config.maxTime);
 
-    bool foundSolution = false;
+    Solution solution;
     bool changes[] = {true, true, true}; // any changes for the strategies
     size_t waits[] = {0, 0, 0};
     size_t countdowns[] = {0, 0, 0};
@@ -234,10 +274,11 @@ void Library::simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
     SimplifyBySat* sbs = nullptr;
 
     while (!timeout && anf->getOK() &&
-           (!config.stopOnSolution || !foundSolution) &&
+           solution.ret == l_Undef &&
            (std::accumulate(changes, changes + 3, false,
                             std::logical_or<bool>()) ||
-            numIters < config.minIter)) {
+            numIters < config.minIter))
+    {
         static const char* strategy_str[] = {"XL", "ElimLin", "SAT"};
         const double startTime = cpuTime();
         int num_learnt = 0;
@@ -248,7 +289,7 @@ void Library::simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
                      << countdowns[subIters] << " iteration(s)." << endl;
             }
         } else {
-            size_t prevsz = loop_learnt.size();
+            const size_t prevsz = loop_learnt.size();
             switch (subIters) {
                 case 0:
                     if (!config.noXL) {
@@ -275,17 +316,25 @@ void Library::simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
                     break;
                 case 2:
                     if (!config.noSAT) {
-                        size_t beg = 0;
-                        if (cnf == nullptr)
-                            cnf = new CNF(*anf, cutting_clauses, config);
-                        else
-                            beg = cnf->update();
-                        if (sbs == nullptr)
+                        size_t no_cls = 0;
+                        if (cnf == NULL) {
+                            if (orig_cnf_file) {
+                                cnf = new CNF(orig_cnf_file, *anf, extra_clauses, config);
+                            } else {
+                                cnf = new CNF(*anf, config);
+                            }
+                        } else {
+                            no_cls = cnf->update();
+                        }
+
+                        if (sbs == NULL) {
                             sbs = new SimplifyBySat(*cnf, config);
+                        }
+
                         num_learnt = sbs->simplify(
                             config.numConfl_lim, config.numConfl_inc,
-                            config.maxTime, beg, loop_learnt, foundSolution,
-                            *anf, orig_anf);
+                            config.maxTime, no_cls, loop_learnt,
+                            *anf, solution);
                     }
                     break;
             }
@@ -335,15 +384,15 @@ void Library::simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
     }
 
     if (config.verbosity >= 2) {
-        cout << "c ["
-             << (timeout
-                     ? "Timeout"
-                     : ((config.stopOnSolution && foundSolution)
-                            ? "Solution"
-                            : (!anf->getOK() ? "No-solution" : "Fixed-Point")))
-             << " after " << numIters << '.' << static_cast<size_t>(subIters)
-             << " iteration(s) in " << (cpuTime() - loopStartTime)
-             << " seconds.]\n";
+        cout << "c [";
+        if (timeout) {
+             cout << "Timeout";
+         }
+
+         cout
+         << " after " << numIters << '.' << (int)subIters
+         << " iteration(s) in " << (cpuTime() - loopStartTime)
+         << " seconds.]\n";
     }
 
     if (sbs != nullptr)

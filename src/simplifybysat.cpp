@@ -38,20 +38,6 @@ inline bool testSolution(const ANF& anf, const vector<lbool>& solution)
     return goodSol;
 }
 
-inline void printSolution(const vector<lbool>& solution)
-{
-    size_t num = 0;
-    std::stringstream toWrite;
-    toWrite << "v ";
-    for (const lbool lit : solution) {
-        if (lit != l_Undef) {
-            toWrite << ((lit == l_True) ? "" : "-") << num << " ";
-        }
-        num++;
-    }
-    cout << toWrite.str() << endl;
-}
-
 SimplifyBySat::SimplifyBySat(const CNF& _cnf, const ConfigData& _config)
     : config(_config), cnf(_cnf)
 {
@@ -202,29 +188,21 @@ int SimplifyBySat::extractLinear(vector<BoolePolynomial>& loop_learnt)
 }
 
 int SimplifyBySat::simplify(const uint64_t numConfl_lim,
-                            const uint64_t numConflinc, const double time_limit,
+                            const uint64_t numConflinc,
+                            const double time_limit,
                             const size_t cbeg,
                             vector<BoolePolynomial>& loop_learnt,
-                            bool& foundSolution, ANF& anf, const ANF* orig_anf)
+                            ANF& anf, Solution& solution)
 {
     if (!anf.getOK()) {
         cout << "c Nothing to simplify: UNSAT" << endl;
         return -1;
     }
 
-    // Add variables to SAT solver
-    /*
-    for(uint32_t i = 0; i < cnf.getNumVars(); i++) {
-        solver->new_var();
-    }
-    */
+    //Add problem to solver
     solver->new_vars(cnf.getNumVars() - solver->nVars());
-
-    // Add XOR & normal clauses from CNF
     addClausesToSolver(cbeg);
 
-    lbool ret;
-    int num_learnt = 0;
     double time_left = time_limit - cpuTime();
     uint64_t numConfl_left = numConfl_lim;
 
@@ -237,115 +215,62 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
              << " seconds" << std::fixed << endl;
     }
 
-    do {
-        const size_t prev_loop_learnt_sz = loop_learnt.size();
-        solver->set_max_time(time_left);
-        solver->set_timeout_all_calls(time_left);
-        solver->set_max_confl((numConfl_left > numConflinc)
-                                  ? numConflinc
-                                  : numConfl_left); // do nuConfl at a time
+    //Run the solver
+    solver->set_max_time(time_left);
+    solver->set_timeout_all_calls(time_left);
+    solver->set_max_confl(std::min(numConflinc, numConfl_left));
+    solution.ret = solver->solve();
+    time_left = time_limit - cpuTime();
+    numConfl_left =
+        (numConfl_left > numConflinc) ? (numConfl_left - numConflinc) : 0;
 
-        ret = solver->solve();
+    if (config.verbosity >= 4)
+        cout << "c ... " << solver->get_sum_conflicts() << '/'
+             << solver->get_sum_propagations() << '/'
+             << solver->get_sum_decisions() << ' ' << std::scientific
+             << time_left << std::fixed << " seconds" << endl;
 
-        //Extract data
-        if (config.verbosity >= 3) {
-            cout << "c  Number of unit/assigns/binary/(anti-)equiv/linear ";
-        }
-        extractUnitaries(loop_learnt);
-        extractBinaries(loop_learnt);
-        extractLinear(loop_learnt);
-        for (size_t i = prev_loop_learnt_sz; i < loop_learnt.size(); ++i)
-            num_learnt += anf.addLearntBoolePolynomial(loop_learnt[i]);
+    //Extract data
+    const size_t prev_loop_learnt_sz = loop_learnt.size();
+    if (config.verbosity >= 3) {
+        cout << "c  Number of unit/assigns/binary/(anti-)equiv/linear ";
+    }
+    extractUnitaries(loop_learnt);
+    extractBinaries(loop_learnt);
+    extractLinear(loop_learnt);
+    int num_learnt = 0;
+    for (size_t i = prev_loop_learnt_sz; i < loop_learnt.size(); ++i)
+        num_learnt += anf.addLearntBoolePolynomial(loop_learnt[i]);
+    if (config.verbosity >= 3) {
+        cout << endl;
+    }
 
-        if (config.verbosity >= 3) {
-            cout << endl;
-        }
-
-        time_left = time_limit - cpuTime();
-        numConfl_left =
-            (numConfl_left > numConflinc) ? (numConfl_left - numConflinc) : 0;
-
-        if (config.verbosity >= 4)
-            cout << "c ... " << solver->get_sum_conflicts() << '/'
-                 << solver->get_sum_propagations() << '/'
-                 << solver->get_sum_decisions() << ' ' << std::scientific
-                 << time_left << std::fixed << " seconds" << endl;
-    } while (ret == l_Undef && num_learnt == 0 && time_left > 0 &&
-             numConfl_left > 0);
-
-    if (ret == l_Undef) {
+    //Deal with result
+    if (solution.ret == l_Undef) {
         return num_learnt;
     }
 
-    if (ret == l_False) {
+    if (solution.ret == l_False) {
         cout << "c UNSAT returned by solver" << endl;
         anf.addBoolePolynomial(BoolePolynomial(true, anf.getRing()));
         return -1;
     }
 
-    //We have a solution
-    assert(ret == l_True);
-    foundSolution = true;
+    //Solution found
+    assert(solution.ret == l_True);
     if (config.verbosity >= 1) {
         cout << "c [SAT] has found a solution" << endl;
     }
 
-    if (config.verbosity >= 5 || config.paranoid || config.learnSolution ||
-        (config.solutionOutput.length() > 0)) {
-        // Do extra work only if the any of the above are true
-        const size_t sz = solver->get_model().size();
-        vector<lbool> solutionFromSolver(sz, l_Undef);
-        for (uint32_t i = 0; i < sz; ++i) {
-            solutionFromSolver[i] = solver->get_model()[i];
-            assert(solutionFromSolver[i] != l_Undef);
-        }
-
-        vector<lbool> solution2 = cnf.mapSolToOrig(solutionFromSolver);
-        const vector<lbool> solution = anf.extendSolution(solution2);
-
-        if (config.learnSolution) {
-            anf.learnSolution(solution2);
-        }
-
-        if (config.verbosity >= 5) {
-            printSolution(solution);
-        }
-
-        if (config.paranoid) {
-            const bool ok = testSolution(*orig_anf, solution);
-            assert(ok);
-            if (config.verbosity >= 3) {
-                cout << "c Solution found is correct." << endl;
-            }
-        }
-
-        if (config.solutionOutput.length() > 0) {
-            // Write solution
-            std::ofstream ofs;
-            ofs.open(config.solutionOutput.c_str());
-            if (!ofs) {
-                std::cerr << "c Error opening file \"" << config.solutionOutput
-                          << "\" for writing\n";
-                exit(-1);
-            } else {
-                size_t num = 0;
-                ofs << "v ";
-                for (const lbool lit : solution) {
-                    if (lit != l_Undef) {
-                        ofs << ((lit == l_True) ? "" : "-") << num << " ";
-                    }
-                    num++;
-                }
-                ofs << endl;
-
-                if (config.verbosity >= 2) {
-                    cout << "c [Cryptominisat] Solution written to "
-                         << config.solutionOutput << endl;
-                }
-            }
-            ofs.close();
-        }
+    const size_t sz = solver->get_model().size();
+    vector<lbool> solutionFromSolver(sz, l_Undef);
+    for (uint32_t i = 0; i < sz; ++i) {
+        solutionFromSolver[i] = solver->get_model()[i];
+        assert(solutionFromSolver[i] != l_Undef);
     }
+
+    vector<lbool> solution2 = cnf.mapSolToOrig(solutionFromSolver);
+    solution.sol = anf.extendSolution(solution2);
 
     return num_learnt;
 }

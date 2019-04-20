@@ -27,6 +27,7 @@ SOFTWARE.
 #include <fstream>
 #include "anf.hpp"
 #include "cnf.hpp"
+#include "solution.h"
 
 namespace CMSat {
 class SATSolver;
@@ -40,8 +41,8 @@ class SimplifyBySat
 
     int simplify(const uint64_t numConfl_lim, const uint64_t numConfl_inc,
                  const double time_limit, const size_t cbeg,
-                 vector<BoolePolynomial>& loop_learnt, bool& foundSolution,
-                 ANF& anf, const ANF* orig_anf);
+                 vector<BoolePolynomial>& loop_learnt,
+                 ANF& anf, Solution& solution);
 
    private:
     const ConfigData& config;

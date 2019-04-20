@@ -29,21 +29,33 @@ SOFTWARE.
 #include "dimacscache.hpp"
 #include "karnaugh.hpp"
 
-CNF::CNF(const ANF& _anf, const vector<Clause>& cutting_clauses,
-         const ConfigData& _config)
+CNF::CNF(const ANF& _anf, const ConfigData& _config)
     : anf(_anf), config(_config)
 {
-    //Make sure outside var X is inside var X
     init();
-
-    if (config.readCNF) {
-        addOriginalCNF(cutting_clauses);
-    } else {
-        addAllEquations();
-    }
+    addAllEquations();
 }
 
-size_t CNF::update(void)
+CNF::CNF(const char* fname, const ANF& _anf,
+         const vector<Clause>& extra_clauses, const ConfigData& _config)
+    : anf(_anf), config(_config)
+{
+    init();
+    addTrivialEquations();
+
+    DIMACSCache dimacs_cache(fname);
+    vector<Clause> setOfClauses(dimacs_cache.getClauses());
+    // add cutting clauses
+    setOfClauses.insert(setOfClauses.end(), extra_clauses.begin(),
+                        extra_clauses.end());
+
+
+    // Associate with 0=0 polynomial
+    BoolePolynomial eq(0, anf.getRing());
+    clauses.push_back(std::make_pair(setOfClauses, eq));
+}
+
+size_t CNF::update()
 {
     size_t prev = clauses.size();
 
@@ -90,22 +102,6 @@ void CNF::addAllEquations()
     for (const BoolePolynomial& poly : eqs) {
         addBoolePolynomial(poly);
     }
-}
-
-void CNF::addOriginalCNF(const vector<Clause>& cutting_clauses)
-{
-    // Add replaced and set variables to CNF
-    addTrivialEquations();
-
-    DIMACSCache dimacs_cache(config.cnfInput.c_str());
-    vector<Clause> setOfClauses(dimacs_cache.getClauses());
-    // add cutting clauses
-    setOfClauses.insert(setOfClauses.end(), cutting_clauses.begin(),
-                        cutting_clauses.end());
-
-    // Associate with 0=0 polynomial
-    BoolePolynomial eq(0, anf.getRing());
-    clauses.push_back(std::make_pair(setOfClauses, eq));
 }
 
 void CNF::addTrivialEquations()

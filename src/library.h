@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
+#ifndef LIBRARY_H_
+#define LIBRARY_H_
 
 #include "GitSHA1.h"
 #include "anf.hpp"
@@ -29,6 +31,7 @@ SOFTWARE.
 #include "gaussjordan.hpp"
 #include "replacer.hpp"
 #include "time_mem.h"
+#include "solution.h"
 
 // ALGOS
 #include "elimlin.hpp"
@@ -39,19 +42,33 @@ class Library
 {
 public:
     ~Library();
-
-    ANF* read_anf();
-    CNF* anf_to_cnf(const ANF* anf, const vector<Clause>& cutting_clauses);
-    ANF* read_cnf(vector<Clause>& extra_clauses);
-    void write_anf(const ANF* anf);
-    void write_cnf(const ANF* anf, const vector<Clause>& cutting_clauses,
-               const vector<BoolePolynomial>& learnt);
-
-    void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
-              const ANF* orig_anf, const vector<Clause>& cutting_clauses);
-    void deduplicate(vector<BoolePolynomial>& learnt);
     void set_config(const ConfigData& cfg);
+
+    ANF* read_anf(const char* fname);
+    ANF* read_cnf(const char* fname);
+    void write_anf(const char* fname, const ANF* anf);
+    void write_cnf(const char* input_cnf_fname,
+              const char* output_cnf_fname,
+              const ANF* anf,
+              const vector<BoolePolynomial>& learnt);
+
+
+    CNF* anf_to_cnf(const ANF* anf);
+    CNF* cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf);
+
+    Solution simplify(ANF* anf, const char* orig_cnf_file,
+                  vector<BoolePolynomial>& loop_learnt);
+
+    void deduplicate(vector<BoolePolynomial>& learnt);
+
 private:
+    void check_library_in_use();
+
     ConfigData config;
     BoolePolyRing* polybori_ring = nullptr;
+    vector<Clause> extra_clauses;
+
+    bool read_in_data = false;
 };
+
+#endif
