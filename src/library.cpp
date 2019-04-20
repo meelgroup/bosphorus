@@ -400,6 +400,7 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
     delete sbs;
     delete cnf;
     anf->contextualize(loop_learnt);
+    return solution;
 }
 
 void Library::deduplicate(vector<BoolePolynomial>& learnt)
