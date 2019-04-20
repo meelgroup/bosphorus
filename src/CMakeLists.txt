@@ -32,6 +32,7 @@ set(bosph_lib_files
     extendedlinearization.cpp
     elimlin.cpp
     anfutils.cpp
+    library.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp
 )
 
