@@ -33,7 +33,13 @@ CNF::CNF(const ANF& _anf, const ConfigData& _config)
     : anf(_anf), config(_config)
 {
     init();
-    addAllEquations();
+    addTrivialEquations();
+
+    // Add regular equations
+    const vector<BoolePolynomial>& eqs = anf.getEqs();
+    for (const BoolePolynomial& poly : eqs) {
+        addBoolePolynomial(poly);
+    }
 }
 
 CNF::CNF(const char* fname, const ANF& _anf,
@@ -62,13 +68,6 @@ size_t CNF::update()
     // Add new replaced and set variables to CNF
     addTrivialEquations();
 
-    if (!config.readCNF) {
-        // Because ANF may have changed to give better clauses
-        const vector<BoolePolynomial>& eqs = anf.getEqs();
-        for (const BoolePolynomial& poly : eqs) {
-            addBoolePolynomial(poly);
-        }
-    }
     return prev;
 }
 
@@ -89,18 +88,6 @@ void CNF::init()
     // If ANF is not OK, then add polynomial '1'
     if (!anf.getOK()) {
         addBoolePolynomial(BoolePolynomial(true, anf.getRing()));
-    }
-}
-
-void CNF::addAllEquations()
-{
-    // Add replaced and set variables to CNF
-    addTrivialEquations();
-
-    // Add regular equations
-    const vector<BoolePolynomial>& eqs = anf.getEqs();
-    for (const BoolePolynomial& poly : eqs) {
-        addBoolePolynomial(poly);
     }
 }
 

@@ -32,10 +32,6 @@ using std::string;
 struct ConfigData {
     // Input/Output
     string executedArgs = "";
-    bool readANF;
-    bool readCNF;
-    bool writeANF;
-    bool writeCNF;
     bool writecomments = false;
     bool printProcessedANF;
     uint32_t verbosity;

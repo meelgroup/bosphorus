@@ -270,8 +270,8 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
     size_t countdowns[] = {0, 0, 0};
     uint32_t numIters = 0;
     unsigned char subIters = 0;
-    CNF* cnf = nullptr;
-    SimplifyBySat* sbs = nullptr;
+    CNF* cnf = NULL;
+    SimplifyBySat* sbs = NULL;
 
     while (!timeout && anf->getOK() &&
            solution.ret == l_Undef &&
@@ -317,17 +317,18 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
                 case 2:
                     if (!config.noSAT) {
                         size_t no_cls = 0;
-                        if (cnf == NULL) {
-                            if (orig_cnf_file) {
+                        if (orig_cnf_file) {
+                            if (cnf == NULL) {
+                                assert(sbs == NULL);
                                 cnf = new CNF(orig_cnf_file, *anf, extra_clauses, config);
+                                sbs = new SimplifyBySat(*cnf, config);
                             } else {
-                                cnf = new CNF(*anf, config);
+                                no_cls = cnf->update();
                             }
                         } else {
-                            no_cls = cnf->update();
-                        }
-
-                        if (sbs == NULL) {
+                            delete cnf;
+                            delete sbs;
+                            cnf = new CNF(*anf, config);
                             sbs = new SimplifyBySat(*cnf, config);
                         }
 

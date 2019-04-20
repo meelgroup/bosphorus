@@ -54,6 +54,12 @@ string cnfInput;
 string cnfOutput;
 string solutionOutput;
 
+// read/write
+bool readANF;
+bool readCNF;
+bool writeANF;
+bool writeCNF;
+
 po::variables_map vm;
 ConfigData config;
 
@@ -209,22 +215,22 @@ void parseOptions(int argc, char* argv[])
 
     // I/O checks
     if (vm.count("anfread")) {
-        config.readANF = true;
+        readANF = true;
     }
     if (vm.count("cnfread")) {
-        config.readCNF = true;
+        readCNF = true;
     }
     if (vm.count("anfwrite")) {
-        config.writeANF = true;
+        writeANF = true;
     }
     if (vm.count("cnfwrite")) {
-        config.writeCNF = true;
+        writeCNF = true;
     }
-    if (!config.readANF && !config.readCNF) {
+    if (!readANF && !readCNF) {
         cout << "You must give an ANF/CNF file to read in\n";
         exit(-1);
     }
-    if (config.readANF && config.readCNF) {
+    if (readANF && readCNF) {
         cout << "You cannot give both ANF/CNF files to read in\n";
         exit(-1);
     }
@@ -346,10 +352,10 @@ inline void print_solution(Solution& solution)
     cout << toWrite.str() << endl;
 }
 
-void check_solution(ANF* anf, vector<lbool> * solution)
+void check_solution(ANF* anf, Solution& solution)
 {
     //Checking
-    bool goodSol = anf->evaluate(*solution);
+    bool goodSol = anf->evaluate(solution.sol);
     if (!goodSol) {
         cout << "ERROR! Solution found is incorrect!" << endl;
         exit(-1);
@@ -371,7 +377,7 @@ int main(int argc, char* argv[])
 
     // Read from file
     ANF* anf = nullptr;
-    if (config.readANF) {
+    if (readANF) {
         double parseStartTime = cpuTime();
         anf = mylib.read_anf(anfInput.c_str());
         if (config.verbosity) {
@@ -380,7 +386,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (config.readCNF) {
+    if (readCNF) {
         double parseStartTime = cpuTime();
         anf = mylib.read_cnf(cnfInput.c_str());
         if (config.verbosity) {
@@ -414,7 +420,11 @@ int main(int argc, char* argv[])
         }
         Solution solution = mylib.simplify(anf, cnf_orig, learnt);
 
-        if (solution.ret != l_Undef) {
+        if (solution.ret != l_Undef)
+        {
+            if (solution.ret == l_True) {
+                check_solution(orig_anf, solution);
+            }
             print_solution(solution);
             if (solutionOutput.length() > 0) {
                 write_solution_to_file(solutionOutput.c_str(), solution);
@@ -436,11 +446,15 @@ int main(int argc, char* argv[])
     mylib.deduplicate(learnt);
 
     // Write to file
-    if (config.writeANF) {
+    if (writeANF) {
         mylib.write_anf(anfOutput.c_str(), anf);
     }
-    if (config.writeCNF) {
-        mylib.write_cnf(cnfInput.c_str(), cnfOutput.c_str(), anf, learnt);
+    if (writeCNF) {
+        const char* cnf_input = NULL;
+        if (cnfInput.length() > 0) {
+            cnf_input = cnfInput.c_str();
+        }
+        mylib.write_cnf(cnf_input, cnfOutput.c_str(), anf, learnt);
     }
 
     if (config.verbosity >= 1) {

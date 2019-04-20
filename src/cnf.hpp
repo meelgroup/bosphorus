@@ -74,7 +74,6 @@ public:
 
    private:
     void init();
-    void addAllEquations();
     void addBoolePolynomial(const BoolePolynomial& eq);
     void addTrivialEquations();
     bool tryAddingPolyWithKarn(const BoolePolynomial& eq,
