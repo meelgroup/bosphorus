@@ -25,9 +25,6 @@ SOFTWARE.
 #include <iostream>
 #include "anf.hpp"
 
-using CMSat::lbool;
-using CMSat::Lit;
-
 using std::cout;
 using std::endl;
 
@@ -136,13 +133,13 @@ vector<uint32_t> Replacer::setValue(uint32_t var, bool val)
 
     //set value
     if (value[var] != l_Undef) {
-        if (value[var] != CMSat::boolToLBool(val)) {
+        if (value[var] != boolToLBool(val)) {
             ok = false;
         }
         return alsoUpdated;
     }
 
-    value[var] = CMSat::boolToLBool(val);
+    value[var] = boolToLBool(val);
 
     //update anti/equivalent variables
     map<uint32_t, vector<uint32_t> >::iterator it = revReplaceTable.find(var);
@@ -154,7 +151,7 @@ vector<uint32_t> Replacer::setValue(uint32_t var, bool val)
     for (vector<uint32_t>::iterator it2 = vars.begin(), end2 = vars.end();
          it2 != end2; it2++) {
         assert(replaceTable[*it2].var() == var);
-        value[*it2] = CMSat::boolToLBool(replaceTable[*it2].sign() ^ val);
+        value[*it2] = boolToLBool(replaceTable[*it2].sign() ^ val);
         alsoUpdated.push_back(*it2);
     }
 

@@ -26,7 +26,10 @@ SOFTWARE.
 
 #include "elimlin.hpp"
 #include "extendedlinearization.hpp"
+
+#ifdef SAT_SIMP
 #include "simplifybysat.hpp"
+#endif
 
 Library::~Library()
 {
@@ -312,6 +315,7 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
                     }
                     break;
                 case 2:
+#ifdef SAT_SIMP
                     if (config.doSAT) {
                         size_t no_cls = 0;
                         if (orig_cnf_file) {
@@ -335,6 +339,7 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
                                           config.numConfl_inc, config.maxTime,
                                           no_cls, loop_learnt, *anf, solution);
                     }
+#endif
                     break;
             }
 

@@ -28,13 +28,17 @@ set(bosph_lib_files
     karnaugh.cpp
     replacer.cpp
     dimacscache.cpp
-    simplifybysat.cpp
     extendedlinearization.cpp
     elimlin.cpp
     anfutils.cpp
     library.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp
 )
+
+if (SAT_SIMP)
+set(bosph_lib_files
+    ${bosph_lib_files} simplifybysat.cpp)
+endif()
 
 add_library(libbosphorus
     ${bosph_lib_files}

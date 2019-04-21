@@ -24,7 +24,7 @@ SOFTWARE.
 #define SOLUTION_H_
 
 #include <vector>
-#include "cryptominisat5/solvertypesmini.h"
+#include "solvertypesmini.h"
 
 using std::vector;
 

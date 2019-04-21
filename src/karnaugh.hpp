@@ -25,10 +25,8 @@ SOFTWARE.
 #define _KARNAUGH_H_
 
 #include "clauses.hpp"
-#include "cryptominisat5/solvertypesmini.h"
+#include "solvertypesmini.h"
 #include "polybori.h"
-using CMSat::lbool;
-using CMSat::Lit;
 
 USING_NAMESPACE_PBORI
 

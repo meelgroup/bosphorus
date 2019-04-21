@@ -27,9 +27,7 @@ SOFTWARE.
 #include <limits>
 #include <vector>
 #include "assert.h"
-#include "cryptominisat5/solvertypesmini.h"
-using CMSat::lbool;
-using CMSat::Lit;
+#include "solvertypesmini.h"
 using std::vector;
 
 class Clause
