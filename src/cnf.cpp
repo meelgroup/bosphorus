@@ -55,7 +55,6 @@ CNF::CNF(const char* fname, const ANF& _anf,
     setOfClauses.insert(setOfClauses.end(), extra_clauses.begin(),
                         extra_clauses.end());
 
-
     // Associate with 0=0 polynomial
     BoolePolynomial eq(0, anf.getRing());
     clauses.push_back(std::make_pair(setOfClauses, eq));

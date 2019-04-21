@@ -34,9 +34,9 @@ namespace po = boost::program_options;
 #include "cnf.hpp"
 #include "dimacscache.hpp"
 #include "gaussjordan.hpp"
+#include "library.h"
 #include "replacer.hpp"
 #include "time_mem.h"
-#include "library.h"
 
 #ifdef SATSOLVE_ENABLED
 #include "satsolve.hpp"
@@ -304,8 +304,7 @@ void write_solution_to_file(const char* fname, const Solution& solution)
     std::ofstream ofs;
     ofs.open(fname);
     if (!ofs) {
-        std::cerr << "c Error opening file \"" << fname
-                  << "\" for writing\n";
+        std::cerr << "c Error opening file \"" << fname << "\" for writing\n";
         exit(-1);
     }
 
@@ -382,7 +381,7 @@ int main(int argc, char* argv[])
         anf = mylib.read_anf(anfInput.c_str());
         if (config.verbosity) {
             cout << "c [ANF Input] read in T: " << (cpuTime() - parseStartTime)
-            << endl;
+                 << endl;
         }
     }
 
@@ -391,7 +390,7 @@ int main(int argc, char* argv[])
         anf = mylib.read_cnf(cnfInput.c_str());
         if (config.verbosity) {
             cout << "c [CNF Input] read in T: " << (cpuTime() - parseStartTime)
-            << endl;
+                 << endl;
         }
     }
     assert(anf != NULL);
@@ -420,8 +419,7 @@ int main(int argc, char* argv[])
         }
         Solution solution = mylib.simplify(anf, cnf_orig, learnt);
 
-        if (solution.ret != l_Undef)
-        {
+        if (solution.ret != l_Undef) {
             if (solution.ret == l_True) {
                 check_solution(orig_anf, solution);
             }

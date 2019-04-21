@@ -188,11 +188,10 @@ int SimplifyBySat::extractLinear(vector<BoolePolynomial>& loop_learnt)
 }
 
 int SimplifyBySat::simplify(const uint64_t numConfl_lim,
-                            const uint64_t numConflinc,
-                            const double time_limit,
+                            const uint64_t numConflinc, const double time_limit,
                             const size_t cbeg,
-                            vector<BoolePolynomial>& loop_learnt,
-                            ANF& anf, Solution& solution)
+                            vector<BoolePolynomial>& loop_learnt, ANF& anf,
+                            Solution& solution)
 {
     if (!anf.getOK()) {
         cout << "c Nothing to simplify: UNSAT" << endl;

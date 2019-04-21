@@ -52,7 +52,8 @@ DIMACSCache::DIMACSCache(const char* _fname)
         if (temp.length() == 0 || temp[0] == 'p' || temp[0] == 'c') {
             continue;
         } else if (temp[0] == 'x') {
-            cout << "ERROR: xor clause found in CNF, we cannot deal with that" << endl;
+            cout << "ERROR: xor clause found in CNF, we cannot deal with that"
+                 << endl;
             exit(-1);
         } else {
             std::istringstream iss(temp);

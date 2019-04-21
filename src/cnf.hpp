@@ -37,10 +37,10 @@ using boost::variant;
 
 class CNF
 {
-public:
+   public:
     CNF(const ANF& _anf, const ConfigData& _config);
-    CNF(const char* fname, const ANF& _anf,
-        const vector<Clause>& extra_clauses, const ConfigData& _config);
+    CNF(const char* fname, const ANF& _anf, const vector<Clause>& extra_clauses,
+        const ConfigData& _config);
 
     /// update CNF with new equations and facts from the anf-sibling;
     /// @returns the previous number of clause-sets

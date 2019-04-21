@@ -30,22 +30,22 @@ SOFTWARE.
 
 Library::~Library()
 {
-        delete polybori_ring;
+    delete polybori_ring;
 }
 
 void Library::check_library_in_use()
 {
     if (read_in_data) {
         cout << "ERROR: data already read in."
-        << " You can only read in *one* ANF or CNF per library creation"
-        << endl;
+             << " You can only read in *one* ANF or CNF per library creation"
+             << endl;
         exit(-1);
     }
     read_in_data = true;
 
     assert(extra_clauses.empty());
-//     assert(anf == nullptr);
-//     assert(cnf = nullptr);
+    //     assert(anf == nullptr);
+    //     assert(cnf = nullptr);
     assert(polybori_ring == nullptr);
 }
 
@@ -160,8 +160,7 @@ void Library::write_anf(const char* fname, const ANF* anf)
     std::ofstream ofs;
     ofs.open(fname);
     if (!ofs) {
-        std::cerr << "c Error opening file \"" << fname
-                  << "\" for writing\n";
+        std::cerr << "c Error opening file \"" << fname << "\" for writing\n";
         exit(-1);
     } else {
         ofs << "c Executed arguments: " << config.executedArgs << endl;
@@ -171,8 +170,7 @@ void Library::write_anf(const char* fname, const ANF* anf)
 }
 
 void Library::write_cnf(const char* input_cnf_fname,
-                        const char* output_cnf_fname,
-                        const ANF* anf,
+                        const char* output_cnf_fname, const ANF* anf,
                         const vector<BoolePolynomial>& learnt)
 {
     CNF* cnf = NULL;
@@ -248,7 +246,7 @@ CNF* Library::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf)
 }
 
 Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
-                       vector<BoolePolynomial>& loop_learnt)
+                           vector<BoolePolynomial>& loop_learnt)
 {
     cout << "c [boshp] Running iterative simplification..." << endl;
     bool timeout = (cpuTime() > config.maxTime);
@@ -273,14 +271,12 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
     CNF* cnf = NULL;
     SimplifyBySat* sbs = NULL;
 
-    while (!timeout && anf->getOK() &&
-           solution.ret == l_Undef &&
+    while (!timeout && anf->getOK() && solution.ret == l_Undef &&
            (std::accumulate(changes, changes + 3, false,
                             std::logical_or<bool>()) ||
-            numIters < config.minIter))
-    {
-        cout << "c [iter-simp] ------ Iteration "
-        << std::fixed << std::dec << (int)numIters << endl;
+            numIters < config.minIter)) {
+        cout << "c [iter-simp] ------ Iteration " << std::fixed << std::dec
+             << (int)numIters << endl;
 
         static const char* strategy_str[] = {"XL", "ElimLin", "SAT"};
         const double startTime = cpuTime();
@@ -321,7 +317,8 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
                         if (orig_cnf_file) {
                             if (cnf == NULL) {
                                 assert(sbs == NULL);
-                                cnf = new CNF(orig_cnf_file, *anf, extra_clauses, config);
+                                cnf = new CNF(orig_cnf_file, *anf,
+                                              extra_clauses, config);
                                 sbs = new SimplifyBySat(*cnf, config);
                             } else {
                                 no_cls = cnf->update();
@@ -333,10 +330,10 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
                             sbs = new SimplifyBySat(*cnf, config);
                         }
 
-                        num_learnt = sbs->simplify(
-                            config.numConfl_lim, config.numConfl_inc,
-                            config.maxTime, no_cls, loop_learnt,
-                            *anf, solution);
+                        num_learnt =
+                            sbs->simplify(config.numConfl_lim,
+                                          config.numConfl_inc, config.maxTime,
+                                          no_cls, loop_learnt, *anf, solution);
                     }
                     break;
             }
@@ -388,13 +385,12 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
     if (config.verbosity) {
         cout << "c [";
         if (timeout) {
-             cout << "Timeout";
-         }
+            cout << "Timeout";
+        }
 
-         cout
-         << " after " << numIters << '.' << (int)subIters
-         << " iteration(s) in " << (cpuTime() - loopStartTime)
-         << " seconds.]\n";
+        cout << " after " << numIters << '.' << (int)subIters
+             << " iteration(s) in " << (cpuTime() - loopStartTime)
+             << " seconds.]\n";
     }
 
     delete sbs;

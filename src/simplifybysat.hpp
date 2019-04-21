@@ -41,8 +41,8 @@ class SimplifyBySat
 
     int simplify(const uint64_t numConfl_lim, const uint64_t numConfl_inc,
                  const double time_limit, const size_t cbeg,
-                 vector<BoolePolynomial>& loop_learnt,
-                 ANF& anf, Solution& solution);
+                 vector<BoolePolynomial>& loop_learnt, ANF& anf,
+                 Solution& solution);
 
    private:
     const ConfigData& config;
