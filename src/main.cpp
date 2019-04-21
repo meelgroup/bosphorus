@@ -108,7 +108,7 @@ void parseOptions(int argc, char* argv[])
 
     po::options_description xl_options("XL");
     xl_options.add_options()
-    ("noxl", po::bool_switch(&config.noXL), "No XL")
+    ("doXL", po::bool_switch(&config.doXL), "No XL")
     ("xldeg", po::value<uint32_t>(&config.xlDeg)->default_value(1),
      "Expansion degree for XL algorithm. Default = 1 (0 = Just GJE. For now we only support 0 <= xldeg = 3)")
     ("xlsample", po::value<double>(&config.XLsample)->default_value(config.XLsample),
@@ -119,14 +119,14 @@ void parseOptions(int argc, char* argv[])
 
     po::options_description elimlin_options("ElimLin options");
     elimlin_options.add_options()
-    ("noel", po::bool_switch(&config.noEL), "no ElimLin")
+    ("el", po::bool_switch(&config.doEL), "Perform ElimLin")
     ("elsample", po::value<double>(&config.ELsample)->default_value(config.ELsample),
      "Size of matrixto sample for EL, in log2")
     ;
 
     po::options_description sat_options("SAT options");
     sat_options.add_options()
-    ("nosat", po::bool_switch(&config.noSAT),  "No SAT solving")
+    ("sat", po::bool_switch(&config.doSAT),  "Do SAT solving")
     ("stoponsolution", po::bool_switch(&config.stopOnSolution),
      "Stops further simplifications and store solution if SAT simp finds a solution")
     ("satinc", po::value<uint64_t>(&config.numConfl_inc)->default_value(config.numConfl_inc),
@@ -265,11 +265,11 @@ void parseOptions(int argc, char* argv[])
              << config.maxTime << std::fixed << endl
              << "c XL simp (deg = " << config.xlDeg
              << "; s = " << config.XLsample << '+' << config.XLsampleX
-             << "): " << !config.noXL << endl
-             << "c EL simp (s = " << config.ELsample << "): " << !config.noEL
+             << "): " << config.doXL << endl
+             << "c EL simp (s = " << config.ELsample << "): " << config.doEL
              << endl
              << "c SAT simp (" << config.numConfl_inc << ':'
-             << config.numConfl_lim << "): " << !config.noSAT << endl
+             << config.numConfl_lim << "): " << config.doSAT << endl
              << "c Stop simplifying if SAT finds solution? "
              << (config.stopOnSolution ? "Yes" : "No") << endl
              << "c Cut num: " << config.cutNum << endl

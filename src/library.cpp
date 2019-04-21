@@ -289,7 +289,7 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
             const size_t prevsz = loop_learnt.size();
             switch (subIters) {
                 case 0:
-                    if (!config.noXL) {
+                    if (config.doXL) {
                         if (!extendedLinearization(config, anf->getEqs(),
                                                    loop_learnt)) {
                             anf->setNOTOK();
@@ -301,7 +301,7 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
                     }
                     break;
                 case 1:
-                    if (!config.noEL) {
+                    if (config.doEL) {
                         if (!elimLin(config, anf->getEqs(), loop_learnt)) {
                             anf->setNOTOK();
                         } else {
@@ -312,7 +312,7 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
                     }
                     break;
                 case 2:
-                    if (!config.noSAT) {
+                    if (config.doSAT) {
                         size_t no_cls = 0;
                         if (orig_cnf_file) {
                             if (cnf == NULL) {

@@ -44,9 +44,9 @@ struct ConfigData {
     // Processes
     double maxTime = 1e20;
     uint32_t minIter = 0;
-    bool noXL = false;
-    bool noEL = false;
-    bool noSAT = false;
+    bool doXL = false;
+    bool doEL = false;
+    bool doSAT = false;
     double XLsample = 30.0;
     double XLsampleX = 4.0;
     double ELsample = 30.0;
