@@ -38,9 +38,6 @@ namespace po = boost::program_options;
 #include "replacer.hpp"
 #include "time_mem.h"
 
-#ifdef SATSOLVE_ENABLED
-#include "satsolve.hpp"
-#endif
 using std::cerr;
 using std::cout;
 using std::deque;
@@ -135,18 +132,6 @@ void parseOptions(int argc, char* argv[])
      "Conflict limit for built-in SAT solver.")
     ;
 
-#ifdef SATSOLVE_ENABLED
-    po::options_description solving_processed_CNF_opts("CNF solving");
-    solving_processed_CNF_opts.add_options()
-    ("learnsolution", po::bool_switch(&config.learnSolution),
-     "Make concrete the solution that SAT solver returns on the ANF representation. This is not strictly 'correct' as there may be other solutions(!) to the ANF")
-    ("solvesat,s", po::bool_switch(&config.doSolveSAT), "Solve with SAT solver as per '--solverexe")
-    ("solverexe,e", po::value(&config.solverExe)->default_value("/usr/local/bin/cryptominisat5"),
-     "Solver executable for SAT solving CNF")
-    ("solvewrite,o", po::value(&solutionOutput), "Write solver output to file")
-    ;
-#endif
-
     /* clang-format on */
     po::options_description cmdline_options;
     cmdline_options.add(generalOptions);
@@ -154,9 +139,6 @@ void parseOptions(int argc, char* argv[])
     cmdline_options.add(xl_options);
     cmdline_options.add(elimlin_options);
     cmdline_options.add(sat_options);
-#ifdef SATSOLVE_ENABLED
-    cmdline_options.add(solving_processed_CNF_opts);
-#endif
 
     try {
         po::store(
@@ -168,9 +150,6 @@ void parseOptions(int argc, char* argv[])
             cout << xl_options << endl;
             cout << elimlin_options << endl;
             cout << sat_options << endl;
-#ifdef SATSOLVE_ENABLED
-            cout << solving_processed_CNF_opts << endl;
-#endif
             exit(0);
         }
         po::notify(vm);

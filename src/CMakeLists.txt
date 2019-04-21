@@ -36,10 +36,6 @@ set(bosph_lib_files
     ${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp
 )
 
-if (SATSOLVE_ENABLED)
-    set(bosph_lib_files ${bosph_lib_files} satsolve.cpp)
-endif()
-
 add_library(libbosphorus
     ${bosph_lib_files}
 )
