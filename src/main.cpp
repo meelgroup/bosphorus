@@ -257,27 +257,6 @@ void parseOptions(int argc, char* argv[])
     }
 }
 
-void addTrivialFromANF(ANF* anf, vector<BoolePolynomial>& all_learnt,
-                       const ANF::eqs_hash_t& orig_eqs_hash)
-{
-    // Add *NEW* assignments and equivalences
-    for (uint32_t v = 0; v < anf->getRing().nVariables(); v++) {
-        const lbool val = anf->value(v);
-        const Lit lit = anf->getReplaced(v);
-        BooleVariable bv = anf->getRing().variable(v);
-        if (val != l_Undef) {
-            BoolePolynomial assignment(bv + BooleConstant(val == l_True));
-            if (orig_eqs_hash.find(assignment.hash()) == orig_eqs_hash.end())
-                all_learnt.push_back(assignment);
-        } else if (lit != Lit(v, false)) {
-            BooleVariable bv2 = anf->getRing().variable(lit.var());
-            BoolePolynomial equivalence(bv + bv2 + BooleConstant(lit.sign()));
-            if (orig_eqs_hash.find(equivalence.hash()) == orig_eqs_hash.end())
-                all_learnt.push_back(equivalence);
-        }
-    }
-}
-
 void write_solution_to_file(const char* fname, const Solution& solution)
 {
     std::ofstream ofs;
@@ -388,15 +367,12 @@ int main(int argc, char* argv[])
         cout << "c [ANF hash] Done. T: " << (cpuTime() - myTime) << endl;
     }
 
-    // Perform simplifications
-    vector<BoolePolynomial> learnt;
-
     if (config.simplify) {
         const char* cnf_orig = NULL;
         if (cnfInput.length() > 0) {
             cnf_orig = cnfInput.c_str();
         }
-        Solution solution = mylib.simplify(anf, cnf_orig, learnt);
+        Solution solution = mylib.simplify(anf, cnf_orig);
 
         if (solution.ret != l_Undef) {
             if (solution.ret == l_True) {
@@ -416,11 +392,11 @@ int main(int argc, char* argv[])
     }
 
     // finish up the learnt polynomials
-    addTrivialFromANF(anf, learnt, orig_anf->getEqsHash());
+    mylib.add_trivial_learnt_from_anf_to_learnt(anf, orig_anf->getEqsHash());
     delete orig_anf;
 
     // remove duplicates from learnt clauses
-    mylib.deduplicate(learnt);
+    mylib.deduplicate();
 
     // Write to file
     if (writeANF) {
@@ -431,11 +407,11 @@ int main(int argc, char* argv[])
         if (cnfInput.length() > 0) {
             cnf_input = cnfInput.c_str();
         }
-        mylib.write_cnf(cnf_input, cnfOutput.c_str(), anf, learnt);
+        mylib.write_cnf(cnf_input, cnfOutput.c_str(), anf);
     }
 
     if (config.verbosity >= 1) {
-        cout << "c Learnt " << learnt.size() << " fact(s) in " << cpuTime()
+        cout << "c Learnt " << mylib.get_learnt_size() << " fact(s) in " << cpuTime()
              << " seconds using "
              << static_cast<double>(memUsed()) / 1024.0 / 1024.0 << "MB.\n";
     }

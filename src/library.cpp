@@ -67,6 +67,29 @@ ANF* Library::read_anf(const char* fname)
     return anf;
 }
 
+ANF* Library::start_cnf_input(uint32_t max_vars)
+{
+    polybori_ring = new BoolePolyRing(max_vars);
+    ANF* anf = new ANF(polybori_ring, config);
+    return anf;
+}
+
+ANF* Library::add_clause(ANF* anf, vector<int> clause)
+{
+    BoolePolynomial poly(1, *polybori_ring);
+    for (const int lit: clause) {
+        assert(lit != 0);
+        BoolePolynomial alsoAdd(*polybori_ring);
+        if (lit < 0)
+            alsoAdd = poly;
+        poly *= BooleVariable(std::abs(lit)-1, *polybori_ring);
+        poly += alsoAdd;
+    }
+    anf->addBoolePolynomial(poly);
+    return anf;
+}
+
+
 ANF* Library::read_cnf(const char* fname)
 {
     check_library_in_use();
@@ -173,8 +196,7 @@ void Library::write_anf(const char* fname, const ANF* anf)
 }
 
 void Library::write_cnf(const char* input_cnf_fname,
-                        const char* output_cnf_fname, const ANF* anf,
-                        const vector<BoolePolynomial>& learnt)
+                        const char* output_cnf_fname, const ANF* anf)
 {
     CNF* cnf = NULL;
     if (input_cnf_fname == NULL) {
@@ -248,8 +270,7 @@ CNF* Library::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf)
     return cnf;
 }
 
-Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
-                           vector<BoolePolynomial>& loop_learnt)
+Solution Library::simplify(ANF* anf, const char* orig_cnf_file)
 {
     cout << "c [boshp] Running iterative simplification..." << endl;
     bool timeout = (cpuTime() > config.maxTime);
@@ -289,28 +310,28 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
             cout << "c [" << strategy_str[subIters] << "] waiting for "
                  << countdowns[subIters] << " iteration(s)." << endl;
         } else {
-            const size_t prevsz = loop_learnt.size();
+            const size_t prevsz = learnt.size();
             switch (subIters) {
                 case 0:
                     if (config.doXL) {
                         if (!extendedLinearization(config, anf->getEqs(),
-                                                   loop_learnt)) {
+                                                   learnt)) {
                             anf->setNOTOK();
                         } else {
-                            for (size_t i = prevsz; i < loop_learnt.size(); ++i)
+                            for (size_t i = prevsz; i < learnt.size(); ++i)
                                 num_learnt +=
-                                    anf->addBoolePolynomial(loop_learnt[i]);
+                                    anf->addBoolePolynomial(learnt[i]);
                         }
                     }
                     break;
                 case 1:
                     if (config.doEL) {
-                        if (!elimLin(config, anf->getEqs(), loop_learnt)) {
+                        if (!elimLin(config, anf->getEqs(), learnt)) {
                             anf->setNOTOK();
                         } else {
-                            for (size_t i = prevsz; i < loop_learnt.size(); ++i)
+                            for (size_t i = prevsz; i < learnt.size(); ++i)
                                 num_learnt +=
-                                    anf->addBoolePolynomial(loop_learnt[i]);
+                                    anf->addBoolePolynomial(learnt[i]);
                         }
                     }
                     break;
@@ -334,10 +355,15 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
                             sbs = new SimplifyBySat(*cnf, config);
                         }
 
-                        num_learnt =
-                            sbs->simplify(config.numConfl_lim,
-                                          config.numConfl_inc, config.maxTime,
-                                          no_cls, loop_learnt, *anf, solution);
+                        sbs->simplify(config.numConfl_lim,
+                                      config.numConfl_inc, config.maxTime,
+                                      no_cls, learnt, *anf, solution);
+
+                        if (solution.ret != l_False) {
+                            for (size_t i = prevsz; i < loop_learnt.size(); ++i) {
+                                num_learnt += anf.addLearntBoolePolynomial(loop_learnt[i]);
+                            }
+                        }
                     }
 #endif
                     break;
@@ -382,7 +408,7 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
         else {
             ++numIters;
             subIters = 0;
-            deduplicate(loop_learnt); // because this is a good time to do this
+            deduplicate(); // because this is a good time to do this
         }
         timeout = (cpuTime() > config.maxTime);
     }
@@ -400,11 +426,11 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file,
 
     delete sbs;
     delete cnf;
-    anf->contextualize(loop_learnt);
+    anf->contextualize(learnt);
     return solution;
 }
 
-void Library::deduplicate(vector<BoolePolynomial>& learnt)
+void Library::deduplicate()
 {
     vector<BoolePolynomial> dedup;
     ANF::eqs_hash_t hash;
@@ -416,6 +442,28 @@ void Library::deduplicate(vector<BoolePolynomial>& learnt)
         cout << "c [Dedup] " << learnt.size() << "->" << dedup.size() << endl;
     }
     learnt.swap(dedup);
+}
+
+void Library::add_trivial_learnt_from_anf_to_learnt(
+    ANF* anf,
+    const ANF::eqs_hash_t& orig_eqs_hash
+) {
+    // Add *NEW* assignments and equivalences
+    for (uint32_t v = 0; v < anf->getRing().nVariables(); v++) {
+        const lbool val = anf->value(v);
+        const Lit lit = anf->getReplaced(v);
+        BooleVariable bv = anf->getRing().variable(v);
+        if (val != l_Undef) {
+            BoolePolynomial assignment(bv + BooleConstant(val == l_True));
+            if (orig_eqs_hash.find(assignment.hash()) == orig_eqs_hash.end())
+                learnt.push_back(assignment);
+        } else if (lit != Lit(v, false)) {
+            BooleVariable bv2 = anf->getRing().variable(lit.var());
+            BoolePolynomial equivalence(bv + bv2 + BooleConstant(lit.sign()));
+            if (orig_eqs_hash.find(equivalence.hash()) == orig_eqs_hash.end())
+                learnt.push_back(equivalence);
+        }
+    }
 }
 
 void Library::set_config(const ConfigData& cfg)

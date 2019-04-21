@@ -237,16 +237,13 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
     extractUnitaries(loop_learnt);
     extractBinaries(loop_learnt);
     extractLinear(loop_learnt);
-    int num_learnt = 0;
-    for (size_t i = prev_loop_learnt_sz; i < loop_learnt.size(); ++i)
-        num_learnt += anf.addLearntBoolePolynomial(loop_learnt[i]);
     if (config.verbosity >= 3) {
         cout << endl;
     }
 
     //Deal with result
     if (solution.ret == l_Undef) {
-        return num_learnt;
+        return 0;
     }
 
     if (solution.ret == l_False) {
@@ -271,5 +268,5 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
     vector<lbool> solution2 = cnf.mapSolToOrig(solutionFromSolver);
     solution.sol = anf.extendSolution(solution2);
 
-    return num_learnt;
+    return 0;
 }

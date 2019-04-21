@@ -66,9 +66,15 @@ add_cxx_flag_if_supported("-Wpointer-arith")
 add_cxx_flag_if_supported("-Wheader-guard")
 
 option(STATICCOMPILE "Compile to static executable" OFF)
+
+if(STATICCOMPILE)
+    set(BUILD_SHARED_LIBS OFF)
+else()
+    set(BUILD_SHARED_LIBS ON)
+endif()
+
 if ((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
     if(STATICCOMPILE)
-        set(BUILD_SHARED_LIBS OFF)
         SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
         MESSAGE(STATUS "Compiling for static library use")
         if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -108,6 +114,7 @@ if (SAT_SIMP)
     if (cryptominisat4_FOUND)
         message(STATUS "OK, CryptoMiniSat5 found")
     endif()
+    add_definitions(-DSAT_SIMP)
 endif()
 
 include(GetGitRevisionDescription)
@@ -146,7 +153,7 @@ set(BOSPHORUS_TARGETS_FILENAME "bosphorusTargets.cmake")
 set(BOSPHORUS_CONFIG_FILENAME "bosphorusConfig.cmake")
 
 # Export targets
-export(TARGETS libbosphorus bosphorus FILE "${PROJECT_BINARY_DIR}/${BOSPHORUS_TARGETS_FILENAME}")
+export(TARGETS bosphorus bosphorus-bin FILE "${PROJECT_BINARY_DIR}/${BOSPHORUS_TARGETS_FILENAME}")
 
 # Create bosphorusConfig file
 set(EXPORT_TYPE "Build-tree")

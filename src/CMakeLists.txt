@@ -40,16 +40,19 @@ set(bosph_lib_files
     ${bosph_lib_files} simplifybysat.cpp)
 endif()
 
-add_library(libbosphorus
+add_library(bosphorus
     ${bosph_lib_files}
 )
 
-target_link_libraries(libbosphorus
-  ${M4RI_LIBRARIES}
-  ${BRiAl_LIBRARIES}
+target_link_libraries(bosphorus
+    MV
+    ${M4RI_LIBRARIES}
+    ${BRiAl_LIBRARIES}
+    ${PNG_LIBRARIES}
+    ${CRYPTOMINISAT5_LIBRARIES}
 )
 
-install(TARGETS libbosphorus
+install(TARGETS bosphorus
     EXPORT ${BOSPHORUS_EXPORT_NAME}
     LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
@@ -58,26 +61,24 @@ install(TARGETS libbosphorus
 
 ###############
 
-add_executable(bosphorus
+add_executable(bosphorus-bin
     main.cpp
 )
-set_target_properties(bosphorus PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-set_target_properties(bosphorus PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+set_target_properties(bosphorus-bin PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+    OUTPUT_NAME bosphorus
+)
 
 if (STATICCOMPILE)
-    SET_TARGET_PROPERTIES(bosphorus PROPERTIES LINK_SEARCH_START_STATIC 1)
+    SET_TARGET_PROPERTIES(bosphorus-bin PROPERTIES LINK_SEARCH_START_STATIC 1)
 endif()
 
-target_link_libraries(bosphorus
-    libbosphorus
-    MV
+target_link_libraries(bosphorus-bin
+    bosphorus
     ${Boost_LIBRARIES}
-    ${PNG_LIBRARIES}
-    ${M4RI_LIBRARIES}
-    ${BRiAl_LIBRARIES}
-    ${CRYPTOMINISAT5_LIBRARIES}
 )
-install(TARGETS bosphorus
+install(TARGETS bosphorus-bin
     EXPORT ${BOSPHORUS_EXPORT_NAME}
     RUNTIME DESTINATION bin
 )
