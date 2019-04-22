@@ -20,7 +20,6 @@
 # THE SOFTWARE.
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/GitSHA1.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp" @ONLY)
-set(bosphorus_public_headers "")
 
 set(bosph_lib_files
     anf.cpp
@@ -31,7 +30,7 @@ set(bosph_lib_files
     extendedlinearization.cpp
     elimlin.cpp
     anfutils.cpp
-    library.cpp
+    bosphorus.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp
 )
 
@@ -45,11 +44,11 @@ add_library(bosphorus
 )
 
 target_link_libraries(bosphorus
-    MV
     ${M4RI_LIBRARIES}
     ${BRiAl_LIBRARIES}
     ${PNG_LIBRARIES}
     ${CRYPTOMINISAT5_LIBRARIES}
+    espresso
 )
 
 install(TARGETS bosphorus
@@ -83,5 +82,26 @@ install(TARGETS bosphorus-bin
     RUNTIME DESTINATION bin
 )
 
-SET(CPACK_PACKAGE_EXECUTABLES "bosphorus")
+bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.h )
 
+# -----------------------------------------------------------------------------
+# Copy public headers into build directory include directory.
+# The cryptominisat5Config.cmake we generate in the build directory depends on
+# this.
+# -----------------------------------------------------------------------------
+set(HEADER_DEST "${PROJECT_BINARY_DIR}/include/bosphorus")
+add_custom_target(CopyPublicHeaders ALL)
+get_target_property(cryptominisat5_public_headers bosphorus PUBLIC_HEADER)
+foreach(public_header ${cryptominisat5_public_headers})
+    get_filename_component(HEADER_NAME ${public_header} NAME)
+    add_custom_command(TARGET CopyPublicHeaders PRE_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E make_directory
+                               "${HEADER_DEST}"
+                       COMMAND ${CMAKE_COMMAND} -E echo
+                       "Copying ${HEADER_NAME} to ${HEADER_DEST}"
+                       COMMAND ${CMAKE_COMMAND} -E
+                           copy_if_different
+                           ${public_header}
+                           "${HEADER_DEST}"
+                      )
+endforeach()

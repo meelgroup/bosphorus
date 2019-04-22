@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include "library.h"
+#include "bosphorus.h"
 
 #include "elimlin.hpp"
 #include "extendedlinearization.hpp"

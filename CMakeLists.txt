@@ -65,6 +65,39 @@ add_cxx_flag_if_supported("-Wstrict-aliasing")
 add_cxx_flag_if_supported("-Wpointer-arith")
 add_cxx_flag_if_supported("-Wheader-guard")
 
+if (NOT WIN32)
+    if(NOT ENABLE_TESTING AND ${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND NOT COVERAGE)
+        #add_cxx_flag_if_supported("-fvisibility=hidden")
+    endif()
+    add_compile_options("-fPIC")
+
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    else()
+        add_cxx_flag_if_supported("-mtune=native")
+        add_cxx_flag_if_supported("-Wall")
+        add_cxx_flag_if_supported("-Wextra")
+        add_cxx_flag_if_supported("-Wunused")
+        add_cxx_flag_if_supported("-Wsign-compare")
+        add_cxx_flag_if_supported("-fno-omit-frame-pointer")
+        add_cxx_flag_if_supported("-Wtype-limits")
+        add_cxx_flag_if_supported("-Wuninitialized")
+        add_cxx_flag_if_supported("-Wno-deprecated")
+        add_cxx_flag_if_supported("-Wstrict-aliasing")
+        add_cxx_flag_if_supported("-Wpointer-arith")
+        add_cxx_flag_if_supported("-Wheader-guard")
+        add_cxx_flag_if_supported("-Wpointer-arith")
+        add_cxx_flag_if_supported("-Wformat-nonliteral")
+        add_cxx_flag_if_supported("-Winit-self")
+        add_cxx_flag_if_supported("-Wparentheses")
+        add_cxx_flag_if_supported("-Wunreachable-code")
+        add_cxx_flag_if_supported("-ggdb3")
+
+        # Apparently needed before OS X Maverics (2013)
+        #add_c_flag_if_supported("-stdlib=libc++")
+    endif()
+endif()
+
+
 option(STATICCOMPILE "Compile to static executable" OFF)
 
 if(STATICCOMPILE)
@@ -129,6 +162,27 @@ include_directories(${BRiAl_INCLUDE_DIRS})
 
 link_directories(${bosphorus_BINARY_DIR}/espresso)
 
+
+# headers, install locations, etc
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
+
+macro(bosphorus_add_public_header LIBTARGET HEADER)
+    get_target_property(EXISTING_PUBLIC_HEADERS ${LIBTARGET} PUBLIC_HEADER)
+    if(EXISTING_PUBLIC_HEADERS)
+        list(APPEND EXISTING_PUBLIC_HEADERS "${HEADER}")
+    else()
+        # Do not append to empty list
+        set(EXISTING_PUBLIC_HEADERS "${HEADER}")
+    endif()
+    set_target_properties(
+        ${LIBTARGET}
+        PROPERTIES
+        PUBLIC_HEADER "${EXISTING_PUBLIC_HEADERS}"
+     )
+endmacro()
+
 set(BOSPHORUS_EXPORT_NAME "bosphorusTargets")
 
 add_subdirectory(espresso)
@@ -153,7 +207,8 @@ set(BOSPHORUS_TARGETS_FILENAME "bosphorusTargets.cmake")
 set(BOSPHORUS_CONFIG_FILENAME "bosphorusConfig.cmake")
 
 # Export targets
-export(TARGETS bosphorus bosphorus-bin FILE "${PROJECT_BINARY_DIR}/${BOSPHORUS_TARGETS_FILENAME}")
+export(TARGETS espresso bosphorus bosphorus-bin
+    FILE "${PROJECT_BINARY_DIR}/${BOSPHORUS_TARGETS_FILENAME}")
 
 # Create bosphorusConfig file
 set(EXPORT_TYPE "Build-tree")
@@ -183,34 +238,6 @@ install(FILES
 )
 
 # Install the export set for use with the install-tree
-install(EXPORT ${BOSPHORUS_EXPORT_NAME} DESTINATION
-    "${BOSPHORUS_INSTALL_CMAKE_DIR}"
+install(EXPORT ${BOSPHORUS_EXPORT_NAME}
+    DESTINATION "${BOSPHORUS_INSTALL_CMAKE_DIR}"
 )
-
-set(CPACK_PACKAGE_NAME "BOSPHORUS")
-set(CPACK_PACKAGE_VENDOR "")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "An Iterative Bridge between ANF and CNF Solvers")
-set(CPACK_PACKAGE_VERSION "1.0.0")
-set(CPACK_PACKAGE_VERSION_MAJOR "1")
-set(CPACK_PACKAGE_VERSION_MINOR "0")
-set(CPACK_PACKAGE_VERSION_PATCH "0")
-set(CPACK_SOURCE_GENERATOR "TBZ2")
-set(CPACK_SOURCE_PACKAGE_FILE_NAME
-  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
-set(CPACK_SOURCE_IGNORE_FILES
-  "/build/"
-  "/.git/"
-  "~$"
-  "${CPACK_SOURCE_IGNORE_FILES}"
-  "/m4/"
-  "/.kdev4/"
-  ".gitignore"
-  ".git$"
-  "tar.gz$"
-  "tar.bz2$"
-  ".kdev4$"
-  ".directory$"
-)
-include(CPack)
-
-add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)

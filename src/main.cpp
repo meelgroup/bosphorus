@@ -34,7 +34,7 @@ namespace po = boost::program_options;
 #include "cnf.hpp"
 #include "dimacscache.hpp"
 #include "gaussjordan.hpp"
-#include "library.h"
+#include "bosphorus.h"
 #include "replacer.hpp"
 #include "time_mem.h"
 
