@@ -51,11 +51,10 @@ target_link_libraries(bosphorus
     $<TARGET_OBJECTS:espresso> 
 )
 
-install(TARGETS bosphorus
-    EXPORT ${BOSPHORUS_EXPORT_NAME}
-    LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-    PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include/bosphorus"
+set_target_properties(bosphorus PROPERTIES
+    PUBLIC_HEADER "${bosphorus_public_headers}"
+    VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+    SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
 )
 
 ###############
@@ -77,22 +76,19 @@ target_link_libraries(bosphorus-bin
     bosphorus
     ${Boost_LIBRARIES}
 )
-install(TARGETS bosphorus-bin
-    EXPORT ${BOSPHORUS_EXPORT_NAME}
-    RUNTIME DESTINATION bin
-)
+
 
 bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.h )
 
 # -----------------------------------------------------------------------------
 # Copy public headers into build directory include directory.
-# The cryptominisat5Config.cmake we generate in the build directory depends on
+# The bosphorusConfig.cmake we generate in the build directory depends on
 # this.
 # -----------------------------------------------------------------------------
 set(HEADER_DEST "${PROJECT_BINARY_DIR}/include/bosphorus")
 add_custom_target(CopyPublicHeaders ALL)
-get_target_property(cryptominisat5_public_headers bosphorus PUBLIC_HEADER)
-foreach(public_header ${cryptominisat5_public_headers})
+get_target_property(bosphorus_public_headers bosphorus PUBLIC_HEADER)
+foreach(public_header ${bosphorus_public_headers})
     get_filename_component(HEADER_NAME ${public_header} NAME)
     add_custom_command(TARGET CopyPublicHeaders PRE_BUILD
                        COMMAND ${CMAKE_COMMAND} -E make_directory
@@ -105,3 +101,18 @@ foreach(public_header ${cryptominisat5_public_headers})
                            "${HEADER_DEST}"
                       )
 endforeach()
+
+
+install(TARGETS bosphorus
+    EXPORT ${BOSPHORUS_EXPORT_NAME}
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/bosphorus"
+)
+
+
+install(TARGETS bosphorus-bin
+    # EXPORT ${BOSPHORUS_EXPORT_NAME}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
