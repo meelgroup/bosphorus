@@ -289,28 +289,30 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file)
     bool changes[] = {true, true, true}; // any changes for the strategies
     size_t waits[] = {0, 0, 0};
     size_t countdowns[] = {0, 0, 0};
-    uint32_t numIters = 0;
-    unsigned char subIters = 0;
+    uint32_t iters = 0;
+    unsigned subiter = 0;
     CNF* cnf = NULL;
     SimplifyBySat* sbs = NULL;
 
-    while (!timeout && anf->getOK() && solution.ret == l_Undef &&
-           (std::accumulate(changes, changes + 3, false,
-                            std::logical_or<bool>()) ||
-            numIters < config.minIter)) {
+    while (
+        !timeout
+        && anf->getOK()
+        && solution.ret == l_Undef
+        && (changes[0] || changes[1] || changes[2] || iters < 3)
+    ) {
         cout << "c [iter-simp] ------ Iteration " << std::fixed << std::dec
-             << (int)numIters << endl;
+             << (int)iters << endl;
 
         static const char* strategy_str[] = {"XL", "ElimLin", "SAT"};
         const double startTime = cpuTime();
         int num_learnt = 0;
 
-        if (countdowns[subIters] > 0) {
-            cout << "c [" << strategy_str[subIters] << "] waiting for "
-                 << countdowns[subIters] << " iteration(s)." << endl;
+        if (countdowns[subiter] > 0) {
+            cout << "c [" << strategy_str[subiter] << "] waiting for "
+                 << countdowns[subiter] << " iteration(s)." << endl;
         } else {
             const size_t prevsz = learnt.size();
-            switch (subIters) {
+            switch (subiter) {
                 case 0:
                     if (config.doXL) {
                         if (!extendedLinearization(config, anf->getEqs(),
@@ -369,44 +371,46 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file)
             }
 
             if (config.verbosity >= 2) {
-                cout << "c [" << strategy_str[subIters] << "] learnt "
+                cout << "c [" << strategy_str[subiter] << "] learnt "
                      << num_learnt << " new facts in "
                      << (cpuTime() - startTime) << " seconds." << endl;
             }
         }
 
-        // Determine if there are any changes to the system
+        // Check if there are any changes to the system
         if (num_learnt <= 0) {
-            changes[subIters] = false;
+            changes[subiter] = false;
         } else {
-            changes[subIters] = true;
+            changes[subiter] = true;
             bool ok = anf->propagate();
             if (!ok) {
                 if (config.verbosity >= 1)
                     cout << "c [ANF Propagation] is false\n";
             }
+            solution.ret = l_False;
         }
 
         // Scheduling strategies
-        if (changes[subIters]) {
-            waits[subIters] = 0;
+        if (changes[subiter]) {
+            waits[subiter] = 0;
         } else {
-            if (countdowns[subIters] > 0)
-                --countdowns[subIters];
+            if (countdowns[subiter] > 0)
+                --countdowns[subiter];
             else {
                 static size_t series[] = {0, 1,  1,  2,  3,  5,
                                           8, 13, 21, 34, 55, 89};
-                countdowns[subIters] = series[std::min(
-                    waits[subIters], sizeof(series) / sizeof(series[0]) - 1)];
-                ++waits[subIters];
+                countdowns[subiter] = series[std::min(
+                    waits[subiter], sizeof(series) / sizeof(series[0]) - 1)];
+                ++waits[subiter];
             }
         }
 
-        if (subIters < 2)
-            ++subIters;
-        else {
-            ++numIters;
-            subIters = 0;
+        //Schedule next iteration
+        if (subiter < 2) {
+            ++subiter;
+        } else {
+            ++iters;
+            subiter = 0;
             deduplicate(); // because this is a good time to do this
         }
         timeout = (cpuTime() > config.maxTime);
@@ -418,7 +422,7 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file)
             cout << "Timeout";
         }
 
-        cout << " after " << numIters << '.' << (int)subIters
+        cout << " after " << iters << '.' << subiter
              << " iteration(s) in " << (cpuTime() - loopStartTime)
              << " seconds.]\n";
     }

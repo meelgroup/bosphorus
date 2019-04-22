@@ -43,7 +43,6 @@ struct ConfigData {
 
     // Processes
     double maxTime = 1e20;
-    uint32_t minIter = 0;
     bool doXL = false;
     bool doEL = false;
     bool doSAT = false;
