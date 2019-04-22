@@ -379,7 +379,7 @@ set(BOSPHORUS_TARGETS_FILENAME "bosphorusTargets.cmake")
 set(BOSPHORUS_CONFIG_FILENAME "bosphorusConfig.cmake")
 
 # Export targets
-export(TARGETS espresso bosphorus bosphorus-bin
+export(TARGETS bosphorus bosphorus-bin
     FILE "${PROJECT_BINARY_DIR}/${BOSPHORUS_TARGETS_FILENAME}")
 
 # Create bosphorusConfig file

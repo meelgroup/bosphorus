@@ -32,6 +32,7 @@ set(bosph_lib_files
     anfutils.cpp
     bosphorus.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp
+    $<TARGET_OBJECTS:espresso>
 )
 
 if (SAT_SIMP)
@@ -48,7 +49,6 @@ target_link_libraries(bosphorus
     ${BRiAl_LIBRARIES}
     ${PNG_LIBRARIES}
     ${CRYPTOMINISAT5_LIBRARIES}
-    $<TARGET_OBJECTS:espresso> 
 )
 
 set_target_properties(bosphorus PROPERTIES
