@@ -74,7 +74,7 @@ ANF* Library::start_cnf_input(uint32_t max_vars)
     return anf;
 }
 
-ANF* Library::add_clause(ANF* anf, vector<int> clause)
+void Library::add_clause(ANF* anf, const std::vector<int>& clause)
 {
     BoolePolynomial poly(1, *polybori_ring);
     for (const int lit: clause) {
@@ -86,7 +86,6 @@ ANF* Library::add_clause(ANF* anf, vector<int> clause)
         poly += alsoAdd;
     }
     anf->addBoolePolynomial(poly);
-    return anf;
 }
 
 
@@ -464,6 +463,17 @@ void Library::add_trivial_learnt_from_anf_to_learnt(
                 learnt.push_back(equivalence);
         }
     }
+}
+
+vector<Clause> Library::get_learnt(ANF* anf)
+{
+    vector<vector<int>> ret;
+    ANF* anf2 = new ANF(&anf->getRing(), config);
+    for(const auto& l: learnt) {
+        anf2->addBoolePolynomial(l);
+    }
+    CNF* cnf = new CNF(*anf2, config);
+    return cnf->get_clauses_simple();
 }
 
 void Library::set_config(const ConfigData& cfg)

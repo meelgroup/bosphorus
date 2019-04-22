@@ -424,3 +424,14 @@ uint64_t CNF::getNumAllClauses() const
 
     return numClauses;
 }
+
+vector<Clause> CNF::get_clauses_simple() const
+{
+    vector<Clause> ret;
+    for(auto& cls: clauses) {
+        for(auto& cl: cls.first) {
+            ret.push_back(cl);
+        }
+    }
+    return ret;
+}

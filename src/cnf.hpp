@@ -65,6 +65,7 @@ class CNF
     size_t getAddedAsSimpleANF() const;
     size_t getAddedAsComplexANF() const;
     const vector<pair<vector<Clause>, BoolePolynomial> >& getClauses() const;
+    vector<Clause> get_clauses_simple() const;
     uint32_t getNumVars() const;
     uint64_t getNumAllLits() const;
     uint64_t getNumAllClauses() const;

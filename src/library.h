@@ -24,6 +24,8 @@ SOFTWARE.
 #ifndef MYLIBRARY_H_
 #define MYLIBRARY_H_
 
+#include <vector>
+
 #include "GitSHA1.h"
 #include "anf.hpp"
 #include "cnf.hpp"
@@ -38,6 +40,8 @@ SOFTWARE.
 #include "extendedlinearization.hpp"
 #include "simplifybysat.hpp"
 
+using std::vector;
+
 class Library
 {
 public:
@@ -50,7 +54,7 @@ public:
 
     // To insert dynamically generated CNF
     ANF* start_cnf_input(uint32_t max_vars);
-    ANF* add_clause(ANF* anf, vector<int> clause);
+    void add_clause(ANF* anf, const std::vector<int>& clause);
 
     // Output functions
     void write_anf(const char* fname, const ANF* anf);
@@ -73,6 +77,8 @@ public:
     size_t get_learnt_size() const {
         return learnt.size();
     }
+
+    vector<Clause> get_learnt(ANF* anf);
 
 private:
     void check_library_in_use();
