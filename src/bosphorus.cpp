@@ -386,9 +386,9 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file)
             if (!ok) {
                 if (config.verbosity >= 1)
                     cout << "c [ANF Propagation] is false\n";
+                solution.ret = l_False;
             }
-            solution.ret = l_False;
-        }
+       }
 
         // Scheduling strategies
         if (changes[subiter]) {
