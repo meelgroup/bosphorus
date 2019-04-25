@@ -48,7 +48,7 @@ target_link_libraries(bosphorus
     ${BRiAl_LIBRARIES}
     ${PNG_LIBRARIES}
     ${CRYPTOMINISAT5_LIBRARIES}
-    espresso
+    $<TARGET_OBJECTS:espresso> 
 )
 
 install(TARGETS bosphorus
