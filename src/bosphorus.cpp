@@ -361,8 +361,8 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file)
                                       no_cls, learnt, *anf, solution);
 
                         if (solution.ret != l_False) {
-                            for (size_t i = prevsz; i < loop_learnt.size(); ++i) {
-                                num_learnt += anf.addLearntBoolePolynomial(loop_learnt[i]);
+                            for (size_t i = prevsz; i < learnt.size(); ++i) {
+                                num_learnt += anf->addLearntBoolePolynomial(learnt[i]);
                             }
                         }
                     }
