@@ -198,7 +198,7 @@ void Library::write_cnf(const char* input_cnf_fname,
                         const char* output_cnf_fname, const ANF* anf)
 {
     CNF* cnf = NULL;
-    if (input_cnf_fname == NULL) {
+    if (input_cnf_fname != NULL) {
         cnf = cnf_from_anf_and_cnf(input_cnf_fname, anf);
     } else {
         cnf = anf_to_cnf(anf);
