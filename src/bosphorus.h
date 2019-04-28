@@ -47,6 +47,9 @@ class Library
 public:
     ~Library();
     void set_config(const ConfigData& cfg);
+    static const char* get_compilation_env();
+    static const char* get_version_tag();
+    static const char* get_version_sha1();
 
     // To read CNF or ANF from file
     ANF* read_anf(const char* fname);

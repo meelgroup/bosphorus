@@ -484,3 +484,19 @@ void Library::set_config(const ConfigData& cfg)
 {
     config = cfg;
 }
+
+const char* Library::get_compilation_env()
+{
+    return ::Bosphorus::get_compilation_env();
+
+}
+
+const char* Library::get_version_tag()
+{
+    return ::Bosphorus::get_version_tag();
+}
+
+const char* Library::get_version_sha1()
+{
+    return ::Bosphorus::get_version_sha1();
+}

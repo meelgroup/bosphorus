@@ -20,20 +20,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************/
 
+#include "GitSHA1.h"
 
-const char* get_version_sha1()
+const char* Bosphorus::get_version_sha1()
 {
     static const char myversion_sha1[] = "@GIT_SHA1@";
     return myversion_sha1;
 }
 
-const char* get_version_tag()
+const char* Bosphorus::get_version_tag()
 {
     static const char myversion_tag[] = "@PROJECT_VERSION@";
     return myversion_tag;
 }
 
-const char* get_compilation_env()
+const char* Bosphorus::get_compilation_env()
 {
     static const char compilation_env[] =
     "CMAKE_CXX_COMPILER = @CMAKE_CXX_COMPILER@ | "

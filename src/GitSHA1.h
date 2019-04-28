@@ -23,10 +23,12 @@ SOFTWARE.
 #ifndef GITSHA_1_H
 #define GITSHA_1_H
 
-const char* get_git_version();
+namespace Bosphorus {
 
 const char* get_version_sha1();
 const char* get_version_tag();
 const char* get_compilation_env();
+
+}
 
 #endif //GITSHA_1_H
