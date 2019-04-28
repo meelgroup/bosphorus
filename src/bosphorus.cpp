@@ -62,9 +62,15 @@ public:
     bool read_in_data = false;
 };
 
+Bosphorus::Bosphorus()
+{
+    dat = new PrivateData;
+}
+
 Bosphorus::~Bosphorus()
 {
     delete dat->pring;
+    delete dat;
 }
 
 void Bosphorus::check_library_in_use()

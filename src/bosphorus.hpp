@@ -39,6 +39,7 @@ class Bosphorus
 {
 public:
     ~Bosphorus();
+    Bosphorus();
     void set_config(void* cfg);
     static const char* get_compilation_env();
     static const char* get_version_tag();
@@ -81,7 +82,7 @@ public:
 private:
     void check_library_in_use();
 
-    PrivateData* dat;
+    PrivateData* dat = NULL;
 };
 
 }
