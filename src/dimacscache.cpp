@@ -29,7 +29,7 @@ SOFTWARE.
 using std::cout;
 using std::endl;
 
-using namespace BosphLib;
+using namespace BLib;
 
 DIMACSCache::DIMACSCache(const char* _fname)
 {

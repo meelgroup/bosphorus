@@ -26,9 +26,9 @@ SOFTWARE.
 
 using std::vector;
 
-using namespace BosphLib;
+using namespace BLib;
 
-bool BosphLib::extendedLinearization(const ConfigData& config,
+bool BLib::extendedLinearization(const ConfigData& config,
                            const vector<BoolePolynomial>& eqs,
                            vector<BoolePolynomial>& loop_learnt)
 {

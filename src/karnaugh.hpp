@@ -30,7 +30,7 @@ SOFTWARE.
 
 USING_NAMESPACE_PBORI
 
-namespace BosphLib {
+namespace BLib {
 
 class Karnaugh
 {

@@ -32,7 +32,7 @@ SOFTWARE.
 using boost::lexical_cast;
 using std::cout;
 using std::endl;
-using namespace BosphLib;
+using namespace BLib;
 
 ANF::ANF(const polybori::BoolePolyRing* _ring, ConfigData& _config)
     : ring(_ring),

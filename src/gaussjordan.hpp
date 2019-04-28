@@ -37,7 +37,7 @@ using std::make_pair;
 using std::unordered_map;
 using std::vector;
 
-namespace BosphLib {
+namespace BLib {
 
 class GaussJordan
 {

@@ -28,7 +28,7 @@ SOFTWARE.
 #include "configdata.hpp"
 #include "polybori.h"
 
-namespace BosphLib {
+namespace BLib {
 
 bool elimLin(const ConfigData& config,
              const std::vector<polybori::BoolePolynomial>& eqs,

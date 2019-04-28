@@ -55,7 +55,7 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-namespace BosphLib {
+namespace BLib {
 
 class Replacer;
 

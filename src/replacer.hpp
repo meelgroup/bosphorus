@@ -36,7 +36,7 @@ using std::map;
 using std::set;
 using std::vector;
 
-namespace BosphLib {
+namespace BLib {
 
 class ANF;
 

@@ -28,21 +28,23 @@ namespace po = boost::program_options;
 #include <deque>
 #include <fstream>
 #include <memory>
+#include <iomanip>
 
 #include "GitSHA1.h"
-#include "anf.hpp"
-#include "cnf.hpp"
-#include "dimacscache.hpp"
-#include "gaussjordan.hpp"
 #include "bosphorus.h"
-#include "replacer.hpp"
 #include "time_mem.h"
+#include "configdata.hpp"
 
 using std::cerr;
 using std::cout;
 using std::deque;
 using std::endl;
 using std::string;
+using BLib::l_Undef;
+using BLib::l_True;
+using BLib::l_False;
+using BLib::lbool;
+using BLib::Solution;
 
 //inputs and outputs
 string anfInput;
@@ -58,7 +60,7 @@ bool writeANF;
 bool writeCNF;
 
 po::variables_map vm;
-ConfigData config;
+BLib::ConfigData config;
 
 void parseOptions(int argc, char* argv[])
 {
@@ -259,7 +261,7 @@ void parseOptions(int argc, char* argv[])
     }
 }
 
-void write_solution_to_file(const char* fname, const Solution& solution)
+void write_solution_to_file(const char* fname, const BLib::Solution& solution)
 {
     std::ofstream ofs;
     ofs.open(fname);
@@ -314,7 +316,7 @@ inline void print_solution(Solution& solution)
 void check_solution(ANF* anf, Solution& solution)
 {
     //Checking
-    bool goodSol = anf->evaluate(solution.sol);
+    bool goodSol = Bosphorus::evaluate(anf, solution.sol);
     if (!goodSol) {
         cout << "ERROR! Solution found is incorrect!" << endl;
         exit(-1);
@@ -332,10 +334,10 @@ int main(int argc, char* argv[])
     }
 
     Bosphorus mylib;
-    mylib.set_config(config);
+    mylib.set_config((void*)&config);
 
     // Read from file
-    ANF* anf = nullptr;
+    ANF* anf = NULL;
     if (readANF) {
         double parseStartTime = cpuTime();
         anf = mylib.read_anf(anfInput.c_str());
@@ -355,7 +357,7 @@ int main(int argc, char* argv[])
     }
     assert(anf != NULL);
     if (config.verbosity >= 1) {
-        anf->printStats();
+        Bosphorus::print_stats(anf);
     }
 
     // this is needed to check for test solution and the check if it is really a new learnt fact
@@ -364,7 +366,7 @@ int main(int argc, char* argv[])
         cout << "c [ANF hash] Calculating ANF hash..." << endl;
     }
 
-    ANF* orig_anf = new ANF(*anf, anf_no_replacer_tag());
+    auto orig_anf = Bosphorus::copy_anf_no_replacer(anf);
     if (config.verbosity) {
         cout << "c [ANF hash] Done. T: " << (cpuTime() - myTime) << endl;
     }
@@ -387,15 +389,15 @@ int main(int argc, char* argv[])
         }
     }
     if (config.printProcessedANF) {
-        cout << *anf << endl;
+        Bosphorus::print_anf(anf);
     }
     if (config.verbosity >= 1) {
-        anf->printStats();
+        Bosphorus::print_stats(anf);
     }
 
     // finish up the learnt polynomials
-    mylib.add_trivial_learnt_from_anf_to_learnt(anf, orig_anf->getEqsHash());
-    delete orig_anf;
+    mylib.add_trivial_learnt_from_anf_to_learnt(anf, orig_anf);
+    Bosphorus::delete_anf(orig_anf);
 
     // remove duplicates from learnt clauses
     mylib.deduplicate();
@@ -419,6 +421,6 @@ int main(int argc, char* argv[])
     }
 
     // clean up
-    delete anf;
+    Bosphorus::delete_anf(anf);
     return 0;
 }

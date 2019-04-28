@@ -30,7 +30,7 @@ SOFTWARE.
 
 USING_NAMESPACE_PBORI
 
-namespace BosphLib {
+namespace BLib {
 
 bool extendedLinearization(const ConfigData& config,
                            const std::vector<BoolePolynomial>& eqs,

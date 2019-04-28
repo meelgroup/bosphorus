@@ -25,11 +25,11 @@ SOFTWARE.
 #define CONFIGDATA__H
 
 #include <limits>
-#include "polybori.h"
+#include <string>
 
 using std::string;
 
-namespace BosphLib {
+namespace BLib {
 
 struct ConfigData {
     // Input/Output

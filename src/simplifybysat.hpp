@@ -33,7 +33,7 @@ namespace CMSat {
 class SATSolver;
 }
 
-namespace BosphLib {
+namespace BLib {
 
 class SimplifyBySat
 {

@@ -26,7 +26,7 @@ SOFTWARE.
 #include <vector>
 #include "clauses.hpp"
 
-namespace BosphLib {
+namespace BLib {
 
 class DIMACSCache
 {

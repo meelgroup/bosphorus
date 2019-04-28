@@ -25,20 +25,21 @@ SOFTWARE.
 #define MYLIBRARY_H_
 
 #include <vector>
-
-#include "GitSHA1.h"
-#include "anf.hpp"
-#include "cnf.hpp"
 #include "solution.h"
+#include "clauses.hpp"
 
 using std::vector;
-using namespace BosphLib;
+using BLib::lbool;
+
+class PrivateData;
+class ANF;
+class CNF;
 
 class Bosphorus
 {
 public:
     ~Bosphorus();
-    void set_config(const ConfigData& cfg);
+    void set_config(void* cfg);
     static const char* get_compilation_env();
     static const char* get_version_tag();
     static const char* get_version_sha1();
@@ -61,29 +62,26 @@ public:
     CNF* anf_to_cnf(const ANF* anf);
     CNF* cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf);
 
-    Solution simplify(ANF* anf, const char* orig_cnf_file);
+    BLib::Solution simplify(ANF* anf, const char* orig_cnf_file);
 
     void deduplicate();
     void add_trivial_learnt_from_anf_to_learnt(
         ANF* anf,
-        const ANF::eqs_hash_t& orig_eqs_hash);
+        ANF* other);
 
+    size_t get_learnt_size() const;
+    static void delete_anf(ANF* anf);
+    static bool evaluate(ANF* anf, const vector<lbool>& sol);
+    static void print_stats(ANF* anf);
+    static ANF* copy_anf_no_replacer(ANF* anf);
+    static void print_anf(ANF* a);
 
-    size_t get_learnt_size() const {
-        return learnt.size();
-    }
-
-    vector<Clause> get_learnt(ANF* anf);
+    vector<BLib::Clause> get_learnt(ANF* anf);
 
 private:
     void check_library_in_use();
 
-    ConfigData config;
-    BoolePolyRing* polybori_ring = nullptr;
-    vector<Clause> extra_clauses;
-    vector<BoolePolynomial> learnt;
-
-    bool read_in_data = false;
+    PrivateData* dat;
 };
 
 #endif

@@ -29,7 +29,7 @@ SOFTWARE.
 #include "dimacscache.hpp"
 #include "karnaugh.hpp"
 
-using namespace BosphLib;
+using namespace BLib;
 
 CNF::CNF(const ANF& _anf, const ConfigData& _config)
     : anf(_anf), config(_config)

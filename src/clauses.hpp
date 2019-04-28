@@ -26,11 +26,11 @@ SOFTWARE.
 
 #include <limits>
 #include <vector>
-#include "assert.h"
+#include <assert.h>
 #include "solvertypesmini.h"
 using std::vector;
 
-namespace BosphLib {
+namespace BLib {
 
 class Clause
 {

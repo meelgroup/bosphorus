@@ -28,7 +28,7 @@ SOFTWARE.
 #include "configdata.hpp"
 #include "polybori.h"
 
-namespace BosphLib {
+namespace BLib {
 
 std::pair<bool, double> if_sample_and_clone(
     const std::vector<polybori::BoolePolynomial>& eqs, double log2size);

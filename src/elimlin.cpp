@@ -27,10 +27,10 @@ SOFTWARE.
 using std::vector;
 
 USING_NAMESPACE_PBORI
-using namespace BosphLib;
+using namespace BLib;
 
 // Implementation based on https://infoscience.epfl.ch/record/176270/files/ElimLin_full_version.pdf
-bool BosphLib::elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
+bool BLib::elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
              vector<BoolePolynomial>& loop_learnt)
 {
     //don't run if empty

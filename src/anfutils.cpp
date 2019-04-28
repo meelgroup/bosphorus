@@ -34,9 +34,9 @@ using std::unordered_set;
 using std::vector;
 
 USING_NAMESPACE_PBORI
-using namespace BosphLib;
+using namespace BLib;
 
-pair<bool, double> BosphLib::if_sample_and_clone(const vector<BoolePolynomial>& eqs,
+pair<bool, double> BLib::if_sample_and_clone(const vector<BoolePolynomial>& eqs,
                                        double log2size)
 {
     const polybori::BoolePolyRing& ring(eqs.front().ring());
@@ -46,7 +46,7 @@ pair<bool, double> BosphLib::if_sample_and_clone(const vector<BoolePolynomial>& 
     return make_pair(log2fullsz > log2size, log2fullsz);
 }
 
-double BosphLib::sample_and_clone(const uint32_t verbosity,
+double BLib::sample_and_clone(const uint32_t verbosity,
                         const vector<BoolePolynomial>& eqs,
                         vector<BoolePolynomial>& equations, double log2size)
 {
@@ -60,7 +60,7 @@ double BosphLib::sample_and_clone(const uint32_t verbosity,
     }
 }
 
-double BosphLib::do_sample_and_clone(const uint32_t verbosity,
+double BLib::do_sample_and_clone(const uint32_t verbosity,
                            const vector<BoolePolynomial>& eqs,
                            vector<BoolePolynomial>& equations, double log2size)
 {
@@ -108,7 +108,7 @@ double BosphLib::do_sample_and_clone(const uint32_t verbosity,
     return log2uniquesz;
 }
 
-void BosphLib::subsitute(const BooleVariable& from_var, const BoolePolynomial& to_poly,
+void BLib::subsitute(const BooleVariable& from_var, const BoolePolynomial& to_poly,
                BoolePolynomial& poly)
 {
     BoolePolynomial quotient = poly / from_var;

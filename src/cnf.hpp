@@ -32,7 +32,7 @@ SOFTWARE.
 #include "anf.hpp"
 #include "clauses.hpp"
 
-namespace BosphLib {
+namespace BLib {
 
 class CNF
 {

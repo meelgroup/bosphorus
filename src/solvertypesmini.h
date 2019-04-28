@@ -32,7 +32,7 @@ THE SOFTWARE.
 #include <iostream>
 #include <vector>
 
-namespace BosphLib {
+namespace BLib {
 
 typedef uint32_t Var;
 static const Var var_Undef(0xffffffffU >> 3);
@@ -118,10 +118,6 @@ inline std::ostream& operator<<(std::ostream& co, const std::vector<Lit>& lits)
     return co;
 }
 
-#define l_True  lbool((uint8_t)0) // gcc does not do constant propagation if these are real constants.
-#define l_False lbool((uint8_t)1)
-#define l_Undef lbool((uint8_t)2)
-
 class lbool {
     uint8_t value;
 
@@ -156,6 +152,10 @@ public:
     friend int   toInt  (lbool l);
     friend lbool toLbool(int   v);
 };
+
+const static lbool l_True = lbool((uint8_t)0);
+const static lbool l_False = lbool((uint8_t)1);
+const static lbool l_Undef = lbool((uint8_t)2);
 
 inline lbool boolToLBool(const bool b)
 {

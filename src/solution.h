@@ -28,7 +28,7 @@ SOFTWARE.
 
 using std::vector;
 
-namespace BosphLib {
+namespace BLib {
 
 class Solution
 {

@@ -23,7 +23,7 @@ SOFTWARE.
 #ifndef GITSHA_1_H
 #define GITSHA_1_H
 
-namespace BosphLib {
+namespace BLib {
 
 const char* get_version_sha1();
 const char* get_version_tag();

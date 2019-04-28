@@ -28,7 +28,7 @@ SOFTWARE.
 using std::cout;
 using std::endl;
 
-using namespace BosphLib;
+using namespace BLib;
 
 inline bool testSolution(const ANF& anf, const vector<lbool>& solution)
 {

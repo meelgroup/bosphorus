@@ -34,7 +34,7 @@ USING_NAMESPACE_PBORI
 using std::map;
 using std::vector;
 
-namespace BosphLib {
+namespace BLib {
 
 inline const lbool evaluatePoly(const BoolePolynomial& poly,
                                 const uint32_t setting,
