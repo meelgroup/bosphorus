@@ -29,6 +29,8 @@ SOFTWARE.
 
 using std::string;
 
+namespace BosphLib {
+
 struct ConfigData {
     // Input/Output
     string executedArgs = "";
@@ -58,5 +60,7 @@ struct ConfigData {
     bool doSolveSAT = false;
     string solverExe;
 };
+
+}
 
 #endif //CONFIGDATA__H

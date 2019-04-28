@@ -37,6 +37,8 @@ using std::make_pair;
 using std::unordered_map;
 using std::vector;
 
+namespace BosphLib {
+
 class GaussJordan
 {
    public:
@@ -219,5 +221,7 @@ class GaussJordan
             monomMap[revMonomMap[i].hash()] = i;
     }
 };
+
+}
 
 #endif //__GAUSSJORDAN_H__

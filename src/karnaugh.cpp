@@ -34,6 +34,8 @@ using std::cout;
 using std::endl;
 using std::map;
 
+using namespace BosphLib;
+
 Karnaugh::Karnaugh(uint32_t maxKarnTableSize)
 {
     maxKarnTable = maxKarnTableSize;

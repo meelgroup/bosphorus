@@ -32,8 +32,7 @@ SOFTWARE.
 #include "anf.hpp"
 #include "clauses.hpp"
 
-using boost::get;
-using boost::variant;
+namespace BosphLib {
 
 class CNF
 {
@@ -197,6 +196,8 @@ inline void CNF::printStats() const
          << "c Added as simple ANF  : " << getAddedAsSimpleANF() << endl
          << "c Added as complex  ANF: " << getAddedAsComplexANF() << endl
          << "c --------------------" << endl;
+}
+
 }
 
 #endif //CNF_H__

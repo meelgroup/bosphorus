@@ -44,8 +44,6 @@ SOFTWARE.
 
 USING_NAMESPACE_PBORI
 
-class Replacer;
-
 using std::cout;
 using std::endl;
 using std::list;
@@ -56,6 +54,10 @@ using std::set;
 using std::string;
 using std::unordered_set;
 using std::vector;
+
+namespace BosphLib {
+
+class Replacer;
 
 struct anf_no_replacer_tag {
 };
@@ -300,6 +302,8 @@ ANF& ANF::operator=(const ANF& other)
     *replacer = *other.replacer;
     occur = other.occur;
     return *this;
+}
+
 }
 
 #endif //ANF_H__

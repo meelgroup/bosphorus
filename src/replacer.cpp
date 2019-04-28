@@ -28,6 +28,8 @@ SOFTWARE.
 using std::cout;
 using std::endl;
 
+using namespace BosphLib;
+
 bool Replacer::evaluate(const vector<lbool>& vals) const
 {
     bool ret = true;

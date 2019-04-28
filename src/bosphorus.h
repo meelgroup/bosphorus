@@ -29,18 +29,10 @@ SOFTWARE.
 #include "GitSHA1.h"
 #include "anf.hpp"
 #include "cnf.hpp"
-#include "dimacscache.hpp"
-#include "gaussjordan.hpp"
-#include "replacer.hpp"
-#include "time_mem.h"
 #include "solution.h"
 
-// ALGOS
-#include "elimlin.hpp"
-#include "extendedlinearization.hpp"
-#include "simplifybysat.hpp"
-
 using std::vector;
+using namespace BosphLib;
 
 class Bosphorus
 {

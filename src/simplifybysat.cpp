@@ -28,6 +28,8 @@ SOFTWARE.
 using std::cout;
 using std::endl;
 
+using namespace BosphLib;
+
 inline bool testSolution(const ANF& anf, const vector<lbool>& solution)
 {
     bool goodSol = anf.evaluate(solution);

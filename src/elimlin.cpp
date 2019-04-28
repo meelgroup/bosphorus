@@ -25,7 +25,9 @@ SOFTWARE.
 #include "gaussjordan.hpp"
 
 using std::vector;
+
 USING_NAMESPACE_PBORI
+using namespace BosphLib;
 
 // Implementation based on https://infoscience.epfl.ch/record/176270/files/ElimLin_full_version.pdf
 bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,

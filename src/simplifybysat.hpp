@@ -33,6 +33,8 @@ namespace CMSat {
 class SATSolver;
 }
 
+namespace BosphLib {
+
 class SimplifyBySat
 {
    public:
@@ -58,5 +60,7 @@ class SimplifyBySat
     int process(vector<BoolePolynomial>& loop_learnt,
                 const vector<pair<vector<uint32_t>, bool> >& extracted);
 };
+
+}
 
 #endif //SIMPLIFYBYSAT_H

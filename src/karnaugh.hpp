@@ -30,6 +30,8 @@ SOFTWARE.
 
 USING_NAMESPACE_PBORI
 
+namespace BosphLib {
+
 class Karnaugh
 {
    public:
@@ -54,5 +56,7 @@ class Karnaugh
     uint32_t karnSize;
     uint32_t maxKarnTable;
 };
+
+}
 
 #endif //_KARNAUGH_H_

@@ -26,6 +26,8 @@ SOFTWARE.
 #include <vector>
 #include "clauses.hpp"
 
+namespace BosphLib {
+
 class DIMACSCache
 {
    public:
@@ -44,5 +46,7 @@ class DIMACSCache
     size_t maxVar;
     const char* fname = nullptr;
 };
+
+}
 
 #endif

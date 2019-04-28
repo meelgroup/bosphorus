@@ -28,11 +28,15 @@ SOFTWARE.
 
 using std::vector;
 
+namespace BosphLib {
+
 class Solution
 {
 public:
     vector<lbool> sol;
     lbool ret = l_Undef;
 };
+
+}
 
 #endif

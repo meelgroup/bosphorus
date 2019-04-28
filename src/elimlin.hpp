@@ -28,8 +28,12 @@ SOFTWARE.
 #include "configdata.hpp"
 #include "polybori.h"
 
+namespace BosphLib {
+
 bool elimLin(const ConfigData& config,
              const std::vector<polybori::BoolePolynomial>& eqs,
              std::vector<polybori::BoolePolynomial>& loop_learnt);
+
+}
 
 #endif

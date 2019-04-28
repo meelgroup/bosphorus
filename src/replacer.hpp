@@ -36,6 +36,8 @@ using std::map;
 using std::set;
 using std::vector;
 
+namespace BosphLib {
+
 class ANF;
 
 class Replacer
@@ -216,6 +218,8 @@ inline std::ostream& operator<<(std::ostream& os, const Replacer& repl)
     os << "c UNSAT : " << std::boolalpha << !repl.ok << std::endl;
 
     return os;
+}
+
 }
 
 #endif //__REPLACER_H__

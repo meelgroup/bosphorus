@@ -30,6 +30,8 @@ SOFTWARE.
 #include "solvertypesmini.h"
 using std::vector;
 
+namespace BosphLib {
+
 class Clause
 {
    public:
@@ -73,6 +75,8 @@ inline std::ostream& operator<<(std::ostream& os, const Clause& cl)
     os << "0";
 
     return os;
+}
+
 }
 
 #endif //_CLAUSES_H_

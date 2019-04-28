@@ -29,6 +29,8 @@ SOFTWARE.
 using std::cout;
 using std::endl;
 
+using namespace BosphLib;
+
 DIMACSCache::DIMACSCache(const char* _fname)
 {
     if (_fname == fname)
