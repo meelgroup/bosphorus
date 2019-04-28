@@ -35,13 +35,13 @@ struct ConfigData {
     // Input/Output
     string executedArgs = "";
     bool writecomments = false;
-    bool printProcessedANF;
+    bool printProcessedANF = false;
     uint32_t verbosity = 2;
     int simplify = 1;
 
     // CNF conversion
     uint32_t cutNum = 5;
-    uint32_t maxKarnTableSize;
+    uint32_t maxKarnTableSize = 8;
 
     // Processes
     double maxTime = 1e20;

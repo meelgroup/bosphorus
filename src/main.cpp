@@ -96,7 +96,7 @@ void parseOptions(int argc, char* argv[])
     cnf_conv_options.add_options()
     ("cutnum", po::value<uint32_t>(&config.cutNum)->default_value(config.cutNum),
      "Cutting number when not using XOR clauses")
-    ("karn", po::value(&config.maxKarnTableSize)->default_value(8),
+    ("karn", po::value(&config.maxKarnTableSize)->default_value(config.maxKarnTableSize),
      "Sets Karnaugh map dimension during CNF conversion")
     ;
 
