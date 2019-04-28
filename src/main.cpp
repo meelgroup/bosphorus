@@ -30,7 +30,6 @@ namespace po = boost::program_options;
 #include <memory>
 #include <iomanip>
 
-#include "GitSHA1.h"
 #include "bosphorus.h"
 #include "time_mem.h"
 #include "configdata.hpp"
@@ -188,10 +187,9 @@ void parseOptions(int argc, char* argv[])
     }
 
     if (vm.count("version")) {
-        Bosphorus l;
-        cout << "bosphorus " << l.get_version_sha1() << '\n'
-             << l.get_version_tag() << '\n'
-             << l.get_compilation_env() << endl;
+        cout << "bosphorus " << Bosphorus::get_version_sha1() << '\n'
+             << Bosphorus::get_version_tag() << '\n'
+             << Bosphorus::get_compilation_env() << endl;
         exit(0);
     }
 
@@ -237,12 +235,11 @@ void parseOptions(int argc, char* argv[])
     }
 
     if (config.verbosity) {
-        Bosphorus l;
-        cout << "c Bosphorus SHA revision " << l.get_version_sha1() << endl;
+        cout << "c Bosphorus SHA revision " << Bosphorus::get_version_sha1() << endl;
         cout << "c Executed with command line: " << argv[0];
         for (int i = 1; i < argc; ++i)
             cout << ' ' << argv[i];
-        cout << endl << "c Compilation env " << l.get_compilation_env() << endl;
+        cout << endl << "c Compilation env " << Bosphorus::get_compilation_env() << endl;
         cout << "c --- Configuration --\n"
              << "c maxTime = " << std::scientific << std::setprecision(2)
              << config.maxTime << std::fixed << endl
