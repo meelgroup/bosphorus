@@ -22,19 +22,19 @@ THE SOFTWARE.
 
 #include "GitSHA1.h"
 
-const char* BosphLib::get_version_sha1()
+const char* BLib::get_version_sha1()
 {
     static const char myversion_sha1[] = "@GIT_SHA1@";
     return myversion_sha1;
 }
 
-const char* BosphLib::get_version_tag()
+const char* BLib::get_version_tag()
 {
     static const char myversion_tag[] = "@PROJECT_VERSION@";
     return myversion_tag;
 }
 
-const char* BosphLib::get_compilation_env()
+const char* BLib::get_compilation_env()
 {
     static const char compilation_env[] =
     "CMAKE_CXX_COMPILER = @CMAKE_CXX_COMPILER@ | "
