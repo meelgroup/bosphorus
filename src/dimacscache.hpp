@@ -24,7 +24,7 @@ SOFTWARE.
 #define DIMACSCACHE_H__
 
 #include <vector>
-#include "clauses.hpp"
+#include "clause.hpp"
 
 namespace BLib {
 

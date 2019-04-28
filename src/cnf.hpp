@@ -30,7 +30,7 @@ SOFTWARE.
 #include <vector>
 
 #include "anf.hpp"
-#include "clauses.hpp"
+#include "clause.hpp"
 
 namespace BLib {
 

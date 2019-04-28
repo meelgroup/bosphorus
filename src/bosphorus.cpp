@@ -22,16 +22,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include "bosphorus.h"
+#include "bosphorus.hpp"
 
-#include "GitSHA1.h"
+#include "GitSHA1.hpp"
 #include "elimlin.hpp"
 #include "extendedlinearization.hpp"
 #include "dimacscache.hpp"
 #include "gaussjordan.hpp"
 #include "replacer.hpp"
 #include "time_mem.h"
-#include "solution.h"
+#include "solution.hpp"
 #include "elimlin.hpp"
 #include "extendedlinearization.hpp"
 #include "simplifybysat.hpp"

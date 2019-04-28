@@ -30,7 +30,7 @@ namespace po = boost::program_options;
 #include <memory>
 #include <iomanip>
 
-#include "bosphorus.h"
+#include "bosphorus.hpp"
 #include "time_mem.h"
 #include "configdata.hpp"
 

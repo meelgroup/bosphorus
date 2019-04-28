@@ -25,8 +25,8 @@ SOFTWARE.
 #define MYLIBRARY_H_
 
 #include <vector>
-#include "solution.h"
-#include "clauses.hpp"
+#include "solution.hpp"
+#include "clause.hpp"
 
 using std::vector;
 using BLib::lbool;

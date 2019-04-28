@@ -79,7 +79,9 @@ target_link_libraries(bosphorus-bin
 )
 
 
-bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.h )
+bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.hpp )
+bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/solution.hpp )
+bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/clause.hpp )
 
 # -----------------------------------------------------------------------------
 # Copy public headers into build directory include directory.

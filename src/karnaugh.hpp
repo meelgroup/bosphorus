@@ -24,7 +24,7 @@ SOFTWARE.
 #ifndef _KARNAUGH_H_
 #define _KARNAUGH_H_
 
-#include "clauses.hpp"
+#include "clause.hpp"
 #include "solvertypesmini.h"
 #include "polybori.h"
 
