@@ -36,7 +36,7 @@ struct ConfigData {
     string executedArgs = "";
     bool writecomments = false;
     bool printProcessedANF;
-    uint32_t verbosity;
+    uint32_t verbosity = 2;
     int simplify = 1;
 
     // CNF conversion
