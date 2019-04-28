@@ -103,7 +103,7 @@ void parseOptions(int argc, char* argv[])
     po::options_description xl_options("XL");
     xl_options.add_options()
     ("xl", po::value(&config.doXL), "Turn on/off XL-based simplification. Default: ON")
-    ("xldeg", po::value<uint32_t>(&config.xlDeg)->default_value(1),
+    ("xldeg", po::value<uint32_t>(&config.xlDeg)->default_value(config.xlDeg),
      "Expansion degree for XL algorithm. Default = 1 (0 = Just GJE. For now we only support 0 <= xldeg = 3)")
     ("xlsample", po::value<double>(&config.XLsample)->default_value(config.XLsample),
      "Size of matrix to sample for XL, in log2")

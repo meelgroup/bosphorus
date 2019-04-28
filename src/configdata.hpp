@@ -51,7 +51,7 @@ struct ConfigData {
     double XLsample = 30.0;
     double XLsampleX = 4.0;
     double ELsample = 30.0;
-    uint32_t xlDeg;
+    uint32_t xlDeg = 1;
     uint64_t numConfl_inc = 10000;
     uint64_t numConfl_lim = 100000;
     bool stopOnSolution = false;
