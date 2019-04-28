@@ -63,7 +63,7 @@ public:
     CNF* anf_to_cnf(const ANF* anf);
     CNF* cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf);
 
-    Solution simplify(ANF* anf, const char* orig_cnf_file);
+    Solution simplify(ANF* anf, const char* orig_cnf_file, uint32_t max_iters = 100);
 
     void deduplicate();
     void add_trivial_learnt_from_anf_to_learnt(

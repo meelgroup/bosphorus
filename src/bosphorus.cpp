@@ -312,7 +312,7 @@ CNF* Bosphorus::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* a)
     return (CNF*)cnf;
 }
 
-Solution Bosphorus::simplify(ANF* a, const char* orig_cnf_file)
+Solution Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
 {
     auto anf = (BLib::ANF*)a;
 
@@ -343,6 +343,7 @@ Solution Bosphorus::simplify(ANF* a, const char* orig_cnf_file)
         !timeout
         && anf->getOK()
         && solution.ret == l_Undef
+        && iters < max_iters
         && (changes[0] || changes[1] || changes[2] || iters < 3)
     ) {
         cout << "c [iter-simp] ------ Iteration " << std::fixed << std::dec
