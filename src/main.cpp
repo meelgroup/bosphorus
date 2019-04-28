@@ -79,7 +79,7 @@ void parseOptions(int argc, char* argv[])
     ("cnfread", po::value(&cnfInput), "Read CNF from this file")
     ("anfwrite", po::value(&anfOutput), "Write ANF output to file")
     ("cnfwrite", po::value(&cnfOutput), "Write CNF output to file")
-    ("verb,v", po::value<uint32_t>(&config.verbosity)->default_value(1),
+    ("verb,v", po::value<uint32_t>(&config.verbosity)->default_value(config.verbosity),
      "Verbosity setting: 0(slient) - 3(noisy)")
     ("simplify", po::value<int>(&config.simplify)->default_value(config.simplify),
      "Simplify ANF")
