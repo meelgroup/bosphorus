@@ -186,7 +186,7 @@ void parseOptions(int argc, char* argv[])
     }
 
     if (vm.count("version")) {
-        Library l;
+        Bosphorus l;
         cout << "bosphorus " << l.get_version_sha1() << '\n'
              << l.get_version_tag() << '\n'
              << l.get_compilation_env() << endl;
@@ -235,7 +235,7 @@ void parseOptions(int argc, char* argv[])
     }
 
     if (config.verbosity) {
-        Library l;
+        Bosphorus l;
         cout << "c Bosphorus SHA revision " << l.get_version_sha1() << endl;
         cout << "c Executed with command line: " << argv[0];
         for (int i = 1; i < argc; ++i)
@@ -331,7 +331,7 @@ int main(int argc, char* argv[])
         cerr << "c ERROR: you must provide an ANF/CNF input file" << endl;
     }
 
-    Library mylib;
+    Bosphorus mylib;
     mylib.set_config(config);
 
     // Read from file

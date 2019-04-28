@@ -42,10 +42,10 @@ SOFTWARE.
 
 using std::vector;
 
-class Library
+class Bosphorus
 {
 public:
-    ~Library();
+    ~Bosphorus();
     void set_config(const ConfigData& cfg);
     static const char* get_compilation_env();
     static const char* get_version_tag();

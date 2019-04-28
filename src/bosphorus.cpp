@@ -31,12 +31,12 @@ SOFTWARE.
 #include "simplifybysat.hpp"
 #endif
 
-Library::~Library()
+Bosphorus::~Bosphorus()
 {
     delete polybori_ring;
 }
 
-void Library::check_library_in_use()
+void Bosphorus::check_library_in_use()
 {
     if (read_in_data) {
         cout << "ERROR: data already read in."
@@ -52,7 +52,7 @@ void Library::check_library_in_use()
     assert(polybori_ring == nullptr);
 }
 
-ANF* Library::read_anf(const char* fname)
+ANF* Bosphorus::read_anf(const char* fname)
 {
     check_library_in_use();
 
@@ -67,14 +67,14 @@ ANF* Library::read_anf(const char* fname)
     return anf;
 }
 
-ANF* Library::start_cnf_input(uint32_t max_vars)
+ANF* Bosphorus::start_cnf_input(uint32_t max_vars)
 {
     polybori_ring = new BoolePolyRing(max_vars);
     ANF* anf = new ANF(polybori_ring, config);
     return anf;
 }
 
-void Library::add_clause(ANF* anf, const std::vector<int>& clause)
+void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
 {
     BoolePolynomial poly(1, *polybori_ring);
     for (const int lit: clause) {
@@ -89,7 +89,7 @@ void Library::add_clause(ANF* anf, const std::vector<int>& clause)
 }
 
 
-ANF* Library::read_cnf(const char* fname)
+ANF* Bosphorus::read_cnf(const char* fname)
 {
     check_library_in_use();
 
@@ -180,7 +180,7 @@ ANF* Library::read_cnf(const char* fname)
     return anf;
 }
 
-void Library::write_anf(const char* fname, const ANF* anf)
+void Bosphorus::write_anf(const char* fname, const ANF* anf)
 {
     std::ofstream ofs;
     ofs.open(fname);
@@ -194,7 +194,7 @@ void Library::write_anf(const char* fname, const ANF* anf)
     ofs.close();
 }
 
-void Library::write_cnf(const char* input_cnf_fname,
+void Bosphorus::write_cnf(const char* input_cnf_fname,
                         const char* output_cnf_fname, const ANF* anf)
 {
     CNF* cnf = NULL;
@@ -245,7 +245,7 @@ void Library::write_cnf(const char* input_cnf_fname,
     ofs.close();
 }
 
-CNF* Library::anf_to_cnf(const ANF* anf)
+CNF* Bosphorus::anf_to_cnf(const ANF* anf)
 {
     double convStartTime = cpuTime();
     CNF* cnf = new CNF(*anf, config);
@@ -257,7 +257,7 @@ CNF* Library::anf_to_cnf(const ANF* anf)
     return cnf;
 }
 
-CNF* Library::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf)
+CNF* Bosphorus::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf)
 {
     double convStartTime = cpuTime();
     CNF* cnf = new CNF(cnf_fname, *anf, extra_clauses, config);
@@ -269,7 +269,7 @@ CNF* Library::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf)
     return cnf;
 }
 
-Solution Library::simplify(ANF* anf, const char* orig_cnf_file)
+Solution Bosphorus::simplify(ANF* anf, const char* orig_cnf_file)
 {
     cout << "c [boshp] Running iterative simplification..." << endl;
     bool timeout = (cpuTime() > config.maxTime);
@@ -433,7 +433,7 @@ Solution Library::simplify(ANF* anf, const char* orig_cnf_file)
     return solution;
 }
 
-void Library::deduplicate()
+void Bosphorus::deduplicate()
 {
     vector<BoolePolynomial> dedup;
     ANF::eqs_hash_t hash;
@@ -447,7 +447,7 @@ void Library::deduplicate()
     learnt.swap(dedup);
 }
 
-void Library::add_trivial_learnt_from_anf_to_learnt(
+void Bosphorus::add_trivial_learnt_from_anf_to_learnt(
     ANF* anf,
     const ANF::eqs_hash_t& orig_eqs_hash
 ) {
@@ -469,7 +469,7 @@ void Library::add_trivial_learnt_from_anf_to_learnt(
     }
 }
 
-vector<Clause> Library::get_learnt(ANF* anf)
+vector<Clause> Bosphorus::get_learnt(ANF* anf)
 {
     vector<vector<int>> ret;
     ANF* anf2 = new ANF(&anf->getRing(), config);
@@ -480,23 +480,23 @@ vector<Clause> Library::get_learnt(ANF* anf)
     return cnf->get_clauses_simple();
 }
 
-void Library::set_config(const ConfigData& cfg)
+void Bosphorus::set_config(const ConfigData& cfg)
 {
     config = cfg;
 }
 
-const char* Library::get_compilation_env()
+const char* Bosphorus::get_compilation_env()
 {
     return ::BosphLib::get_compilation_env();
 
 }
 
-const char* Library::get_version_tag()
+const char* Bosphorus::get_version_tag()
 {
     return ::BosphLib::get_version_tag();
 }
 
-const char* Library::get_version_sha1()
+const char* Bosphorus::get_version_sha1()
 {
     return ::BosphLib::get_version_sha1();
 }
