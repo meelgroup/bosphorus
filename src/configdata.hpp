@@ -55,10 +55,6 @@ struct ConfigData {
     uint64_t numConfl_inc = 10000;
     uint64_t numConfl_lim = 100000;
     bool stopOnSolution = false;
-
-    // Solve processed CNF
-    bool doSolveSAT = false;
-    string solverExe;
 };
 
 }

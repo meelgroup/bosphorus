@@ -224,11 +224,6 @@ void parseOptions(int argc, char* argv[])
         cout << "ERROR! We only currently support up to xldeg = 3\n";
         exit(-1);
     }
-    if (config.doSolveSAT && !vm.count("solvewrite")) {
-        cout << "ERROR! Provide a output file for the solving of the solved "
-                "CNF with '--solvewrite x'\n";
-        exit(-1);
-    }
 
     if (config.verbosity) {
         cout << "c Bosphorus SHA revision " << Bosphorus::get_version_sha1() << endl;
