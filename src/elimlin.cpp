@@ -30,7 +30,7 @@ USING_NAMESPACE_PBORI
 using namespace BosphLib;
 
 // Implementation based on https://infoscience.epfl.ch/record/176270/files/ElimLin_full_version.pdf
-bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
+bool BosphLib::elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
              vector<BoolePolynomial>& loop_learnt)
 {
     //don't run if empty
