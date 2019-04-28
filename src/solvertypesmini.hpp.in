@@ -23,16 +23,15 @@ THE SOFTWARE.
 #ifndef __SOLVERTYPESMINI_H__
 #define __SOLVERTYPESMINI_H__
 
-#if defined(_MSC_VER) || __cplusplus>=201103L || defined(__GXX_EXPERIMENTAL_CXX0X__)
-    #include <cstdint>
-#else
-    #include <stdint.h>
-#endif
 
+#include <cstdint>
 #include <iostream>
 #include <vector>
+#include <cassert>
 
-namespace BLib {
+using std::vector;
+
+namespace Bosph {
 
 typedef uint32_t Var;
 static const Var var_Undef(0xffffffffU >> 3);
@@ -171,6 +170,58 @@ inline std::ostream& operator<<(std::ostream& cout, const lbool val)
     if (val == l_False) cout << "l_False";
     if (val == l_Undef) cout << "l_Undef";
     return cout;
+}
+
+class Solution
+{
+public:
+    vector<lbool> sol;
+    lbool ret = l_Undef;
+};
+
+class Clause
+{
+   public:
+    Clause(const vector<Lit>& _lits) : lits(_lits)
+    {
+    }
+
+    const vector<Lit>& getLits() const
+    {
+        return lits;
+    }
+
+    size_t size() const
+    {
+        return lits.size();
+    }
+
+    bool empty() const
+    {
+        return lits.empty();
+    }
+
+    std::vector<Lit> getClause() const
+    {
+        assert(!lits.empty());
+        return lits;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const Clause& cl);
+
+   private:
+    vector<Lit> lits;
+};
+
+inline std::ostream& operator<<(std::ostream& os, const Clause& cl)
+{
+    for (vector<Lit>::const_iterator it = cl.lits.begin(), end = cl.lits.end();
+         it != end; it++) {
+        os << *it << " ";
+    }
+    os << "0";
+
+    return os;
 }
 
 }

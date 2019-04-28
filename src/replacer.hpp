@@ -27,10 +27,11 @@ SOFTWARE.
 #include <map>
 #include <set>
 #include <vector>
-#include "solvertypesmini.h"
+#include "bosphorus/solvertypesmini.hpp"
 #include "polybori.h"
 
 USING_NAMESPACE_PBORI
+using namespace Bosph;
 
 using std::map;
 using std::set;

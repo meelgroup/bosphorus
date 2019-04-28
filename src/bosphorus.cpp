@@ -31,7 +31,7 @@ SOFTWARE.
 #include "gaussjordan.hpp"
 #include "replacer.hpp"
 #include "time_mem.h"
-#include "solution.hpp"
+#include "bosphorus/solvertypesmini.hpp"
 #include "elimlin.hpp"
 #include "extendedlinearization.hpp"
 #include "simplifybysat.hpp"
@@ -43,14 +43,14 @@ SOFTWARE.
 #include "simplifybysat.hpp"
 #endif
 
-using BLib::Lit;
-using BLib::Clause;
+using Bosph::Lit;
+using Bosph::Clause;
+using Bosph::Solution;
+using Bosph::lbool;
+using Bosph::l_Undef;
+using Bosph::l_True;
+using Bosph::l_False;
 using BLib::ConfigData;
-using BLib::Solution;
-using BLib::lbool;
-using BLib::l_Undef;
-using BLib::l_True;
-using BLib::l_False;
 
 class PrivateData {
 public:

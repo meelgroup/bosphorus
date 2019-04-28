@@ -19,9 +19,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+include_directories(
+    ${PROJECT_SOURCE_DIR}
+)
+
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/GitSHA1.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/solvertypesmini.hpp.in" "${CMAKE_CURRENT_BINARY_DIR}/bosphorus/solvertypesmini.hpp" @ONLY)
 
 include_directories ( ${CMAKE_CURRENT_SOURCE_DIR} )
+include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 set(bosph_lib_files
     anf.cpp
     cnf.cpp
@@ -80,8 +86,7 @@ target_link_libraries(bosphorus-bin
 
 
 bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.hpp )
-bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/solution.hpp )
-bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/clause.hpp )
+bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_BINARY_DIR}/bosphorus/solvertypesmini.hpp )
 
 # -----------------------------------------------------------------------------
 # Copy public headers into build directory include directory.

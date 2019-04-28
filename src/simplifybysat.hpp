@@ -27,7 +27,7 @@ SOFTWARE.
 #include <fstream>
 #include "anf.hpp"
 #include "cnf.hpp"
-#include "solution.hpp"
+#include "bosphorus/solvertypesmini.hpp"
 
 namespace CMSat {
 class SATSolver;

@@ -25,15 +25,15 @@ SOFTWARE.
 #define MYLIBRARY_H_
 
 #include <vector>
-#include "solution.hpp"
-#include "clause.hpp"
+#include "bosphorus/solvertypesmini.hpp"
 
 using std::vector;
-using BLib::lbool;
 
 class PrivateData;
 class ANF;
 class CNF;
+
+namespace Bosph {
 
 class Bosphorus
 {
@@ -62,7 +62,7 @@ public:
     CNF* anf_to_cnf(const ANF* anf);
     CNF* cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf);
 
-    BLib::Solution simplify(ANF* anf, const char* orig_cnf_file);
+    Bosph::Solution simplify(ANF* anf, const char* orig_cnf_file);
 
     void deduplicate();
     void add_trivial_learnt_from_anf_to_learnt(
@@ -71,17 +71,19 @@ public:
 
     size_t get_learnt_size() const;
     static void delete_anf(ANF* anf);
-    static bool evaluate(ANF* anf, const vector<lbool>& sol);
+    static bool evaluate(ANF* anf, const vector<Bosph::lbool>& sol);
     static void print_stats(ANF* anf);
     static ANF* copy_anf_no_replacer(ANF* anf);
     static void print_anf(ANF* a);
 
-    vector<BLib::Clause> get_learnt(ANF* anf);
+    vector<Bosph::Clause> get_learnt(ANF* anf);
 
 private:
     void check_library_in_use();
 
     PrivateData* dat;
 };
+
+}
 
 #endif

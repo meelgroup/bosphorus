@@ -24,12 +24,13 @@ SOFTWARE.
 #ifndef EVALUATOR_H__
 #define EVALUATOR_H__
 
-#include "solvertypesmini.h"
+#include <map>
+
+#include "bosphorus/solvertypesmini.hpp"
 #include "polybori.h"
 
 USING_NAMESPACE_PBORI
-
-#include <map>
+using namespace Bosph;
 
 using std::map;
 using std::vector;

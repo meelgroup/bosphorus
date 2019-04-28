@@ -30,7 +30,7 @@ SOFTWARE.
 #include <vector>
 
 #include "anf.hpp"
-#include "clause.hpp"
+#include "bosphorus/solvertypesmini.hpp"
 
 namespace BLib {
 

@@ -39,11 +39,7 @@ using std::cout;
 using std::deque;
 using std::endl;
 using std::string;
-using BLib::l_Undef;
-using BLib::l_True;
-using BLib::l_False;
-using BLib::lbool;
-using BLib::Solution;
+using namespace Bosph;
 
 //inputs and outputs
 string anfInput;
@@ -258,7 +254,7 @@ void parseOptions(int argc, char* argv[])
     }
 }
 
-void write_solution_to_file(const char* fname, const BLib::Solution& solution)
+void write_solution_to_file(const char* fname, const Solution& solution)
 {
     std::ofstream ofs;
     ofs.open(fname);

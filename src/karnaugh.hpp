@@ -24,11 +24,11 @@ SOFTWARE.
 #ifndef _KARNAUGH_H_
 #define _KARNAUGH_H_
 
-#include "clause.hpp"
-#include "solvertypesmini.h"
+#include "bosphorus/solvertypesmini.hpp"
 #include "polybori.h"
 
 USING_NAMESPACE_PBORI
+using namespace Bosph;
 
 namespace BLib {
 

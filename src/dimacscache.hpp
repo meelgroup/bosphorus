@@ -24,7 +24,8 @@ SOFTWARE.
 #define DIMACSCACHE_H__
 
 #include <vector>
-#include "clause.hpp"
+#include "bosphorus/solvertypesmini.hpp"
+using namespace Bosph;
 
 namespace BLib {
 
