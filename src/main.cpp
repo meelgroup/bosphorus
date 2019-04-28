@@ -102,7 +102,7 @@ void parseOptions(int argc, char* argv[])
 
     po::options_description xl_options("XL");
     xl_options.add_options()
-    ("doXL", po::bool_switch(&config.doXL), "No XL")
+    ("xl", po::value(&config.doXL), "Turn on/off XL-based simplification. Default: ON")
     ("xldeg", po::value<uint32_t>(&config.xlDeg)->default_value(1),
      "Expansion degree for XL algorithm. Default = 1 (0 = Just GJE. For now we only support 0 <= xldeg = 3)")
     ("xlsample", po::value<double>(&config.XLsample)->default_value(config.XLsample),
@@ -113,14 +113,14 @@ void parseOptions(int argc, char* argv[])
 
     po::options_description elimlin_options("ElimLin options");
     elimlin_options.add_options()
-    ("el", po::bool_switch(&config.doEL), "Perform ElimLin")
+    ("el", po::value(&config.doEL), "Turn on/off ElimLin-based simplification. Default: ON")
     ("elsample", po::value<double>(&config.ELsample)->default_value(config.ELsample),
      "Size of matrixto sample for EL, in log2")
     ;
 
     po::options_description sat_options("SAT options");
     sat_options.add_options()
-    ("sat", po::bool_switch(&config.doSAT),  "Do SAT solving")
+    ("sat", po::value(&config.doSAT),  "Turn on/off SAT-based simplification. Default: ON")
     ("stoponsolution", po::bool_switch(&config.stopOnSolution),
      "Stops further simplifications and store solution if SAT simp finds a solution")
     ("satinc", po::value<uint64_t>(&config.numConfl_inc)->default_value(config.numConfl_inc),

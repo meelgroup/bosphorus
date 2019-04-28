@@ -45,9 +45,9 @@ struct ConfigData {
 
     // Processes
     double maxTime = 1e20;
-    bool doXL = false;
-    bool doEL = false;
-    bool doSAT = false;
+    int doXL = true;
+    int doEL = true;
+    int doSAT = true;
     double XLsample = 30.0;
     double XLsampleX = 4.0;
     double ELsample = 30.0;
