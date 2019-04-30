@@ -391,15 +391,15 @@ Solution Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_ite
                                 assert(sbs == NULL);
                                 cnf = new BLib::CNF(orig_cnf_file, *anf,
                                               dat->extra_clauses, dat->config);
-                                sbs = new SimplifyBySat(*cnf, dat->config);
+                                sbs = new BLib::SimplifyBySat(*cnf, dat->config);
                             } else {
                                 no_cls = cnf->update();
                             }
                         } else {
                             delete cnf;
                             delete sbs;
-                            cnf = new Blib::CNF(*anf, dat->config);
-                            sbs = new SimplifyBySat(*cnf, dat->config);
+                            cnf = new BLib::CNF(*anf, dat->config);
+                            sbs = new BLib::SimplifyBySat(*cnf, dat->config);
                         }
 
                         sbs->simplify(dat->config.numConfl_lim,
