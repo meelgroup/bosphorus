@@ -383,6 +383,22 @@ vector<lbool> CNF::mapSolToOrig(const std::vector<lbool>& solution) const
     return ret;
 }
 
+void CNF::print_solution_map(std::ofstream* ofs)
+{
+    for (size_t i = 0; i < getNumVars(); ++i) {
+        // only map monomials which are single variables
+        if (varRepresentsMonomial(i)) {
+            const BooleMonomial& m(revCombinedMap[i].lead());
+
+            //Only single-vars
+            if (m.deg() == 1) {
+                const uint32_t var = m.firstVariable().index();
+                *ofs << "Internal-ANF-var " << var << " = solution-var " << i << endl;
+            }
+        }
+    }
+}
+
 BooleMonomial CNF::getMonomForVar(const uint32_t& var) const
 {
     if (varRepresentsMonomial(var))

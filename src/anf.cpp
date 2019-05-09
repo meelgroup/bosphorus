@@ -287,6 +287,11 @@ size_t ANF::readFile(const std::string& filename)
     return maxVar;
 }
 
+void print_solution_map(std::ofstream* ofs)
+{
+
+}
+
 // KMA Chai: Check if this polynomial can cause further ANF propagation
 bool ANF::check_if_need_update(const BoolePolynomial& poly,
                                unordered_set<uint32_t>& updatedVars)

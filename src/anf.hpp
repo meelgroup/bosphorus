@@ -77,6 +77,7 @@ class ANF
     bool propagate();
     inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
     void printStats() const;
+    void print_solution_map(std::ofstream* ofs);
 
     // Returns true if polynomial is new and has been added
     bool addBoolePolynomial(const BoolePolynomial& poly);

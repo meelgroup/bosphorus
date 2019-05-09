@@ -25,6 +25,7 @@ SOFTWARE.
 #define MYLIBRARY_H_
 
 #include <vector>
+#include <fstream>
 #include "bosphorus/solvertypesmini.hpp"
 
 using std::vector;
@@ -55,9 +56,12 @@ public:
 
     // Output functions
     void write_anf(const char* fname, const ANF* anf);
-    void write_cnf(const char* input_cnf_fname,
+    CNF* write_cnf(const char* input_cnf_fname,
               const char* output_cnf_fname,
               const ANF* anf);
+
+    void write_solution_map(CNF* cnf, std::ofstream* ofs);
+    void write_solution_map(ANF* anf, std::ofstream* ofs);
 
 
     CNF* anf_to_cnf(const ANF* anf);

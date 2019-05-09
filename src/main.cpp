@@ -56,6 +56,9 @@ bool writeCNF;
 
 po::variables_map vm;
 BLib::ConfigData config;
+string solmap_file_read;
+string solmap_file_write;
+string map_solution;
 
 void parseOptions(int argc, char* argv[])
 {
@@ -90,6 +93,13 @@ void parseOptions(int argc, char* argv[])
     // checks
     ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
      "Do not write comments to output files")
+    ;
+
+    po::options_description mapping("Mapping solutions");
+    mapping.add_options()
+    ("map", po::value(&solmap_file_read), "Use this solution map")
+    ("mapsol", po::value(&map_solution), "Map solution in this file")
+    ("writemap", po::value(&solmap_file_write), "Write solution map to this file")
     ;
 
     po::options_description cnf_conv_options("CNF conversion");
@@ -132,6 +142,7 @@ void parseOptions(int argc, char* argv[])
     /* clang-format on */
     po::options_description cmdline_options;
     cmdline_options.add(generalOptions);
+    cmdline_options.add(mapping);
     cmdline_options.add(cnf_conv_options);
     cmdline_options.add(xl_options);
     cmdline_options.add(elimlin_options);
@@ -143,6 +154,7 @@ void parseOptions(int argc, char* argv[])
             vm);
         if (vm.count("help")) {
             cout << generalOptions << endl;
+            cout << mapping << endl;
             cout << cnf_conv_options << endl;
             cout << xl_options << endl;
             cout << elimlin_options << endl;
@@ -399,7 +411,19 @@ int main(int argc, char* argv[])
         if (cnfInput.length() > 0) {
             cnf_input = cnfInput.c_str();
         }
-        mylib.write_cnf(cnf_input, cnfOutput.c_str(), anf);
+        CNF* cnf = mylib.write_cnf(cnf_input, cnfOutput.c_str(), anf);
+        if (!solmap_file_write.empty()) {
+            std::ofstream ofs;
+            ofs.open(solmap_file_write.c_str()); //std::ios_base::app
+            if (!ofs) {
+                std::cerr << "c Error opening file \"" << solmap_file_write
+                          << "\" for writing solution map: solution -> simplified ANF\n";
+                exit(-1);
+            }
+
+            mylib.write_solution_map(cnf, &ofs);
+            mylib.append_anf_solution_map(anf, &ofs);
+        }
     }
 
     if (config.verbosity >= 1) {

@@ -231,7 +231,7 @@ void Bosphorus::write_anf(const char* fname, const ANF* anf)
     ofs.close();
 }
 
-void Bosphorus::write_cnf(const char* input_cnf_fname,
+CNF* Bosphorus::write_cnf(const char* input_cnf_fname,
                         const char* output_cnf_fname, const ::ANF* a)
 {
     auto anf = (const BLib::ANF*)a;
@@ -282,6 +282,20 @@ void Bosphorus::write_cnf(const char* input_cnf_fname,
         }
     }
     ofs.close();
+
+    return (CNF*)cnf;
+}
+
+void Bosphorus::write_solution_map(CNF* c, std::ofstream* ofs)
+{
+    auto cnf = (BLib::CNF*)c;
+    cnf->print_solution_map(ofs);
+}
+
+void Bosphorus::write_solution_map(ANF* a, std::ofstream* ofs)
+{
+    auto anf = (BLib::ANF*)a;
+    anf->print_solution_map(ofs);
 }
 
 CNF* Bosphorus::anf_to_cnf(const ANF* a)
