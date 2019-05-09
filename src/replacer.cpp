@@ -23,6 +23,7 @@ SOFTWARE.
 
 #include "replacer.hpp"
 #include <iostream>
+#include <fstream>
 #include "anf.hpp"
 
 using std::cout;
@@ -244,6 +245,32 @@ vector<uint32_t> Replacer::setReplace(uint32_t var, Lit lit)
     }
 
     return ret;
+}
+
+void Replacer::print_solution_map(std::ofstream* ofs)
+{
+    uint32_t num = 0;
+    for (vector<lbool>::const_iterator it = value.begin(), end = value.end();
+         it != end; it++, num++) {
+        if (*it != l_Undef) {
+            (*ofs) << "ANF-var-val " << num << " = " << *it << endl;
+        }
+    }
+
+    num = 0;
+    for (vector<Lit>::const_iterator it = replaceTable.begin(), end = replaceTable.end();
+        it != end; it++, num++
+    ) {
+        //it is not replaced
+        if (it->var() == num)
+            continue;
+
+        //maybe never solved for, because equation is "a = b", and neither "a", nor "b" appear anywhere else
+        //so, just set the value randomly... to true :)
+        (*ofs) << "must-set-ANF-var-to-any " << it->var() << endl;
+        (*ofs) << "ANF-var " << num << " = "
+               << "ANF-var " << it->var() << " ^ " << it->sign() << endl;
+    }
 }
 
 vector<lbool> Replacer::extendSolution(const vector<lbool>& solution) const

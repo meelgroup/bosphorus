@@ -66,6 +66,7 @@ class Replacer
     bool evaluate(const vector<lbool>& vals) const;
     vector<lbool> extendSolution(const vector<lbool>& solution) const;
     void setNOTOK();
+    void print_solution_map(std::ofstream* ofs);
 
     //Get-functions
     lbool getValue(const uint32_t var) const;

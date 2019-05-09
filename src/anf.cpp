@@ -667,3 +667,8 @@ void ANF::checkOccur() const
         cout << "Sanity check passed" << endl;
     }
 }
+
+void ANF::print_solution_map(std::ofstream* ofs)
+{
+    replacer->print_solution_map(ofs);
+}

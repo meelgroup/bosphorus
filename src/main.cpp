@@ -422,7 +422,7 @@ int main(int argc, char* argv[])
             }
 
             mylib.write_solution_map(cnf, &ofs);
-            mylib.append_anf_solution_map(anf, &ofs);
+            mylib.write_solution_map(anf, &ofs);
         }
     }
 
