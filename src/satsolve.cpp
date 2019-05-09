@@ -70,7 +70,7 @@ void SATSolve::createChildProcess()
         close(out[0]);
 
         // Over-write the child process with the binary
-        execl(solverExecutable.c_str(), solverExecutable.c_str(), (char*)NULL);
+        execl(solverExecutable.c_str(), solverExecutable.c_str(), "--polar" , "false");
 
         //If we couldn't overwrite it, it means there is a failure
         cout << "ERROR! Could not execute '" << solverExecutable << "'" << endl;

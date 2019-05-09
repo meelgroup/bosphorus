@@ -131,8 +131,6 @@ void parseOptions(int argc, char* argv[])
 #ifdef SATSOLVE_ENABLED
     po::options_description solving_processed_CNF_opts("CNF solving");
     solving_processed_CNF_opts.add_options()
-    ("learnsolution", po::bool_switch(&config.learnSolution),
-     "Make concrete the solution that SAT solver returns on the ANF representation. This is not strictly 'correct' as there may be other solutions(!) to the ANF")
     ("solvesat,s", po::bool_switch(&config.doSolveSAT), "Solve with SAT solver as per '--solverexe")
     ("solverexe,e", po::value(&config.solverExe)->default_value("/usr/local/bin/cryptominisat5"),
      "Solver executable for SAT solving CNF")
@@ -720,12 +718,13 @@ int main(int argc, char* argv[])
         anf->printStats();
     }
 
-#ifdef SATSOLVE_ENABLED
+    #ifdef SATSOLVE_ENABLED
     // Solve processed CNF
     if (config.doSolveSAT) {
+        cout << "Solving by SAT..." << endl;
         solve_by_sat(anf, cutting_clauses, orig_anf);
     }
-#endif
+    #endif
 
     // finish up the learnt polynomials
     if (orig_anf_hash != nullptr)
@@ -746,6 +745,7 @@ int main(int argc, char* argv[])
     if (config.writeANF) {
         write_anf(anf);
     }
+
     if (config.writeCNF)
         write_cnf(anf, cutting_clauses, learnt);
 

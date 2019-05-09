@@ -120,6 +120,7 @@ include_directories(${BRiAl_INCLUDE_DIRS})
 option(SATSOLVE "Compile in mode to execute external solver" ON)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND SATSOLVE)
     add_definitions( -DSATSOLVE_ENABLED )
+    message(STATUS "SAT solving as a separate executable is enabled.")
     set(SATSOLVE_ENABLED ON)
 endif()
 
