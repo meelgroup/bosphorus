@@ -202,7 +202,7 @@ size_t ANF::readFile(const std::string& filename)
 
             if (temp[i] == '*') {
                 if (!readInVar) {
-                    cout << "No variable before \"*\" in equation: \"" << temp
+                    cout << "ERROR: No variable before \"*\" in equation: \"" << temp
                          << "\"" << endl;
                     exit(-1);
                 }
@@ -216,15 +216,20 @@ size_t ANF::readFile(const std::string& filename)
                 continue;
             }
 
+            //Feal with carriage return. Thanks Windows!
+            if (temp[i] == 13) {
+                continue;
+            }
+
             //At this point, only numbers are valid
             if (temp[i] < '0' || temp[i] > '9') {
-                cout << "Unknown character \"" << temp[i]
-                     << "\" in equation: \"" << temp << "\"" << endl;
+                cout << "ERROR: Unknown character 0x" << (int)temp[i]
+                     << " in equation: " << temp << "\"" << endl;
                 exit(-1);
             }
 
             if (!startOfVar) {
-                cout << "Value of var before \"x\" in equation: \"" << temp
+                cout << "ERROR: Value of variable is BEFORE \"x\" in the equation: \"" << temp
                      << "\"" << endl;
                 exit(-1);
             }
