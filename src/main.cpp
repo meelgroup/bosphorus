@@ -21,12 +21,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include <boost/program_options.hpp>
-namespace po = boost::program_options;
-
 #include <sys/wait.h>
 #include <deque>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <iomanip>
 
@@ -34,12 +32,16 @@ namespace po = boost::program_options;
 #include "time_mem.h"
 #include "configdata.hpp"
 
+#include <boost/program_options.hpp>
+
 using std::cerr;
 using std::cout;
 using std::deque;
 using std::endl;
 using std::string;
+
 using namespace Bosph;
+namespace po = boost::program_options;
 
 //inputs and outputs
 string anfInput;
@@ -47,6 +49,11 @@ string anfOutput;
 string cnfInput;
 string cnfOutput;
 string solutionOutput;
+
+//solution map
+string solmap_file_read;
+string solmap_file_write;
+string cnf_solution;
 
 // read/write
 bool readANF;
@@ -56,9 +63,9 @@ bool writeCNF;
 
 po::variables_map vm;
 BLib::ConfigData config;
-string solmap_file_read;
-string solmap_file_write;
-string map_solution;
+
+vector<lbool> read_cnf_solution(const char* fname);
+
 
 void parseOptions(int argc, char* argv[])
 {
@@ -98,7 +105,7 @@ void parseOptions(int argc, char* argv[])
     po::options_description mapping("Mapping solutions");
     mapping.add_options()
     ("map", po::value(&solmap_file_read), "Use this solution map")
-    ("mapsol", po::value(&map_solution), "Map solution in this file")
+    ("cnfsolution", po::value(&cnf_solution), "Map solution in this file")
     ("writemap", po::value(&solmap_file_write), "Write solution map to this file")
     ;
 
@@ -214,10 +221,7 @@ void parseOptions(int argc, char* argv[])
     if (vm.count("cnfwrite")) {
         writeCNF = true;
     }
-    if (!readANF && !readCNF) {
-        cout << "You must give an ANF/CNF file to read in\n";
-        exit(-1);
-    }
+
     if (readANF && readCNF) {
         cout << "You cannot give both ANF/CNF files to read in\n";
         exit(-1);
@@ -329,6 +333,23 @@ void check_solution(ANF* anf, Solution& solution)
 int main(int argc, char* argv[])
 {
     parseOptions(argc, argv);
+    if (!solmap_file_read.empty() || !cnf_solution.empty()) {
+        if (solmap_file_read.empty() || cnf_solution.empty()) {
+            cout << "ERROR: You must must give both --map and --cnfsolution at the same time, in case you give *either* of the two" << endl;
+            exit(-1);
+        }
+
+        vector<lbool> sol = read_cnf_solution(cnf_solution.c_str());
+        if (config.verbosity >= 2) {
+            cout << "Read CNF solution: " << endl;
+            for(uint32_t i = 0; i < sol.size(); i++) {
+                cout << "CNF sol " << i << " : " << sol[i] << endl;
+            }
+        }
+        cout << "When performing solution mapping, everything else is disabled. Exiting." << endl;
+        exit(0);
+    }
+
     if (anfInput.length() == 0 && cnfInput.length() == 0) {
         cerr << "c ERROR: you must provide an ANF/CNF input file" << endl;
     }
@@ -435,4 +456,68 @@ int main(int argc, char* argv[])
     // clean up
     Bosphorus::delete_anf(anf);
     return 0;
+}
+
+void process_line(const std::string& str, vector<lbool>& sol) {
+    if (str[0] != 'v') {
+            return;
+    }
+
+    size_t pos = 1;
+    bool finishing = false;
+    while (pos < str.size()) {
+        while (str[pos] == ' ' && pos < str.size())
+            pos++;
+        if (pos == str.size())
+            break;
+
+        string tmp;
+        while (str[pos] != ' ' && pos < str.size()) {
+            tmp += str[pos];
+            pos++;
+        }
+        int val;
+        try {
+            val = boost::lexical_cast<int>(tmp);
+        } catch (boost::bad_lexical_cast&) {
+            std::cout << "Solution from SAT solver contains part '" << tmp
+                 << "', which cannot be converted to int!" << endl;
+
+            exit(-1);
+        }
+        if (val == 0) {
+            if (!finishing)
+                finishing = true;
+            else {
+                std::cout << "Finishing value '0' encountered twice while "
+                     << "reading solution from SAT solver!" << endl;
+
+                exit(-1);
+            }
+            finishing = true;
+        } else {
+            size_t v = std::abs(val) - 1;
+            if (v >= sol.size())
+                sol.resize(v + 1, l_Undef);
+            sol[v] = boolToLBool(val > 0);
+        }
+    }
+}
+
+vector<lbool> read_cnf_solution(const char* fname)
+{
+    std::ifstream ifs(fname);
+    if (!ifs) {
+        std::cerr << "c Error opening file \"" << fname << "\" for reading" << endl;
+        exit(-1);
+    }
+
+    vector<lbool> sol;
+
+    std::string str;
+    while (std::getline(ifs, str)) {
+        cout << "line: " << str << endl;
+        process_line(str, sol);
+    }
+    return sol;
 }
