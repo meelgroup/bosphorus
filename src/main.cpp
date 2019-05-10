@@ -650,6 +650,18 @@ void solve_by_sat(const ANF* anf, const vector<Clause>& cutting_clauses,
         ofs << endl;
     }
     ofs.close();
+
+    //also write to the console
+    size_t num = 0;
+    cout << "v ";
+    for (const lbool lit : sol) {
+        if (lit != l_Undef) {
+            cout << ((lit == l_True) ? "" : "-") << num << " ";
+        }
+        num++;
+    }
+    cout << endl;
+
     if (config.verbosity) {
         cout << "c Wrote solution to '" << config.solutionOutput << "'" << endl;
     }
