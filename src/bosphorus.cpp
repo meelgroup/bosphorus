@@ -326,7 +326,7 @@ CNF* Bosphorus::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* a)
     return (CNF*)cnf;
 }
 
-Solution Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
+bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
 {
     auto anf = (BLib::ANF*)a;
 
@@ -336,7 +336,7 @@ Solution Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_ite
         if (dat->config.verbosity) {
             cout << "c Timeout before learning" << endl;
         }
-        return Solution();
+        return anf->getOK();
     }
 
     double loopStartTime = cpuTime();
@@ -344,7 +344,6 @@ Solution Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_ite
     anf->propagate();
     timeout = (cpuTime() > dat->config.maxTime);
 
-    Solution solution;
     bool changes[] = {true, true, true}; // any changes for the strategies
     size_t waits[] = {0, 0, 0};
     size_t countdowns[] = {0, 0, 0};
@@ -356,7 +355,6 @@ Solution Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_ite
     while (
         !timeout
         && anf->getOK()
-        && solution.ret == l_Undef
         && iters < max_iters
         && (changes[0] || changes[1] || changes[2] || iters < 3)
     ) {
@@ -416,11 +414,11 @@ Solution Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_ite
                             sbs = new BLib::SimplifyBySat(*cnf, dat->config);
                         }
 
-                        sbs->simplify(dat->config.numConfl_lim,
+                        lbool ret = sbs->simplify(dat->config.numConfl_lim,
                                       dat->config.numConfl_inc, dat->config.maxTime,
-                                      no_cls, dat->learnt, *anf, solution);
+                                      no_cls, dat->learnt, *anf);
 
-                        if (solution.ret != l_False) {
+                        if (ret != l_False) {
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
                                 num_learnt += anf->addLearntBoolePolynomial(dat->learnt[i]);
                             }
@@ -444,9 +442,10 @@ Solution Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_ite
             changes[subiter] = true;
             bool ok = anf->propagate();
             if (!ok) {
-                if (dat->config.verbosity >= 1)
+                if (dat->config.verbosity >= 1) {
                     cout << "c [ANF Propagation] is false\n";
-                solution.ret = l_False;
+                }
+                anf->setNOTOK();
             }
         }
 
@@ -490,7 +489,7 @@ Solution Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_ite
     delete sbs;
     delete cnf;
     anf->contextualize(dat->learnt);
-    return solution;
+    return anf->getOK();
 }
 
 void Bosphorus::deduplicate()

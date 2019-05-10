@@ -54,7 +54,6 @@ struct ConfigData {
     uint32_t xlDeg = 1;
     uint64_t numConfl_inc = 10000;
     uint64_t numConfl_lim = 100000;
-    bool stopOnSolution = false;
 };
 
 }

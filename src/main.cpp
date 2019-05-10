@@ -48,7 +48,6 @@ string anfInput;
 string anfOutput;
 string cnfInput;
 string cnfOutput;
-string solutionOutput;
 
 //solution map
 string solmap_file_write;
@@ -96,7 +95,7 @@ void parseOptions(int argc, char* argv[])
     // checks
     ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
      "Do not write comments to output files")
-    ("writesolmap", po::value(&solmap_file_write), "Write solution map to this file")
+    ("solmap", po::value(&solmap_file_write), "Write solution map to this file")
     ;
 
     po::options_description cnf_conv_options("CNF conversion");
@@ -128,8 +127,6 @@ void parseOptions(int argc, char* argv[])
     po::options_description sat_options("SAT options");
     sat_options.add_options()
     ("sat", po::value(&config.doSAT),  "Turn on/off SAT-based simplification. Default: ON")
-    ("stoponsolution", po::bool_switch(&config.stopOnSolution),
-     "Stops further simplifications and store solution if SAT simp finds a solution")
     ("satinc", po::value<uint64_t>(&config.numConfl_inc)->default_value(config.numConfl_inc),
      "Conflict inc for built-in SAT solver.")
     ("satlim", po::value<uint64_t>(&config.numConfl_lim)->default_value(config.numConfl_lim),
@@ -245,8 +242,6 @@ void parseOptions(int argc, char* argv[])
              << endl
              << "c SAT simp (" << config.numConfl_inc << ':'
              << config.numConfl_lim << "): " << config.doSAT << endl
-             << "c Stop simplifying if SAT finds solution? "
-             << (config.stopOnSolution ? "Yes" : "No") << endl
              << "c Cut num: " << config.cutNum << endl
              << "c Karnaugh size: " << config.maxKarnTableSize << endl
              << "c --------------------" << endl;
@@ -368,17 +363,7 @@ int main(int argc, char* argv[])
         if (cnfInput.length() > 0) {
             cnf_orig = cnfInput.c_str();
         }
-        Solution solution = mylib.simplify(anf, cnf_orig);
-
-        if (solution.ret != l_Undef) {
-            if (solution.ret == l_True) {
-                check_solution(orig_anf, solution);
-            }
-            print_solution(solution);
-            if (solutionOutput.length() > 0) {
-                write_solution_to_file(solutionOutput.c_str(), solution);
-            }
-        }
+        mylib.simplify(anf, cnf_orig);
     }
     if (config.printProcessedANF) {
         Bosphorus::print_anf(anf);

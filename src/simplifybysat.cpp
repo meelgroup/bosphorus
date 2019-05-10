@@ -190,15 +190,14 @@ int SimplifyBySat::extractLinear(vector<BoolePolynomial>& loop_learnt)
     return num_polys;
 }
 
-int SimplifyBySat::simplify(const uint64_t numConfl_lim,
+lbool SimplifyBySat::simplify(const uint64_t numConfl_lim,
                             const uint64_t numConflinc, const double time_limit,
                             const size_t cbeg,
-                            vector<BoolePolynomial>& loop_learnt, ANF& anf,
-                            Solution& solution)
+                            vector<BoolePolynomial>& loop_learnt, ANF& anf)
 {
     if (!anf.getOK()) {
         cout << "c Nothing to simplify: UNSAT" << endl;
-        return -1;
+        return l_False;
     }
 
     //Add problem to solver
@@ -218,12 +217,13 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
     }
 
     //Run the solver
+    Solution sol;
     solver->set_max_time(time_left);
     solver->set_timeout_all_calls(time_left);
     solver->set_max_confl(std::min(numConflinc, numConfl_left));
     CMSat::lbool ret = solver->solve();
     Bosph::lbool* ret2 = (Bosph::lbool*)&ret;
-    solution.ret = *ret2;
+    sol.ret = *ret2;
     time_left = time_limit - cpuTime();
     numConfl_left =
         (numConfl_left > numConflinc) ? (numConfl_left - numConflinc) : 0;
@@ -247,39 +247,37 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
     }
 
     //Deal with result
-    if (solution.ret == l_Undef) {
-        return 0;
-    }
-
-    if (solution.ret == l_False) {
+    if (sol.ret == l_False) {
         cout << "c UNSAT returned by solver" << endl;
         anf.addBoolePolynomial(BoolePolynomial(true, anf.getRing()));
-        return -1;
     }
 
     //Solution found
-    assert(solution.ret == l_True);
-    if (config.verbosity >= 1) {
-        cout << "c [SAT] has found a solution" << endl;
-    }
-
-    const size_t sz = solver->get_model().size();
-    vector<lbool> solutionFromSolver(sz, l_Undef);
-    for (uint32_t i = 0; i < sz; ++i) {
-        //solutionFromSolver[i] = solver->get_model()[i];
-        CMSat::lbool m = solver->get_model()[i];
-        if (m == CMSat::l_Undef) {
-            solutionFromSolver[i] = l_Undef;
-        } else if (m == CMSat::l_True) {
-            solutionFromSolver[i] = l_True;
-        } else if (m == CMSat::l_False) {
-            solutionFromSolver[i] = l_False;
+    if(sol.ret == l_True) {
+        if (config.verbosity >= 1) {
+            cout << "c [SAT] has found a solution" << endl;
         }
-        assert(solutionFromSolver[i] != l_Undef);
+
+        /*const size_t sz = solver->get_model().size();
+        vector<lbool> solutionFromSolver(sz, l_Undef);
+        for (uint32_t i = 0; i < sz; ++i) {
+            //solutionFromSolver[i] = solver->get_model()[i];
+            CMSat::lbool m = solver->get_model()[i];
+            if (m == CMSat::l_Undef) {
+                solutionFromSolver[i] = l_Undef;
+            } else if (m == CMSat::l_True) {
+                solutionFromSolver[i] = l_True;
+            } else if (m == CMSat::l_False) {
+                solutionFromSolver[i] = l_False;
+            }
+            assert(solutionFromSolver[i] != l_Undef);
+        }
+
+        vector<lbool> solution2 = cnf.mapSolToOrig(solutionFromSolver);
+        sol.sol = anf.extendSolution(solution2);
+        ....-> we could use sol.sol here, but it's useless
+        */
     }
 
-    vector<lbool> solution2 = cnf.mapSolToOrig(solutionFromSolver);
-    solution.sol = anf.extendSolution(solution2);
-
-    return 0;
+    return sol.ret;
 }

@@ -30,22 +30,23 @@ def evaluate(monom, sol):
     for var in monom:
         var = var.strip("x()")
         try:
-            var = int(x)
+            v = int(var)
         except ValueError:
-            print("ERROR: solution file contains non-integer variable value")
+            print("ERROR: Equation file contains non-integer monomial var '%s' in monomial '%s' " % (var, monom))
             exit(-1)
 
-        if var not in sol:
-            print("ERROR: variable %d in ANF but not in solution" % var)
+        if v not in sol:
+            print("ERROR: variable %d in ANF but not in solution" % v)
             exit(-1)
 
-        val *= sol[var]
+        val *= sol[v]
 
     return val
 
 
 if len(sys.argv) != 3:
     print("Usage: check_solution.py solution ANF")
+    exit(-1)
 
 solfile = sys.argv[1]
 anffile = sys.argv[2]
@@ -72,13 +73,16 @@ with open(solfile, "r") as f:
 
         line = line.split()
         for x in line:
+            if x == "v":
+                continue
+
             x = x.strip()
             if len(x) == 0:
                 continue
             try:
-                var = int(x)
+                var = abs(int(x))
             except ValueError:
-                print("ERROR: solution file contains non-integer variable value")
+                print("ERROR: solution file contains non-integer variable value: ", x)
                 exit(-1)
 
             val = 1
@@ -104,7 +108,7 @@ with open(anffile, "r") as f:
         if val != 0:
             print("ERROR: Equation not satisfied: ", line)
             for mon in monoms:
-                print("--> Monomial '%s' evaluates to:" , evaluate(mon, sol))
-                exit(-1);
+                print("--> Monomial '%s' evaluates to: %s" % (mon, evaluate(mon, sol)))
+            exit(-1);
 
 print("OK, solution is good!")

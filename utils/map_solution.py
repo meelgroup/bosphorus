@@ -83,6 +83,7 @@ def parse_solution(fname):
 if len(sys.argv) != 3:
     print("ERROR: You must give 2 arguments: map file and solution file")
     print("Usage: map_solution.py map_file solution_file")
+    exit(-1)
 
 
 mapfile = sys.argv[1]
