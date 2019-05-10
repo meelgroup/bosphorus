@@ -67,7 +67,7 @@ if len(sys.argv) == 2:
 
 random.seed(seed)
 max_var = random.randint(10, 100)
-num_eqs = random.randint(1, 100)
+num_eqs = random.randint(1, max_var*10)
 for x in range(num_eqs):
     eq = gen_equation()
     print(eq)

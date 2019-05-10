@@ -25,9 +25,16 @@ import sys
 def parse_solution(fname):
     num_vars = 0
     solution = {}
+    unsat = None
     with open(fname, "r") as f:
         for line in f:
             line = line.strip()
+            if line == "s UNSATISFIABLE":
+                return True, None
+
+            if line ==  "s SATISFIABLE":
+                unsat = False
+
             vline = False
             for elem in line.split(" "):
                 elem = elem.strip()
@@ -67,7 +74,11 @@ def parse_solution(fname):
         print("ERROR: no solution found in solution file '%s'" % fname)
         exit(-1)
 
-    return solution
+    if unsat is None:
+        print("ERROR: solution neither says UNSAT or SAT, maybe things didn't get solved?")
+        exit(-1)
+
+    return unsat, solution
 
 if len(sys.argv) != 3:
     print("ERROR: You must give 2 arguments: map file and solution file")
@@ -81,7 +92,10 @@ print("c solution file: ", solfile)
 print("c map file: ", mapfile)
 
 # parse up solution
-cnfsol = parse_solution(solfile)
+unsat, cnfsol = parse_solution(solfile)
+if unsat:
+    print("s UNSATISFIABLE")
+    exit(0)
 # print ("CNF solution: ", cnfsol)
 
 
@@ -174,4 +188,5 @@ for a,b in anfsol.items():
 
 print("c solution below, with variables starting at 0, as per ANF convention.")
 print("c preceding '-' means it's False, so '-0' has a meaning")
+print("s ANF-SATISFIABLE")
 print("v %s" % sol_in_txt)
