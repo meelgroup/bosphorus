@@ -58,21 +58,22 @@ void SimplifyBySat::addClausesToSolver(size_t beg)
     const auto& csets = cnf.getClauses();
     for (auto it = csets.begin() + beg; it != csets.end(); ++it) {
         for (const Clause& c : it->first) {
-            const vector<Lit>& lits = c.getClause();
-            solver->add_clause(lits);
+            vector<Lit> lits = c.getClause();
+            vector<CMSat::Lit>* lits2 = (vector<CMSat::Lit>*)&lits;
+            solver->add_clause(*lits2);
         }
     }
 }
 
 int SimplifyBySat::extractUnitaries(vector<BoolePolynomial>& loop_learnt)
 {
-    vector<Lit> units = solver->get_zero_assigned_lits();
+    vector<CMSat::Lit> units = solver->get_zero_assigned_lits();
     if (config.verbosity >= 3) {
         cout << units.size(); // "c Number of unit learnt clauses: " << << endl;
     }
 
     uint64_t numVarLearnt = 0;
-    for (const Lit& unit : units) {
+    for (const CMSat::Lit& unit : units) {
         //If var represents a partial XOR clause, skip it
         if (!cnf.varRepresentsMonomial(unit.var())) {
             continue;
@@ -105,16 +106,16 @@ int SimplifyBySat::extractUnitaries(vector<BoolePolynomial>& loop_learnt)
 
 int SimplifyBySat::extractBinaries(vector<BoolePolynomial>& loop_learnt)
 {
-    vector<pair<Lit, Lit> > binXors = solver->get_all_binary_xors();
+    auto binXors = solver->get_all_binary_xors();
     if (config.verbosity >= 3) {
         cout << '/'
              << binXors.size(); //"c Number of binary clauses:" <<  << endl;
     }
 
     uint64_t numVarReplaced = 0;
-    for (pair<Lit, Lit>& pair : binXors) {
-        Lit lit1 = pair.first;
-        Lit lit2 = pair.second;
+    for (auto& pair : binXors) {
+        CMSat::Lit lit1 = pair.first;
+        CMSat::Lit lit2 = pair.second;
         uint32_t v1 = lit1.var();
         uint32_t v2 = lit2.var();
         assert(v1 != v2);
@@ -220,7 +221,9 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
     solver->set_max_time(time_left);
     solver->set_timeout_all_calls(time_left);
     solver->set_max_confl(std::min(numConflinc, numConfl_left));
-    solution.ret = solver->solve();
+    CMSat::lbool ret = solver->solve();
+    Bosph::lbool* ret2 = (Bosph::lbool*)&ret;
+    solution.ret = *ret2;
     time_left = time_limit - cpuTime();
     numConfl_left =
         (numConfl_left > numConflinc) ? (numConfl_left - numConflinc) : 0;
@@ -263,7 +266,15 @@ int SimplifyBySat::simplify(const uint64_t numConfl_lim,
     const size_t sz = solver->get_model().size();
     vector<lbool> solutionFromSolver(sz, l_Undef);
     for (uint32_t i = 0; i < sz; ++i) {
-        solutionFromSolver[i] = solver->get_model()[i];
+        //solutionFromSolver[i] = solver->get_model()[i];
+        CMSat::lbool m = solver->get_model()[i];
+        if (m == CMSat::l_Undef) {
+            solutionFromSolver[i] = l_Undef;
+        } else if (m == CMSat::l_True) {
+            solutionFromSolver[i] = l_True;
+        } else if (m == CMSat::l_False) {
+            solutionFromSolver[i] = l_False;
+        }
         assert(solutionFromSolver[i] != l_Undef);
     }
 
