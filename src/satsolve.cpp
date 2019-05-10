@@ -149,7 +149,7 @@ vector<lbool> SATSolve::solveCNF(const ANF* orig_anf, const ANF& anf,
     vector<string> solLines;
     string SAT;
     size_t pos = 0;
-    cout << "c solver output: " << str << endl;
+    //cout << "c solver output: " << str << endl;
     while (pos < str.size()) {
         string tmp;
         while (pos < str.size() && str[pos] == '\n')
