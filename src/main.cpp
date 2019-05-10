@@ -51,9 +51,7 @@ string cnfOutput;
 string solutionOutput;
 
 //solution map
-string solmap_file_read;
 string solmap_file_write;
-string cnf_solution;
 
 // read/write
 bool readANF;
@@ -63,8 +61,6 @@ bool writeCNF;
 
 po::variables_map vm;
 BLib::ConfigData config;
-
-vector<lbool> read_cnf_solution(const char* fname);
 
 
 void parseOptions(int argc, char* argv[])
@@ -100,13 +96,7 @@ void parseOptions(int argc, char* argv[])
     // checks
     ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
      "Do not write comments to output files")
-    ;
-
-    po::options_description mapping("Mapping solutions");
-    mapping.add_options()
-    ("map", po::value(&solmap_file_read), "Use this solution map")
-    ("cnfsolution", po::value(&cnf_solution), "Map solution in this file")
-    ("writemap", po::value(&solmap_file_write), "Write solution map to this file")
+    ("writesolmap", po::value(&solmap_file_write), "Write solution map to this file")
     ;
 
     po::options_description cnf_conv_options("CNF conversion");
@@ -149,7 +139,6 @@ void parseOptions(int argc, char* argv[])
     /* clang-format on */
     po::options_description cmdline_options;
     cmdline_options.add(generalOptions);
-    cmdline_options.add(mapping);
     cmdline_options.add(cnf_conv_options);
     cmdline_options.add(xl_options);
     cmdline_options.add(elimlin_options);
@@ -161,7 +150,6 @@ void parseOptions(int argc, char* argv[])
             vm);
         if (vm.count("help")) {
             cout << generalOptions << endl;
-            cout << mapping << endl;
             cout << cnf_conv_options << endl;
             cout << xl_options << endl;
             cout << elimlin_options << endl;
@@ -333,23 +321,6 @@ void check_solution(ANF* anf, Solution& solution)
 int main(int argc, char* argv[])
 {
     parseOptions(argc, argv);
-    if (!solmap_file_read.empty() || !cnf_solution.empty()) {
-        if (solmap_file_read.empty() || cnf_solution.empty()) {
-            cout << "ERROR: You must must give both --map and --cnfsolution at the same time, in case you give *either* of the two" << endl;
-            exit(-1);
-        }
-
-        vector<lbool> sol = read_cnf_solution(cnf_solution.c_str());
-        if (config.verbosity >= 2) {
-            cout << "Read CNF solution: " << endl;
-            for(uint32_t i = 0; i < sol.size(); i++) {
-                cout << "CNF sol " << i << " : " << sol[i] << endl;
-            }
-        }
-        cout << "When performing solution mapping, everything else is disabled. Exiting." << endl;
-        exit(0);
-    }
-
     if (anfInput.length() == 0 && cnfInput.length() == 0) {
         cerr << "c ERROR: you must provide an ANF/CNF input file" << endl;
     }
@@ -502,22 +473,4 @@ void process_line(const std::string& str, vector<lbool>& sol) {
             sol[v] = boolToLBool(val > 0);
         }
     }
-}
-
-vector<lbool> read_cnf_solution(const char* fname)
-{
-    std::ifstream ifs(fname);
-    if (!ifs) {
-        std::cerr << "c Error opening file \"" << fname << "\" for reading" << endl;
-        exit(-1);
-    }
-
-    vector<lbool> sol;
-
-    std::string str;
-    while (std::getline(ifs, str)) {
-        cout << "line: " << str << endl;
-        process_line(str, sol);
-    }
-    return sol;
 }
