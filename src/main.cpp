@@ -318,6 +318,7 @@ int main(int argc, char* argv[])
     parseOptions(argc, argv);
     if (anfInput.length() == 0 && cnfInput.length() == 0) {
         cerr << "c ERROR: you must provide an ANF/CNF input file" << endl;
+        exit(-1);
     }
 
     Bosphorus mylib;
