@@ -26,6 +26,7 @@ def parse_solution(fname):
     num_vars = 0
     solution = {}
     unsat = None
+    vline_found = False
     with open(fname, "r") as f:
         for line in f:
             line = line.strip()
@@ -40,6 +41,7 @@ def parse_solution(fname):
                 elem = elem.strip()
                 if elem == "v":
                     vline = True
+                    vline_found = True
                     continue
                 if not vline:
                     continue
@@ -70,7 +72,7 @@ def parse_solution(fname):
                 solution[var] = val
                 num_vars += 1
 
-    if num_vars == 0:
+    if not vline_found:
         print("ERROR: no solution found in solution file '%s'" % fname)
         exit(-1)
 
@@ -118,7 +120,10 @@ with open(mapfile, "r") as f:
                 exit(-1)
 
             assert var >= 0
-            anfsol[var] = cnfsol[var]
+            if var not in cnfsol:
+                anfsol[var] = None
+            else:
+                anfsol[var] = cnfsol[var]
 
         elif line[0] == "ANF-var-val":
             try:
@@ -182,6 +187,9 @@ with open(mapfile, "r") as f:
 # print("ANF solution:", anfsol)
 sol_in_txt = ""
 for a,b in anfsol.items():
+    if b is None:
+        continue
+
     extra = ""
     if not b:
         extra = "-"

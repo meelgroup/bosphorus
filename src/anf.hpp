@@ -140,7 +140,7 @@ class ANF
     vector<vector<size_t> >
         occur; //occur[var] -> index of polys where the variable occurs
 
-    size_t new_equations_begin;
+    size_t new_equations_begin = 0;
 
     friend std::ostream& operator<<(std::ostream& os, const ANF& anf);
 };

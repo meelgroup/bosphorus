@@ -57,6 +57,7 @@ class Replacer
         replaceTable.push_back(Lit(var, false));
     }
 
+    //returns updated vars
     vector<uint32_t> setValue(uint32_t var, bool value);
     vector<uint32_t> setReplace(uint32_t var, Lit lit);
     BoolePolynomial update(const BooleMonomial& m) const;

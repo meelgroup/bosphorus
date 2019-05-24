@@ -341,7 +341,10 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
 
     double loopStartTime = cpuTime();
     // Perform initial propagation to avoid needing >= 2 iterations
-    anf->propagate();
+    if (!anf->propagate()) {
+        cout << "c ANF is UNSAT after propagation" << endl;
+        return false;
+    }
     timeout = (cpuTime() > dat->config.maxTime);
 
     bool changes[] = {true, true, true}; // any changes for the strategies
@@ -370,9 +373,11 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                  << countdowns[subiter] << " iteration(s)." << endl;
         } else {
             const size_t prevsz = dat->learnt.size();
+            bool sub_iter_performed = false;
             switch (subiter) {
                 case 0:
                     if (dat->config.doXL) {
+                        sub_iter_performed = true;
                         if (!extendedLinearization(dat->config, anf->getEqs(),
                                                    dat->learnt)) {
                             anf->setNOTOK();
@@ -385,6 +390,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                     break;
                 case 1:
                     if (dat->config.doEL) {
+                        sub_iter_performed = true;
                         if (!elimLin(dat->config, anf->getEqs(), dat->learnt)) {
                             anf->setNOTOK();
                         } else {
@@ -397,6 +403,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                 case 2:
 #ifdef SAT_SIMP
                     if (dat->config.doSAT) {
+                        sub_iter_performed = true;
                         size_t no_cls = 0;
                         if (orig_cnf_file) {
                             if (cnf == NULL) {
@@ -428,7 +435,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                     break;
             }
 
-            if (dat->config.verbosity >= 2) {
+            if (dat->config.verbosity >= 2 && sub_iter_performed) {
                 cout << "c [" << strategy_str[subiter] << "] learnt "
                      << num_learnt << " new facts in "
                      << (cpuTime() - startTime) << " seconds." << endl;
