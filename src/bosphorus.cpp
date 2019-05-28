@@ -138,7 +138,7 @@ void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
         cout << "c Read CNF with " << maxVar << " variables." << endl;
     }
 
-     // Chunk up by L positive literals. L = config.cutNum
+    // Chunk up by L positive literals. L = config.cutNum
     vector<Clause> chunked_clauses;
     for (auto clause : orig_clauses) {
         // small already
