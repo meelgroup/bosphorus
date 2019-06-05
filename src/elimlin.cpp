@@ -67,11 +67,13 @@ bool BLib::elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
             if (all_equations[i].deg() == 1)
                 linear_idx_nvar.push_back(
                     std::make_pair(i, all_equations[i].nUsedVariables()));
-
         assert(num_linear == linear_idx_nvar.size());
+
+        //No linear equations, reached fixedpoint, exit
         if (num_linear == 0) {
             break;
         }
+
         if (config.verbosity >= 3) {
             cout << "c  Processing " << num_linear << " linear equations "
                  << "in a system of " << all_equations.size() << " equations"
