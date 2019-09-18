@@ -28,6 +28,7 @@ SOFTWARE.
 #include "satsolve.hpp"
 
 using std::cout;
+using std::cerr;
 using std::endl;
 
 SATSolve::SATSolve(const int _verbosity, const bool _testsolution,
@@ -55,12 +56,13 @@ void SATSolve::createChildProcess()
         // Close stdin, stdout, stderr in the child process
         close(0);
         close(1);
-        close(2);
+        // Don't replace stderr to report problems with execl below
+        // close(2);
 
         // make our pipes, our new stdin,stdout and stderr
         dup2(in[0], 0);
         dup2(out[1], 1);
-        dup2(out[1], 2);
+        // dup2(out[1], 2);
 
         /* Close the other ends of the pipes that the parent will use, because if
         * we leave these open in the child, the child/parent will not get an EOF
@@ -70,10 +72,13 @@ void SATSolve::createChildProcess()
         close(out[0]);
 
         // Over-write the child process with the binary
-        execl(solverExecutable.c_str(), solverExecutable.c_str(), "--polar" , "false");
+        execl(solverExecutable.c_str(), solverExecutable.c_str(), "--polar" , "false",
+                (char *) NULL);
 
         //If we couldn't overwrite it, it means there is a failure
-        cout << "ERROR! Could not execute '" << solverExecutable << "'" << endl;
+        int err_save = errno;
+        cerr << "ERROR! Could not execute '" << solverExecutable << "': " 
+             << strerror(err_save) << endl;
         exit(-1);
     }
 }
