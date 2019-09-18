@@ -61,6 +61,7 @@ struct ConfigData {
     uint32_t xlDeg;
     uint64_t numConfl_inc = 10000;
     uint64_t numConfl_lim = 100000;
+    unsigned int numThreads = 1;
     bool stopOnSolution = false;
     bool learnSolution = false;
 
