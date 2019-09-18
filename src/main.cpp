@@ -126,6 +126,8 @@ void parseOptions(int argc, char* argv[])
      "Conflict inc for built-in SAT solver.")
     ("satlim", po::value<uint64_t>(&config.numConfl_lim)->default_value(config.numConfl_lim),
      "Conflict limit for built-in SAT solver.")
+    ("threads,t", po::value<unsigned int>(&config.numThreads)->default_value(config.numThreads),
+     "Number of threads to use for SAT solver (same value is used for built-in and external).")
     ;
 
 #ifdef SATSOLVE_ENABLED
@@ -260,7 +262,8 @@ void parseOptions(int argc, char* argv[])
              << "c EL simp (s = " << config.ELsample << "): " << !config.noEL
              << endl
              << "c SAT simp (" << config.numConfl_inc << ':'
-             << config.numConfl_lim << "): " << !config.noSAT << endl
+             << config.numConfl_lim << "): " << !config.noSAT
+             << " using " << config.numThreads << " threads" << endl
              << "c Stop simplifying if SAT finds solution? "
              << (config.stopOnSolution ? "Yes" : "No") << endl
              << "c Paranoid: " << config.paranoid << endl
@@ -630,7 +633,7 @@ void solve_by_sat(const ANF* anf, const vector<Clause>& cutting_clauses,
                   const ANF* orig_anf)
 {
     CNF* cnf = anf_to_cnf(anf, cutting_clauses);
-    SATSolve solver(config.verbosity, config.paranoid, config.solverExe);
+    SATSolve solver(config.verbosity, config.paranoid, config.solverExe, config.numThreads);
     vector<lbool> sol = solver.solveCNF(orig_anf, *anf, *cnf);
     std::ofstream ofs;
     ofs.open(config.solutionOutput.c_str());

@@ -32,11 +32,12 @@ using std::cerr;
 using std::endl;
 
 SATSolve::SATSolve(const int _verbosity, const bool _testsolution,
-                   string _solverExecutable)
+                   string _solverExecutable, const int _numThreads)
     : satisfiable(l_Undef),
       solverExecutable(_solverExecutable),
       verbosity(_verbosity),
-      testsolution(_testsolution)
+      testsolution(_testsolution),
+      numThreads(_numThreads)
 {
 }
 
@@ -72,8 +73,8 @@ void SATSolve::createChildProcess()
         close(out[0]);
 
         // Over-write the child process with the binary
-        execl(solverExecutable.c_str(), solverExecutable.c_str(), "--polar" , "false",
-                (char *) NULL);
+        execl(solverExecutable.c_str(), solverExecutable.c_str(), "--polar" , "false", 
+              "-t", std::to_string(numThreads).c_str(), (char *) NULL);
 
         //If we couldn't overwrite it, it means there is a failure
         int err_save = errno;
