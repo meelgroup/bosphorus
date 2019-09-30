@@ -58,6 +58,7 @@ SimplifyBySat::SimplifyBySat(const CNF& _cnf, const ConfigData& _config)
     // Create SAT solver
     solver = new CMSat::SATSolver();
     solver->set_verbosity(config.verbosity >= 5 ? 1 : 0);
+    solver->set_num_threads(config.numThreads);
 }
 
 SimplifyBySat::~SimplifyBySat()
