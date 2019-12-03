@@ -27,7 +27,7 @@ SOFTWARE.
 #include <ostream>
 
 #include "dimacscache.hpp"
-#include "karnaugh.hpp"
+#include "anfcnfutils.hpp"
 
 using namespace BLib;
 
@@ -122,39 +122,6 @@ void CNF::addTrivialEquations()
     }
 }
 
-bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq,
-                                vector<Clause>& setOfClauses) const
-{
-    Karnaugh karn(config.maxKarnTableSize);
-    if (!(eq.deg() > 1 && karn.possibleToConv(eq))) {
-        return false;
-    }
-
-    setOfClauses = karn.convert(eq);
-
-    // Estimate CNF cost
-    uint32_t cnfCost = 0;
-    for (const Clause& c : setOfClauses) {
-        cnfCost += c.size();
-        cnfCost += 2;
-    }
-
-    // Estimate ANF cost
-    uint32_t anfCost = 0;
-    for (const BooleMonomial& mono : eq) {
-        anfCost += mono.deg() * 2;
-        anfCost += 5;
-    }
-
-    if (anfCost >= cnfCost ||
-        (eq.terms().size() == (1UL + (size_t)eq.hasConstantPart()))) {
-        return true;
-    }
-
-    setOfClauses.clear();
-    return false;
-}
-
 void CNF::addMonomialsFromPoly(const BoolePolynomial& eq)
 {
     for (BoolePolynomial::const_iterator it = eq.begin(), end = eq.end();
@@ -185,7 +152,8 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
     }
 
     vector<Clause> setOfClauses;
-    if (tryAddingPolyWithKarn(poly, setOfClauses)) {
+    if (poly.deg() > 1 && poly.nUsedVariables() <= config.maxKarnTableSize &&
+        BrickesteinAlgo32(poly, setOfClauses)) {
         addedAsCNF++;
     } else {
         // Represent using XOR & monomial combination
