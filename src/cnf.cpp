@@ -145,6 +145,7 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
         vector<Lit> lits;
         tmp.push_back(Clause(lits));
         clauses.push_back(std::make_pair(tmp, poly));
+        return;
     }
 
     if (poly.isZero()) {
