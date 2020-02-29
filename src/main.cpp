@@ -32,6 +32,7 @@ namespace po = boost::program_options;
 #include "GitSHA1.h"
 #include "anf.hpp"
 #include "cnf.hpp"
+#include "xnf.hpp"
 #include "dimacscache.hpp"
 #include "gaussjordan.hpp"
 #include "replacer.hpp"
@@ -89,6 +90,7 @@ void parseOptions(int argc, char* argv[])
     ("paranoid", po::value<int>(&config.paranoid), "Run sanity checks")
     ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
      "Do not write comments to output files")
+    ("xorclause", po::bool_switch(&config.xnf), "Use XOR clauses when outputting the final CNF")
     ;
 
     po::options_description cnf_conv_options("CNF conversion");
@@ -447,6 +449,28 @@ void write_cnf(const ANF* anf, const vector<Clause>& cutting_clauses,
     ofs.close();
 }
 
+void write_xnf(const ANF* anf, const vector<BoolePolynomial>& learnt)
+{
+    XNF* xnf = new XNF(*anf, config);
+    std::ofstream ofs;
+    ofs.open(config.cnfOutput.c_str());
+    if (!ofs) {
+        std::cerr << "c Error opening file \"" << config.cnfOutput
+                  << "\" for writing\n";
+        exit(-1);
+    } else {
+        xnf->print_without_header(ofs);
+
+        ofs << "c Learnt " << learnt.size() << " fact(s)\n";
+        if (config.writecomments) {
+            for (const BoolePolynomial& poly : learnt) {
+                ofs << "c " << poly << endl;
+            }
+        }
+    }
+    ofs.close();
+}
+
 void deduplicate(vector<BoolePolynomial>& learnt)
 {
     vector<BoolePolynomial> dedup;
@@ -761,8 +785,13 @@ int main(int argc, char* argv[])
         write_anf(anf);
     }
 
-    if (config.writeCNF)
-        write_cnf(anf, cutting_clauses, learnt);
+    if (config.writeCNF) {
+        if (config.xnf) {
+            write_xnf(anf, learnt);
+        } else {
+            write_cnf(anf, cutting_clauses, learnt);
+        }
+    }
 
     if (config.verbosity >= 1) {
         cout << "c Learnt " << learnt.size() << " fact(s) in " << cpuTime()

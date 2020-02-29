@@ -66,6 +66,30 @@ class Clause
     vector<Lit> lits;
 };
 
+class XClause
+{
+   public:
+    XClause(const vector<uint32_t>& _vars, bool _rhs) : vars(_vars), rhs(_rhs)
+    {
+    }
+
+    size_t size() const
+    {
+        return vars.size();
+    }
+
+    bool empty() const
+    {
+        return vars.empty();
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const XClause& xcl);
+
+   private:
+    vector<uint32_t> vars;
+    bool rhs;
+};
+
 inline std::ostream& operator<<(std::ostream& os, const Clause& cl)
 {
     for (vector<Lit>::const_iterator it = cl.lits.begin(), end = cl.lits.end();
@@ -74,6 +98,36 @@ inline std::ostream& operator<<(std::ostream& os, const Clause& cl)
     }
     os << "0";
 
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const XClause& xcl)
+{
+    //Empty is special
+    if (xcl.size() == 0) {
+        if (xcl.rhs == 1) {
+            os << "0" << std::endl;
+        }
+        return os;
+    }
+
+    os << "x";
+    if (!xcl.rhs) {
+        os << "-";
+    }
+    for (const auto it: xcl.vars) {
+        os << (it+1) << " ";
+    }
+    os << "0" << std::endl;
+
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const vector<Clause>& clauses)
+{
+    for (const auto& it: clauses) {
+        os << it << std::endl;
+    }
     return os;
 }
 

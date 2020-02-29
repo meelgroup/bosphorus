@@ -88,14 +88,18 @@ bool extendedLinearization(const ConfigData& config,
                     // To do: Efficient implementation of "nVars choose xlDeg"
                     //        e.g. http://howardhinnant.github.io/combinations.html?
                     if (deg >= 1) {
+                        //how many variables to be multiplied with
                         const size_t num_variables_allowed = std::min(
                             nVars,
                             static_cast<size_t>(ceil(exp(
                                 log(2) * (XLsample - log2eqsz - numUnique)))));
+
                         if (config.verbosity >= 3 &&
-                            num_variables_allowed < nVars)
+                            num_variables_allowed < nVars
+                        ) {
                             cout << "c  Allowing " << num_variables_allowed
                                  << " variables in degree one expansion\n";
+                        }
 
                         if (num_variables_allowed == nVars) {
                             for (unsigned long i = 0; i < nVars; ++i) {
@@ -103,23 +107,26 @@ bool extendedLinearization(const ConfigData& config,
                                 equations.push_back(BoolePolynomial(v * poly));
                             }
                         } else {
-                            unsigned long i = 0;
-                            if (config.verbosity >= 4)
+                            if (config.verbosity >= 4) {
                                 cout << "c   Adding variables [";
+                            }
+
+                            unsigned long i = 0;
                             for (size_t n = 0; n < num_variables_allowed; ++n) {
                                 double p = static_cast<double>(
-                                               num_variables_allowed - n) /
-                                           (nVars - i);
+                                   num_variables_allowed - n) / (nVars - i);
+
                                 i += floor(log(static_cast<double>(rand()) /
-                                               RAND_MAX) /
-                                           log(1 - p));
+                                               RAND_MAX) / log(1 - p));
 
-                                // Need to make this cleaner
-                                if (i >= nVars)
+                                if (i >= nVars) {
                                     i = nVars - 1;
+                                }
 
-                                if (config.verbosity >= 4)
+                                if (config.verbosity >= 4) {
                                     cout << i << ' ';
+                                }
+
                                 BooleVariable v = ring.variable(i);
                                 equations.push_back(BoolePolynomial(v * poly));
                             }
@@ -128,6 +135,8 @@ bool extendedLinearization(const ConfigData& config,
                         }
                         numUnique += log2(num_variables_allowed);
                     }
+
+                    //When degree 2 expansion is allowed
                     if (deg >= 2) {
                         for (unsigned long i = 0; i < nVars; ++i) {
                             for (unsigned long j = i + 1; j < nVars; ++j) {

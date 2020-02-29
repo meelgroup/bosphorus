@@ -26,6 +26,7 @@ include_directories(${CRYPTOMINISAT5_INCLUDE_DIRS})
 set(bosph_lib_files
     anf.cpp
     cnf.cpp
+    xnf.cpp
     karnaugh.cpp
     replacer.cpp
     dimacscache.cpp

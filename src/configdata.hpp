@@ -36,6 +36,7 @@ struct ConfigData {
     string anfOutput;
     string cnfInput;
     string cnfOutput;
+    bool xnf = false;
     bool readANF;
     bool readCNF;
     bool writeANF;
