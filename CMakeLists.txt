@@ -329,7 +329,6 @@ include_directories(${M4RI_INCLUDE_DIRS})
 find_package(BRiAl REQUIRED)
 include_directories(${BRiAl_INCLUDE_DIRS})
 
-link_directories(${bosphorus_BINARY_DIR}/espresso)
 
 
 # headers, install locations, etc
@@ -357,7 +356,6 @@ endmacro()
 # -----------------------------------------------------------------------------
 set(BOSPHORUS_EXPORT_NAME "bosphorusTargets")
 
-add_subdirectory(espresso)
 add_subdirectory(src)
 
 # -----------------------------------------------------------------------------

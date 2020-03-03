@@ -30,7 +30,7 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 set(bosph_lib_files
     anf.cpp
     cnf.cpp
-    karnaugh.cpp
+    anfcnfutils.cpp
     replacer.cpp
     dimacscache.cpp
     extendedlinearization.cpp
@@ -38,7 +38,6 @@ set(bosph_lib_files
     anfutils.cpp
     bosphorus.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp
-    $<TARGET_OBJECTS:espresso>
 )
 
 if (SAT_SIMP)

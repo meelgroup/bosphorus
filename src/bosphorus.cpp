@@ -134,6 +134,10 @@ void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
     const vector<Clause>& orig_clauses(dimacs_cache.getClauses());
     size_t maxVar = dimacs_cache.getMaxVar();
 
+    if (dat->config.verbosity >= 4) {
+        cout << "c Read CNF with " << maxVar << " variables." << endl;
+    }
+
     // Chunk up by L positive literals. L = config.cutNum
     vector<Clause> chunked_clauses;
     for (auto clause : orig_clauses) {
@@ -194,7 +198,7 @@ void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
 
     // Construct ANF
     if (dat->config.verbosity >= 4) {
-        cout << "c Constructing CNF with " << maxVar << " variables." << endl;
+        cout << "c Constructing ANF with " << maxVar << " variables." << endl;
     }
     // ring size = maxVar, because CNF variables start from 1
     dat->pring = new BoolePolyRing(maxVar);

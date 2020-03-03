@@ -1,6 +1,5 @@
 /*****************************************************************************
-Copyright (C) 2016  Security Research Labs
-Copyright (C) 2018  Mate Soos, Davin Choo, Kian Ming A. Chai, DSO National Laboratories
+Copyright (C) 2019  Kian Ming A. Chai, DSO National Laboratories
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,42 +20,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef _KARNAUGH_H_
-#define _KARNAUGH_H_
+#ifndef ANFCNFUTILS_HPP
+#define ANFCNFUTILS_HPP
 
+#include <vector>
 #include "bosphorus/solvertypesmini.hpp"
 #include "polybori.h"
 
-USING_NAMESPACE_PBORI
-using namespace Bosph;
+bool BrickesteinAlgo32(const polybori::BoolePolynomial &poly,
+                       std::vector<Bosph::Clause> &setofClauses);
 
-namespace BLib {
-
-class Karnaugh
-{
-   public:
-    Karnaugh(uint32_t maxKarnTableSize);
-    ~Karnaugh();
-
-    bool possibleToConv(const BoolePolynomial& eq) const
-    {
-        return (maxKarnTable >= eq.nUsedVariables());
-    }
-    vector<Clause> convert(const BoolePolynomial& eq);
-    void print() const;
-
-   private:
-    void evaluateIntoKarn(const BoolePolynomial& eq);
-    vector<Clause> getClauses();
-    int no_lines[3];
-    int** input;  ///<The input
-    int** output; ///<The output
-    vector<uint32_t>
-        tableVars; ///<The variables that correspond to each column in the Karnaugh table
-    uint32_t karnSize;
-    uint32_t maxKarnTable;
-};
-
-}
-
-#endif //_KARNAUGH_H_
+#endif
