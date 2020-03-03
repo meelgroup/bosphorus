@@ -276,7 +276,7 @@ CNF* Bosphorus::write_cnf(const char* input_cnf_fname,
             }
         }
 
-        cnf->print_without_header(ofs);
+        ofs << *cnf;
 
         ofs << "c Learnt " << dat->learnt.size() << " fact(s)\n";
         if (dat->config.writecomments) {

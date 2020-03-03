@@ -28,7 +28,7 @@ def evaluate(monom, sol):
     val = 1
     monom = monom.split("*")
     for var in monom:
-        var = var.strip("x()")
+        var = var.replace("x", "").replace("(", "").replace(")", "").strip()
         try:
             v = int(var)
         except ValueError:
@@ -76,7 +76,7 @@ with open(solfile, "r") as f:
             if x == "v":
                 continue
 
-            x = x.strip("x()").strip()
+            x = x.replace("x", "").replace("(", "").replace(")", "").strip()
             if len(x) == 0:
                 continue
             try:

@@ -181,7 +181,7 @@ if __name__ == "__main__":
     # print ("CNF solution: ", cnfsol)
 
     anf_map = parse_map(mapfile)
-    # print("ANF map:", anf_map)
+    #print("ANF map:", anf_map)
 
 
     for also_any in [False, True]:
@@ -210,6 +210,7 @@ if __name__ == "__main__":
                     anf_map2[a] = ("set", True)
 
                 anf_map = dict(anf_map2)
+                #print("ANF map:", anf_map)
 
 
     sol_in_txt = ""
