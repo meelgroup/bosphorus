@@ -76,7 +76,7 @@ with open(solfile, "r") as f:
             if x == "v":
                 continue
 
-            x = x.strip()
+            x = x.strip("x()").strip()
             if len(x) == 0:
                 continue
             try:
@@ -109,6 +109,6 @@ with open(anffile, "r") as f:
             print("ERROR: Equation not satisfied: ", line)
             for mon in monoms:
                 print("--> Monomial '%s' evaluates to: %s" % (mon, evaluate(mon, sol)))
-            exit(-1);
+            exit(-1)
 
 print("OK, solution is good!")

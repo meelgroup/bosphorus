@@ -83,11 +83,11 @@ def parse_solution(fname):
     return unsat, solution
 
 
-def parse_one_map_line(line, anfsol):
+def parse_one_map_line(line, anf_map):
     line = line.strip()
     line = line.split()
     if len(line) == 0:
-        continue
+        return
 
     if line[0] == "Internal-ANF-var":
         assert len(line) == 5, "Map file corrupted!"
@@ -99,10 +99,7 @@ def parse_one_map_line(line, anfsol):
             exit(-1)
 
         assert var >= 0
-        if var not in cnfsol:
-            anfsol[var] = None
-        else:
-            anfsol[var] = cnfsol[var]
+        anf_map[var] = ("cnf", var)
 
     elif line[0] == "ANF-var-val":
         try:
@@ -122,7 +119,7 @@ def parse_one_map_line(line, anfsol):
             print("Tried parsing line:", line)
             exit(-1)
 
-        anfsol[var] = val
+        anf_map[var] = ("set", val)
 
     elif line[0] == "must-set-ANF-var-to-any":
         try:
@@ -133,7 +130,7 @@ def parse_one_map_line(line, anfsol):
             exit(-1)
 
         # any value works, so setting to TRUE
-        anfsol[var] = True
+        anf_map[var] = ("any", None)
 
     elif line[0] == "ANF-var":
         try:
@@ -145,31 +142,23 @@ def parse_one_map_line(line, anfsol):
             print("Tried parsing line:", line)
             exit(-1)
 
-        assert line[5] == "^", "Map file is corrupt"
+        assert line[5] == "^", "Map file is corrupt, we expected an '^'"
         assert var1 >= 0, "Map file is corrupt"
         assert var2 >= 0, "Map file is corrupt"
-        assert inv == 0 or inv == 1, "Map file is corrupt"
+        assert inv == 0 or inv == 1, "Map file is corrupt, inversion is neither 0 nor 1"
 
-        val = int(anfsol[var2]) ^ inv
-        if val == 0:
-            realval = False
-        elif val == 1:
-            realval = True
-        else:
-            assert False
-
-        anfsol[var1] = realval
+        anf_map[var1] = ("prop", var2, inv)
 
     else:
         print("Map file corrupt, cannot understand line: ", line)
 
-def parse_anf_sol(mapfile):
-    anfsol = {}
-    with open(mapfile, "r") as f:
+def parse_map(fname):
+    anf_map = {}
+    with open(fname, "r") as f:
         for line in f:
-            parse_one_map_line(line, anfsol)
+            parse_one_map_line(line, anf_map)
 
-    return anfsol
+    return anf_map
 
 if __name__ == "__main__":
 
@@ -191,18 +180,49 @@ if __name__ == "__main__":
         exit(0)
     # print ("CNF solution: ", cnfsol)
 
-    anfsol = parse_anf_sol(mapfile)
-    # print("ANF solution:", anfsol)
+    anf_map = parse_map(mapfile)
+    # print("ANF map:", anf_map)
+
+
+    for also_any in [False, True]:
+        something_done = True;
+        while something_done:
+            something_done = False;
+            anf_map2 = dict(anf_map)
+            for a,b in anf_map.items():
+                if b[0] == "set":
+                    continue
+
+                if b[0] == "cnf":
+                    var = b[1]
+                    if var in cnfsol:
+                        anf_map2[a] = ("set", cnfsol[var])
+                        something_done = True
+
+                if b[0] == "prop":
+                    var = b[1]
+                    inv = b[2]
+                    if var in anf_map and anf_map[var][0] == "set":
+                        anf_map2[a] = ("set", anf_map[var][1])
+                        something_done = True
+
+                if also_any and b[0] == "any":
+                    anf_map2[a] = ("set", True)
+
+                anf_map = dict(anf_map2)
+
 
     sol_in_txt = ""
-    for a,b in anfsol.items():
+    for a,b in anf_map.items():
         if b is None:
             continue
 
         extra = ""
-        if not b:
+        assert b[0] == "set"
+
+        if not b[1]:
             extra = "-"
-        sol_in_txt += "%s%d " %(extra, a)
+        sol_in_txt += "%sx(%d) " %(extra, a)
 
     print("c solution below, with variables starting at 0, as per ANF convention.")
     print("c preceding '-' means it's False, so '-0' has a meaning")

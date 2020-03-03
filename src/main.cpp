@@ -384,8 +384,8 @@ int main(int argc, char* argv[])
                 exit(-1);
             }
 
-            mylib.write_solution_map(cnf, &ofs);
             mylib.write_solution_map(anf, &ofs);
+            mylib.write_solution_map(cnf, &ofs);
         }
     }
 
