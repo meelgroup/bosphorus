@@ -21,43 +21,65 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef CONFIGDATA__H
-#define CONFIGDATA__H
+#ifndef _CLAUSES_H_
+#define _CLAUSES_H_
 
 #include <limits>
-#include <string>
+#include <vector>
+#include "assert.h"
+#include "bosphorus/solvertypesmini.hpp"
 
-using std::string;
 
 namespace BLib {
 
-struct ConfigData {
-    // Input/Output
-    string executedArgs = "";
-    bool xnf = false;
-    bool writecomments = false;
-    bool printProcessedANF = false;
-    uint32_t verbosity = 2;
-    int simplify = 1;
+using std::vector;
 
-    // CNF conversion
-    uint32_t cutNum = 5;
-    uint32_t brickestein_algo_cutoff = 8;
+class XClause
+{
+   public:
+    XClause(const vector<uint32_t>& _vars, bool _rhs) : vars(_vars), rhs(_rhs)
+    {
+    }
 
-    // Processes
-    double maxTime = 1e20;
-    int doXL = true;
-    int doEL = true;
-    int doSAT = true;
-    double XLsample = 30.0;
-    double XLsampleX = 4.0;
-    double ELsample = 30.0;
-    uint32_t xlDeg = 1;
-    uint64_t numConfl_inc = 10000;
-    uint64_t numConfl_lim = 100000;
-    unsigned int numThreads = 1;
+    size_t size() const
+    {
+        return vars.size();
+    }
+
+    bool empty() const
+    {
+        return vars.empty();
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const XClause& xcl);
+
+   private:
+    vector<uint32_t> vars;
+    bool rhs;
 };
+
+inline std::ostream& operator<<(std::ostream& os, const XClause& xcl)
+{
+    //Empty is special
+    if (xcl.size() == 0) {
+        if (xcl.rhs == 1) {
+            os << "0" << std::endl;
+        }
+        return os;
+    }
+
+    os << "x";
+    if (!xcl.rhs) {
+        os << "-";
+    }
+    for (const auto it: xcl.vars) {
+        os << (it+1) << " ";
+    }
+    os << "0" << std::endl;
+
+    return os;
+}
 
 }
 
-#endif //CONFIGDATA__H
+#endif //_CLAUSES_H_

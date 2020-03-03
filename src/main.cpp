@@ -32,6 +32,7 @@ SOFTWARE.
 #include "time_mem.h"
 #include "configdata.hpp"
 
+#include "bosphorus/solvertypesmini.hpp"
 #include <boost/program_options.hpp>
 
 using std::cerr;
@@ -60,6 +61,10 @@ bool writeCNF;
 
 po::variables_map vm;
 BLib::ConfigData config;
+
+
+void print_solution(Solution& solution);
+void check_solution(ANF* anf, Solution& solution);
 
 
 void parseOptions(int argc, char* argv[])
@@ -96,14 +101,15 @@ void parseOptions(int argc, char* argv[])
     ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
      "Do not write comments to output files")
     ("solmap", po::value(&solmap_file_write), "Write solution map to this file")
+    ("xorclause", po::bool_switch(&config.xnf), "Use XOR clauses when outputting the final CNF")
     ;
 
     po::options_description cnf_conv_options("CNF conversion");
     cnf_conv_options.add_options()
     ("cutnum", po::value<uint32_t>(&config.cutNum)->default_value(config.cutNum),
      "Cutting number when not using XOR clauses")
-    ("karn", po::value(&config.maxKarnTableSize)->default_value(config.maxKarnTableSize),
-     "Sets Karnaugh map dimension during CNF conversion")
+    ("karn", po::value(&config.brickestein_algo_cutoff)->default_value(config.brickestein_algo_cutoff),
+     "Uses this cutoff for doing Brickenstein's algorithm for translation of complex ANFs")
     ;
 
     po::options_description xl_options("XL");
@@ -131,6 +137,8 @@ void parseOptions(int argc, char* argv[])
      "Conflict inc for built-in SAT solver.")
     ("satlim", po::value<uint64_t>(&config.numConfl_lim)->default_value(config.numConfl_lim),
      "Conflict limit for built-in SAT solver.")
+    ("threads,t", po::value<unsigned int>(&config.numThreads)->default_value(config.numThreads),
+     "Number of threads to use for SAT solver (same value is used for built-in and external).")
     ;
 
     /* clang-format on */
@@ -217,7 +225,7 @@ void parseOptions(int argc, char* argv[])
         cout << "ERROR! For sanity, cutting number must be between 3 and 10\n";
         exit(-1);
     }
-    if (config.maxKarnTableSize > 20) {
+    if (config.brickestein_algo_cutoff > 20) {
         cout << "ERROR! For sanity, max Karnaugh table size is at most 20\n";
         exit(-1);
     }
@@ -242,8 +250,9 @@ void parseOptions(int argc, char* argv[])
              << endl
              << "c SAT simp (" << config.numConfl_inc << ':'
              << config.numConfl_lim << "): " << config.doSAT << endl
+             << " using " << config.numThreads << " threads" << endl
              << "c Cut num: " << config.cutNum << endl
-             << "c Karnaugh size: " << config.maxKarnTableSize << endl
+             << "c Brickenstein cutoff: " << config.brickestein_algo_cutoff << endl
              << "c --------------------" << endl;
     }
 }
@@ -280,37 +289,6 @@ void write_solution_to_file(const char* fname, const Solution& solution)
         cout << "c [SAT] Solution written to " << fname << endl;
     }
     ofs.close();
-}
-
-inline void print_solution(Solution& solution)
-{
-    assert(solution.ret != l_Undef);
-    cout << "Solution ";
-    cout << ((solution.ret == l_True) ? "SAT" : "UNSAT");
-
-    size_t num = 0;
-    std::stringstream toWrite;
-    toWrite << "v ";
-    for (const lbool lit : solution.sol) {
-        if (lit != l_Undef) {
-            toWrite << ((lit == l_True) ? "" : "-") << num << " ";
-        }
-        num++;
-    }
-    cout << toWrite.str() << endl;
-}
-
-void check_solution(ANF* anf, Solution& solution)
-{
-    //Checking
-    bool goodSol = Bosphorus::evaluate(anf, solution.sol);
-    if (!goodSol) {
-        cout << "ERROR! Solution found is incorrect!" << endl;
-        exit(-1);
-    }
-    if (config.verbosity >= 3) {
-        cout << "c Solution found is correct." << endl;
-    }
 }
 
 int main(int argc, char* argv[])
@@ -389,7 +367,14 @@ int main(int argc, char* argv[])
         if (cnfInput.length() > 0) {
             cnf_input = cnfInput.c_str();
         }
-        CNF* cnf = mylib.write_cnf(cnf_input, cnfOutput.c_str(), anf);
+
+        CNF* cnf = NULL;
+        if (config.xnf) {
+            //write_xnf(anf, learnt);
+            assert(false && "xor-clauses not yet implemented in this version");
+        } else {
+            cnf = mylib.write_cnf(cnf_input, cnfOutput.c_str(), anf);
+        }
         if (!solmap_file_write.empty()) {
             std::ofstream ofs;
             ofs.open(solmap_file_write.c_str()); //std::ios_base::app
@@ -458,5 +443,76 @@ void process_line(const std::string& str, vector<lbool>& sol) {
                 sol.resize(v + 1, l_Undef);
             sol[v] = boolToLBool(val > 0);
         }
+    }
+}
+
+
+/////////
+// Unused functions
+////////
+// void write_xnf(const ANF* anf, const vector<BoolePolynomial>& learnt)
+// {
+//     XNF* xnf = new XNF(*anf, config);
+//     std::ofstream ofs;
+//     ofs.open(config.cnfOutput.c_str());
+//     if (!ofs) {
+//         std::cerr << "c Error opening file \"" << config.cnfOutput
+//                   << "\" for writing\n";
+//         exit(-1);
+//     } else {
+//         xnf->print_without_header(ofs);
+//
+//         ofs << "c Learnt " << learnt.size() << " fact(s)\n";
+//         if (config.writecomments) {
+//             for (const BoolePolynomial& poly : learnt) {
+//                 ofs << "c " << poly << endl;
+//             }
+//         }
+//     }
+//     ofs.close();
+// }
+//
+// void deduplicate(vector<BoolePolynomial>& learnt)
+// {
+//     vector<BoolePolynomial> dedup;
+//     ANF::eqs_hash_t hash;
+//     for (const BoolePolynomial& p : learnt) {
+//         if (hash.insert(p.hash()).second)
+//             dedup.push_back(p);
+//     }
+//     if (config.verbosity >= 3) {
+//         cout << "c [Dedup] " << learnt.size() << "->" << dedup.size() << endl;
+//     }
+//     learnt.swap(dedup);
+// }
+
+void print_solution(Solution& solution)
+{
+    assert(solution.ret != l_Undef);
+    cout << "Solution ";
+    cout << ((solution.ret == l_True) ? "SAT" : "UNSAT");
+
+    size_t num = 0;
+    std::stringstream toWrite;
+    toWrite << "v ";
+    for (const lbool lit : solution.sol) {
+        if (lit != l_Undef) {
+            toWrite << ((lit == l_True) ? "" : "-") << num << " ";
+        }
+        num++;
+    }
+    cout << toWrite.str() << endl;
+}
+
+void check_solution(ANF* anf, Solution& solution)
+{
+    //Checking
+    bool goodSol = Bosphorus::evaluate(anf, solution.sol);
+    if (!goodSol) {
+        cout << "ERROR! Solution found is incorrect!" << endl;
+        exit(-1);
+    }
+    if (config.verbosity >= 3) {
+        cout << "c Solution found is correct." << endl;
     }
 }

@@ -21,31 +21,25 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef CNF_H__
-#define CNF_H__
+#ifndef XNF_H__
+#define XNF_H__
 
-#include <boost/variant.hpp>
 #include <fstream>
 #include <unordered_map>
 #include <vector>
 
 #include "anf.hpp"
+#include "xclause.hpp"
 #include "bosphorus/solvertypesmini.hpp"
 
 namespace BLib {
 
-class CNF
+class XNF
 {
    public:
-    CNF(const ANF& _anf, const ConfigData& _config);
-    CNF(const char* fname, const ANF& _anf, const vector<Clause>& extra_clauses,
-        const ConfigData& _config);
+    XNF(const ANF& _anf, const ConfigData& _config);
 
-    /// update CNF with new equations and facts from the anf-sibling;
-    /// @returns the previous number of clause-sets
-    size_t update();
-
-    // Remap solution to CNF to a solution for the original ANF
+    // Remap solution to XNF to a solution for the original ANF
     vector<lbool> mapSolToOrig(const std::vector<lbool>& solution) const;
 
     void printStats() const;
@@ -55,49 +49,35 @@ class CNF
     {
         return anf.getRing();
     }
-    void print_solution_map(std::ofstream* ofs);
     bool varRepresentsMonomial(const uint32_t var) const;
     BooleMonomial getMonomForVar(const uint32_t& var) const;
     uint32_t getVarForMonom(const BooleMonomial& mono) const;
-    size_t getNumClauses() const;
-    size_t getAddedAsCNF() const;
-    size_t getAddedAsANF() const;
-    size_t getAddedAsSimpleANF() const;
-    size_t getAddedAsComplexANF() const;
-    const vector<pair<vector<Clause>, BoolePolynomial> >& getClauses() const;
-    vector<Clause> get_clauses_simple() const;
     uint32_t getNumVars() const;
     uint64_t getNumAllLits() const;
     uint64_t getNumAllClauses() const;
 
-    friend std::ostream& operator<<(std::ostream& os, const CNF& cnf);
+    friend std::ostream& operator<<(std::ostream& os, const XNF& cnf);
     void print_without_header(std::ostream& os) const;
 
    private:
     void init();
+    void addAllEquations();
     void addBoolePolynomial(const BoolePolynomial& eq);
     void addTrivialEquations();
     bool tryAddingPolyWithKarn(const BoolePolynomial& eq,
                                vector<Clause>& setOfClauses) const;
     void addMonomialsFromPoly(const BoolePolynomial& eq);
-    BoolePolynomial addToPolyVarsUntilCutoff(const BoolePolynomial& poly,
-                                             vector<uint32_t>& vars) const;
 
     //Main adders
     uint32_t addBooleMonomial(const BooleMonomial& m);
-
-    //Adding by enumeration (with cuts)
-    void addPolyWithCuts(BoolePolynomial poly, vector<Clause>& setOfClauses);
-    uint32_t hammingWeight(uint64_t num) const;
-    void addEveryCombination(vector<uint32_t>& vars, bool isTrue,
-                             vector<Clause>& thisClauses) const;
 
     //Setup
     const ANF& anf;
     const ConfigData& config;
 
-    //The cumulated CNF data
+    //The cumulated XNF data
     vector<pair<vector<Clause>, BoolePolynomial> > clauses;
+    vector<pair<XClause, BoolePolynomial> > xcls;
     ANF::eqs_hash_t in_clauses;
 
     //uint32_t maps -- internal/external mapping of variables/monomial/polynomials
@@ -105,7 +85,7 @@ class CNF
         monomMap; // map: outside monom -> inside var
     vector<BoolePolynomial>
         revCombinedMap; // combines monomial map and xor maps; // map: inside var -> outside monom; // When cutting XORs, which var represents which XOR cut. Poly is of degree 1 here of course
-    uint32_t next_cnf_var = 0; ///<CNF variable counter
+    uint32_t next_cnf_var = 0; ///<XNF variable counter
 
     //stats
     size_t addedAsANF = 0;
@@ -114,9 +94,17 @@ class CNF
     size_t addedAsCNF = 0;
 };
 
-inline void CNF::print_without_header(std::ostream& os) const
+inline void XNF::print_without_header(std::ostream& os) const
 {
-    for (const auto& it: clauses) {
+    for (const auto& it : clauses) {
+        os << it.first;
+        if (config.writecomments) {
+            os << "c " << it.second << std::endl;
+            os << "c ------------\n";
+        }
+    }
+
+    for (const auto& it : xcls) {
         os << it.first;
         if (config.writecomments) {
             os << "c " << it.second << std::endl;
@@ -125,7 +113,7 @@ inline void CNF::print_without_header(std::ostream& os) const
     }
 }
 
-inline std::ostream& operator<<(std::ostream& os, const CNF& cnf)
+inline std::ostream& operator<<(std::ostream& os, const XNF& cnf)
 {
     os << "p cnf " << cnf.getNumVars() << " " << cnf.getNumAllClauses()
        << std::endl;
@@ -133,59 +121,27 @@ inline std::ostream& operator<<(std::ostream& os, const CNF& cnf)
     return os;
 }
 
-inline bool CNF::varRepresentsMonomial(const uint32_t var) const
+inline bool XNF::varRepresentsMonomial(const uint32_t var) const
 {
     return revCombinedMap[var].isSingleton();
 }
 
-inline size_t CNF::getNumClauses() const
-{
-    return clauses.size();
-}
-
-inline size_t CNF::getAddedAsCNF() const
-{
-    return addedAsCNF;
-}
-
-inline size_t CNF::getAddedAsANF() const
-{
-    return addedAsANF;
-}
-
-inline size_t CNF::getAddedAsSimpleANF() const
-{
-    return addedAsSimpleANF;
-}
-
-inline size_t CNF::getAddedAsComplexANF() const
-{
-    return addedAsComplexANF;
-}
-
-inline const vector<pair<vector<Clause>, BoolePolynomial> >& CNF::getClauses()
-    const
-{
-    return clauses;
-}
-
-inline uint32_t CNF::getNumVars() const
+inline uint32_t XNF::getNumVars() const
 {
     return next_cnf_var;
 }
 
-inline void CNF::printStats() const
+inline void XNF::printStats() const
 {
-    cout << "c ---- CNF stats -----" << endl
+    cout << "c ---- XNF stats -----" << endl
          << "c Map sizes            : " << monomMap.size() << '/'
          << revCombinedMap.size() << endl
-         << "c Clause Sets          : " << getNumClauses() << endl
-         << "c Added as CNF         : " << getAddedAsCNF() << endl
-         << "c Added as simple ANF  : " << getAddedAsSimpleANF() << endl
-         << "c Added as complex  ANF: " << getAddedAsComplexANF() << endl
+         << "c Clause Sets          : " << clauses.size() << endl
+         << "c Added as ANF         : " << addedAsANF << endl
+         << "c Added as CNF         : " << addedAsCNF << endl
          << "c --------------------" << endl;
 }
 
 }
 
-#endif //CNF_H__
+#endif //XNF_H__

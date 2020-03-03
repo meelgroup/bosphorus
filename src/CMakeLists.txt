@@ -31,6 +31,7 @@ set(bosph_lib_files
     anf.cpp
     cnf.cpp
     anfcnfutils.cpp
+    xnf.cpp
     replacer.cpp
     dimacscache.cpp
     extendedlinearization.cpp

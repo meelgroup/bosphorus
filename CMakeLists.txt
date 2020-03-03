@@ -330,7 +330,6 @@ find_package(BRiAl REQUIRED)
 include_directories(${BRiAl_INCLUDE_DIRS})
 
 
-
 # headers, install locations, etc
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)

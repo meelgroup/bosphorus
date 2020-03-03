@@ -260,10 +260,10 @@ CNF* Bosphorus::write_cnf(const char* input_cnf_fname,
                 Lit l = anf->getReplaced(i);
                 BooleVariable v(l.var(), anf->getRing());
                 if (l.sign()) {
-                    ofs << "c MAP " << i + 1 << " = -" << cnf->getVarForMonom(v)
+                    ofs << "c MAP " << i + 1 << " = 1+x(" << cnf->getVarForMonom(v) << ")"
                         << endl;
                 } else {
-                    ofs << "c MAP " << i + 1 << " = " << cnf->getVarForMonom(v)
+                    ofs << "c MAP " << i + 1 << " = x(" << cnf->getVarForMonom(v) << ")"
                         << endl;
                 }
             }
