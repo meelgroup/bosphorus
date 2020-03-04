@@ -48,75 +48,90 @@ def evaluate(monom, sol):
     return val
 
 
-if len(sys.argv) != 3:
-    print("Usage: check_solution.py solution ANF")
-    exit(-1)
+def read_solution(fname):
+    sol = {}
+    unsat = None
+    with open(fname, "r") as f:
+        for line in f:
+            line = line.strip()
 
-solfile = sys.argv[1]
-anffile = sys.argv[2]
+            if line == "s ANF-SATISFIABLE":
+                unsat = False
 
-sol = {}
-unsat = None
-with open(solfile, "r") as f:
-    for line in f:
-        line = line.strip()
+            if line == "s ANF-UNSATISFIABLE":
+                unsat = True
+                print("Unsatisfiable, cannot check solution")
+                exit(0)
 
-        if line == "s ANF-SATISFIABLE":
-            unsat = False
-
-        if line == "s ANF-UNSATISFIABLE":
-            unsat = True
-            print("Unsatisfiable, cannot check solution")
-            exit(0)
-
-        if len(line) == 0:
-            continue
-
-        if line[0] != "v":
-            continue
-
-        line = line.split()
-        for x in line:
-            if x == "v":
+            if len(line) == 0:
                 continue
 
-            x = x.split("+")
-            rhs = False
-            if x[0] == "1":
-                rhs = True
-                x[0] = x[1]
-
-            x = x[0].replace("x", "").replace("(", "").replace(")", "").strip()
-            if len(x) == 0:
+            if line[0] != "v":
                 continue
-            try:
-                var = abs(int(x))
-            except ValueError:
-                print("ERROR: solution file contains non-integer variable value: ", x)
-                exit(-1)
 
-            sol[var] = rhs
+            line = line.split()
+            for x in line:
+                if x == "v":
+                    continue
 
-if unsat is None:
-    print("ERROR: Solution file does not say ANF-SATISFIABLE or ANF-UNSATISFIABLE")
-    print("ERROR: maybe it's corrupt?")
-    exit(-1)
-print("Solution:", sol)
+                x = x.split("+")
+                rhs = False
+                if x[0] == "1":
+                    rhs = True
+                    x[0] = x[1]
+
+                x = x[0].replace("x", "").replace("(", "").replace(")", "").strip()
+                if len(x) == 0:
+                    continue
+                try:
+                    var = abs(int(x))
+                except ValueError:
+                    print("ERROR: solution file contains non-integer variable value: ", x)
+                    exit(-1)
+
+                sol[var] = rhs
+
+    return sol, unsat
 
 
-with open(anffile, "r") as f:
-    for line in f:
-        line = line.strip()
-        monoms = line.split("+")
-        monoms = [m.strip() for m in monoms]
-        val = 0
-        for mon in monoms:
-            val ^= evaluate(mon, sol)
-
-        if val != 0:
-            print("ERROR: Equation not satisfied: ", line)
+def check_anf_file_against_solution(fname, sol):
+    with open(anffile, "r") as f:
+        for line in f:
+            line = line.strip()
+            monoms = line.split("+")
+            monoms = [m.strip() for m in monoms]
+            val = 0
             for mon in monoms:
-                print("--> Monomial '%s' evaluates to: %s" % (mon, evaluate(mon, sol)))
-            exit(-1)
+                val ^= evaluate(mon, sol)
 
-print("OK, solution is good!")
+            if val != 0:
+                return False, line, monoms
+
+    return True, None, None
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: check_solution.py solution ANF")
+        exit(-1)
+
+    solfile = sys.argv[1]
+    anffile = sys.argv[2]
+
+    # Read in solution
+    sol, unsat = read_solution(solfile)
+    if unsat is None:
+        print("ERROR: Solution file does not say ANF-SATISFIABLE or ANF-UNSATISFIABLE")
+        print("ERROR: maybe it's corrupt?")
+        exit(-1)
+    print("Solution:", sol)
+
+    # check solution against ANF
+    ok, eq, monoms = check_anf_file_against_solution(anffile, sol)
+    if not ok:
+        print("ERROR: Equation not satisfied: ", eq)
+        for mon in monoms:
+            print("--> Monomial '%s' evaluates to: %s" % (mon, evaluate(mon, sol)))
+        exit(-1)
+
+    print("OK, solution is good!")
