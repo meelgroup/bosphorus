@@ -176,7 +176,7 @@ if __name__ == "__main__":
     # parse up solution
     unsat, cnfsol = parse_solution(solfile)
     if unsat:
-        print("s UNSATISFIABLE")
+        print("s ANF-UNSATISFIABLE")
         exit(0)
     # print ("CNF solution: ", cnfsol)
 

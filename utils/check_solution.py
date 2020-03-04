@@ -25,6 +25,10 @@ import sys
 import random
 
 def evaluate(monom, sol):
+    # the constant monomial
+    if monom == "1":
+        return 1
+
     val = 1
     monom = monom.split("*")
     for var in monom:
@@ -101,6 +105,7 @@ with open(anffile, "r") as f:
     for line in f:
         line = line.strip()
         monoms = line.split("+")
+        monoms = [m.strip() for m in monoms]
         val = 0
         for mon in monoms:
             val ^= evaluate(mon, sol)
