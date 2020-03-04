@@ -94,18 +94,22 @@ def read_solution(fname):
     return sol, unsat
 
 
-def check_anf_file_against_solution(fname, sol):
-    with open(anffile, "r") as f:
-        for line in f:
-            line = line.strip()
-            monoms = line.split("+")
-            monoms = [m.strip() for m in monoms]
-            val = 0
-            for mon in monoms:
-                val ^= evaluate(mon, sol)
+def check_anf_against_solution(anf, sol):
+    for line in anf:
+        line = line.strip()
 
-            if val != 0:
-                return False, line, monoms
+        # empty lines are actually OK in ANF, 0=0
+        if line == "":
+            continue
+
+        monoms = line.split("+")
+        monoms = [m.strip() for m in monoms]
+        val = 0
+        for mon in monoms:
+            val ^= evaluate(mon, sol)
+
+        if val != 0:
+            return False, line, monoms
 
     return True, None, None
 
@@ -127,7 +131,10 @@ if __name__ == "__main__":
     print("Solution:", sol)
 
     # check solution against ANF
-    ok, eq, monoms = check_anf_file_against_solution(anffile, sol)
+    with open(anffile, "r") as f:
+        anf = f.read().split("\n")
+
+    ok, eq, monoms = check_anf_against_solution(anf, sol)
     if not ok:
         print("ERROR: Equation not satisfied: ", eq)
         for mon in monoms:

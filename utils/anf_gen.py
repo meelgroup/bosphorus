@@ -39,10 +39,10 @@ def get_monomial():
 
 
 def gen_equation():
-    if random.choice([True, False]):
+    if random.choice([True, True, False]):
         num_monoms = int(random.gammavariate(1, 30))+1
     else:
-        num_monoms = int(random.gammavariate(1, 2))+1
+        num_monoms = int(random.gammavariate(1, 3))+1
     assert num_monoms >0
 
     ret = ""
