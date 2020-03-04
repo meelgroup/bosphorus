@@ -42,7 +42,7 @@ struct ConfigData {
 
     // CNF conversion
     uint32_t cutNum = 5;
-    uint32_t brickestein_algo_cutoff = 8;
+    uint32_t brickestein_algo_cutoff = 10;
 
     // Processes
     double maxTime = 1e20;
