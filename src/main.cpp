@@ -90,7 +90,7 @@ void parseOptions(int argc, char* argv[])
     ("paranoid", po::value<int>(&config.paranoid), "Run sanity checks")
     ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
      "Do not write comments to output files")
-    ("xorclause", po::bool_switch(&config.xnf), "Use XOR clauses when outputting the final CNF")
+    //("xorclause", po::bool_switch(&config.xnf), "Use XOR clauses when outputting the final CNF")
     ;
 
     po::options_description cnf_conv_options("CNF conversion");
