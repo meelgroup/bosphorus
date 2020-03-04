@@ -218,9 +218,11 @@ if __name__ == "__main__":
         if b is None:
             continue
 
-        extra = ""
+        print ("a is:", b)
+        print ("b is:", b)
         assert b[0] == "set"
 
+        extra = ""
         if not b[1]:
             extra = "-"
         sol_in_txt += "%sx(%d) " %(extra, a)

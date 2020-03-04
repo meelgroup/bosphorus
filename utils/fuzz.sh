@@ -2,22 +2,24 @@
 set -x
 set -e
 
-# cat <<EOF > myanf
+# cat <<EOF > problem.anf
 # x(1)
 # x(1)*x(2)
 # x(1) + x(2) + x(3) + x(5) + x4
 # x(1) + x(2) + x(3) + x(5)*x(4)
 # EOF
 
+dir="out_fuzz"
+
 function one_run {
     r=$1
     echo "Doing random seed $r"
-    ./anf_gen.py $r > out_fuzz/myanf
-    ./bosphorus --anfread myanf --cnfwrite out_fuzz/mycnf --solmap out_fuzz/map > out_fuzz/bosph_out
-    ./check_cnf.py out_fuzz/mycnf
-    /home/soos/development/sat_solvers/cryptominisat/build/cryptominisat5 --verb 0 --zero-exit-status out_fuzz/mycnf > out_fuzz/cnfsol
-    ./map_solution.py out_fuzz/map cnfsol > out_fuzz/anfsol
-    ./check_solution.py out_fuzz/anfsol out_fuzz/myanf
+    ./anf_gen.py $r > $dir/problem.anf
+    ./bosphorus --anfread $dir/problem.anf --cnfwrite $dir/problem.cnf --solmap $dir/map > $dir/bosph_out
+    ./check_cnf.py $dir/problem.cnf
+    /home/soos/development/sat_solvers/cryptominisat/build/cryptominisat5 --verb 0 --zero-exit-status $dir/problem.cnf > $dir/cnfsol
+    ./map_solution.py $dir/map $dir/cnfsol > $dir/anfsol
+    ./check_solution.py $dir/anfsol $dir/problem.anf
 }
 
 #!/bin/sh
