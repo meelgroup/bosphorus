@@ -71,7 +71,12 @@ if len(sys.argv) == 2:
 
 
 random.seed(seed)
-max_var = random.randint(5, 30)
+if random.randint(1,3) == 0:
+    # for solution counting
+    max_var = random.randint(2, 10)
+else:
+    max_var = random.randint(5, 30)
+
 num_eqs = random.randint(int(max_var/4), max_var*3)
 for x in range(num_eqs):
     eq = gen_equation()

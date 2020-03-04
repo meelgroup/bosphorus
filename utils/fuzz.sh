@@ -20,6 +20,8 @@ function one_run {
     /home/soos/development/sat_solvers/cryptominisat/build/cryptominisat5 --verb 0 --zero-exit-status $dir/problem.cnf > $dir/cnfsol
     ./map_solution.py $dir/map $dir/cnfsol > $dir/anfsol
     ./check_solution.py $dir/anfsol $dir/problem.anf
+    /home/soos/development/sat_solvers/cryptominisat/build/cryptominisat5 --zero-exit-status $dir/problem.cnf --maxsol 1025 > $dir/numsol
+    ./count_anf_solutions.py $dir/problem.anf $dir/numsol
 }
 
 #!/bin/sh

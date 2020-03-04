@@ -102,6 +102,10 @@ def check_anf_against_solution(anf, sol):
         if line == "":
             continue
 
+        # ignore comments
+        if line[0] == "c":
+            continue
+
         monoms = line.split("+")
         monoms = [m.strip() for m in monoms]
         val = 0
