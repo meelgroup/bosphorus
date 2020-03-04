@@ -47,15 +47,21 @@ with open(cnffile, "r") as f:
             assert line[1] == "cnf"
             header_num_vars = int(line[2])
             header_num_cls = int(line[3])
-            print("Given number of vars: %d, cls: %d" %
+            print("CNF: Given number of vars: %d, cls: %d" %
                   (header_num_vars, header_num_cls))
             continue
 
 
         cls += 1
+        last_lit = None
         for l in line:
             v = abs(int(l))
+            last_lit = int(l)
             max_var_used = max(v, max_var_used)
+
+        if last_lit != 0:
+            print("ERROR: Last literal of a clause must be 0")
+            exit(-1)
 
 if header_num_vars is None or header_num_cls is None:
     print("ERROR: No CNF header was found!")
@@ -72,5 +78,5 @@ if cls != header_num_cls:
           (cls, header_num_cls))
     exit(-1)
 
-print("All good")
+print("CNF is well-formatted")
 exit(0)

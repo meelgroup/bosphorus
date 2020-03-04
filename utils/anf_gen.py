@@ -49,6 +49,9 @@ def gen_equation():
 
         ret += get_monomial()
 
+    if random.choice([True, False]):
+        ret += " + 1"
+
     return ret
 
 
@@ -56,7 +59,6 @@ if len(sys.argv) > 2:
     print("Usage: anf_gen.py [seed]")
 
 
-seed = random.randint(0, 1000000)
 if len(sys.argv) == 2:
     try:
         seed = sys.argv[1]
