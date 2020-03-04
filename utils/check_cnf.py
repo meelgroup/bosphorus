@@ -55,6 +55,10 @@ with open(cnffile, "r") as f:
         cls += 1
         last_lit = None
         for l in line:
+            # allow for XOR clause
+            if l == "x":
+                l = l[1:]
+
             v = abs(int(l))
             last_lit = int(l)
             max_var_used = max(v, max_var_used)

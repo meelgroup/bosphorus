@@ -342,7 +342,9 @@ int main(int argc, char* argv[])
         if (cnfInput.length() > 0) {
             cnf_orig = cnfInput.c_str();
         }
+        cout << "c Simplifying...." << endl;
         mylib.simplify(anf, cnf_orig);
+        cout << "c Simplifying finished." << endl;
     }
     if (config.printProcessedANF) {
         Bosphorus::print_anf(anf);
@@ -400,53 +402,6 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void process_line(const std::string& str, vector<lbool>& sol) {
-    if (str[0] != 'v') {
-            return;
-    }
-
-    size_t pos = 1;
-    bool finishing = false;
-    while (pos < str.size()) {
-        while (str[pos] == ' ' && pos < str.size())
-            pos++;
-        if (pos == str.size())
-            break;
-
-        string tmp;
-        while (str[pos] != ' ' && pos < str.size()) {
-            tmp += str[pos];
-            pos++;
-        }
-        int val;
-        try {
-            val = boost::lexical_cast<int>(tmp);
-        } catch (boost::bad_lexical_cast&) {
-            std::cout << "Solution from SAT solver contains part '" << tmp
-                 << "', which cannot be converted to int!" << endl;
-
-            exit(-1);
-        }
-        if (val == 0) {
-            if (!finishing)
-                finishing = true;
-            else {
-                std::cout << "Finishing value '0' encountered twice while "
-                     << "reading solution from SAT solver!" << endl;
-
-                exit(-1);
-            }
-            finishing = true;
-        } else {
-            size_t v = std::abs(val) - 1;
-            if (v >= sol.size())
-                sol.resize(v + 1, l_Undef);
-            sol[v] = boolToLBool(val > 0);
-        }
-    }
-}
-
-
 /////////
 // Unused functions
 ////////
@@ -470,20 +425,6 @@ void process_line(const std::string& str, vector<lbool>& sol) {
 //         }
 //     }
 //     ofs.close();
-// }
-//
-// void deduplicate(vector<BoolePolynomial>& learnt)
-// {
-//     vector<BoolePolynomial> dedup;
-//     ANF::eqs_hash_t hash;
-//     for (const BoolePolynomial& p : learnt) {
-//         if (hash.insert(p.hash()).second)
-//             dedup.push_back(p);
-//     }
-//     if (config.verbosity >= 3) {
-//         cout << "c [Dedup] " << learnt.size() << "->" << dedup.size() << endl;
-//     }
-//     learnt.swap(dedup);
 // }
 
 void print_solution(Solution& solution)

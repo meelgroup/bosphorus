@@ -25,7 +25,7 @@ import sys
 import random
 
 def get_monomial():
-    deg = int(random.gammavariate(0.3, 4))+1
+    deg = int(random.gammavariate(0.4, 4))+1
     assert deg >0
 
     already_in = []
@@ -39,7 +39,10 @@ def get_monomial():
 
 
 def gen_equation():
-    num_monoms = int(random.gammavariate(1, 20))+1
+    if random.choice([True, False]):
+        num_monoms = int(random.gammavariate(1, 30))+1
+    else:
+        num_monoms = int(random.gammavariate(1, 2))+1
     assert num_monoms >0
 
     ret = ""
@@ -68,8 +71,8 @@ if len(sys.argv) == 2:
 
 
 random.seed(seed)
-max_var = random.randint(5, 40)
-num_eqs = random.randint(int(max_var/2), max_var*3)
+max_var = random.randint(5, 30)
+num_eqs = random.randint(int(max_var/4), max_var*3)
 for x in range(num_eqs):
     eq = gen_equation()
     print(eq)

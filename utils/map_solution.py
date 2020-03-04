@@ -218,16 +218,13 @@ if __name__ == "__main__":
         if b is None:
             continue
 
-        print ("a is:", b)
-        print ("b is:", b)
         assert b[0] == "set"
 
         extra = ""
-        if not b[1]:
-            extra = "-"
-        sol_in_txt += "%sx(%d) " %(extra, a)
+        if b[1]:
+            extra = "1+"
+        sol_in_txt += " %sx(%d)" %(extra, a)
 
     print("c solution below, with variables starting at 0, as per ANF convention.")
-    print("c preceding '-' means it's False, so '-0' has a meaning")
     print("s ANF-SATISFIABLE")
-    print("v %s" % sol_in_txt)
+    print("v%s" % sol_in_txt)

@@ -80,7 +80,13 @@ with open(solfile, "r") as f:
             if x == "v":
                 continue
 
-            x = x.replace("x", "").replace("(", "").replace(")", "").strip()
+            x = x.split("+")
+            rhs = False
+            if x[0] == "1":
+                rhs = True
+                x[0] = x[1]
+
+            x = x[0].replace("x", "").replace("(", "").replace(")", "").strip()
             if len(x) == 0:
                 continue
             try:
@@ -89,10 +95,7 @@ with open(solfile, "r") as f:
                 print("ERROR: solution file contains non-integer variable value: ", x)
                 exit(-1)
 
-            val = 1
-            if x[0] == "-":
-                val = 0
-            sol[var] = val
+            sol[var] = rhs
 
 if unsat is None:
     print("ERROR: Solution file does not say ANF-SATISFIABLE or ANF-UNSATISFIABLE")
