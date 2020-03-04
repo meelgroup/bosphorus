@@ -27,7 +27,7 @@ function one_run {
 #!/bin/sh
 if [ "$#" -ne 1 ]; then
     echo "Doing random seeds"
-    for i in {1..1000};
+    for i in {1..10000};
     do
         r=$RANDOM
         one_run $r
