@@ -10,6 +10,7 @@ set -e
 # EOF
 
 dir="out_fuzz"
+mkdir -p $dir
 
 function one_run {
     r=$1
