@@ -34,7 +34,6 @@ namespace BLib {
 struct ConfigData {
     // Input/Output
     string executedArgs = "";
-    bool xnf = false;
     bool writecomments = false;
     bool printProcessedANF = false;
     uint32_t verbosity = 2;

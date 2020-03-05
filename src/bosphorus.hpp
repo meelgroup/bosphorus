@@ -56,9 +56,11 @@ public:
 
     // Output functions
     void write_anf(const char* fname, const ANF* anf);
-    CNF* write_cnf(const char* input_cnf_fname,
-              const char* output_cnf_fname,
-              const ANF* anf);
+    CNF* write_cnf(const char* output_cnf_fname, const ::ANF* a);
+    CNF* write_cnf(
+        const char* input_cnf_fname,
+        const char* output_cnf_fname,
+        const ANF* anf);
 
     void write_solution_map(CNF* cnf, std::ofstream* ofs);
     void write_solution_map(ANF* anf, std::ofstream* ofs);

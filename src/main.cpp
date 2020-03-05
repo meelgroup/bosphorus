@@ -101,7 +101,6 @@ void parseOptions(int argc, char* argv[])
     ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
      "Do not write comments to output files")
     ("solmap", po::value(&solmap_file_write), "Write solution map to this file")
-    ("xorclause", po::bool_switch(&config.xnf), "Use XOR clauses when outputting the final CNF")
     ;
 
     po::options_description cnf_conv_options("CNF conversion");
@@ -371,11 +370,10 @@ int main(int argc, char* argv[])
         }
 
         CNF* cnf = NULL;
-        if (config.xnf) {
-            //write_xnf(anf, learnt);
-            assert(false && "xor-clauses not yet implemented in this version");
-        } else {
+        if (cnf_input != NULL) {
             cnf = mylib.write_cnf(cnf_input, cnfOutput.c_str(), anf);
+        } else {
+            cnf = mylib.write_cnf(cnfOutput.c_str(), anf);
         }
         if (!solmap_file_write.empty()) {
             std::ofstream ofs;

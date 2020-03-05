@@ -62,6 +62,52 @@ public:
     bool read_in_data = false;
 };
 
+void output_cnf(
+    std::string output_cnf_fname,
+    PrivateData* dat,
+    const BLib::ANF* anf,
+    const BLib::CNF* cnf)
+{
+    std::ofstream ofs;
+    ofs.open(output_cnf_fname);
+    if (!ofs) {
+        std::cerr << "c Error opening file \"" << output_cnf_fname
+                  << "\" for writing\n";
+        exit(-1);
+    }
+
+    if (dat->config.writecomments) {
+        ofs << "c Executed arguments: " << dat->config.executedArgs << endl;
+        for (size_t i = 0; i < anf->getRing().nVariables(); i++) {
+            Lit l = anf->getReplaced(i);
+            BooleVariable v(l.var(), anf->getRing());
+            if (l.sign()) {
+                ofs << "c MAP " << i + 1 << " = 1+x(" << cnf->getVarForMonom(v) << ")"
+                    << endl;
+            } else {
+                ofs << "c MAP " << i + 1 << " = x(" << cnf->getVarForMonom(v) << ")"
+                    << endl;
+            }
+        }
+        for (size_t i = 0; i < cnf->getNumVars(); ++i) {
+            const BooleMonomial mono = cnf->getMonomForVar(i);
+            if (mono.deg() > 0)
+                assert(i == cnf->getVarForMonom(mono));
+            if (mono.deg() > 1)
+                ofs << "c MAP " << i + 1 << " = " << mono << endl;
+        }
+    }
+    ofs << *cnf;
+
+    ofs << "c Learnt " << dat->learnt.size() << " fact(s)\n";
+    if (dat->config.writecomments) {
+        for (const BoolePolynomial& poly : dat->learnt) {
+            ofs << "c " << poly << endl;
+        }
+    }
+    ofs.close();
+}
+
 Bosphorus::Bosphorus()
 {
     dat = new PrivateData;
@@ -235,57 +281,31 @@ void Bosphorus::write_anf(const char* fname, const ANF* anf)
     ofs.close();
 }
 
-CNF* Bosphorus::write_cnf(const char* input_cnf_fname,
-                        const char* output_cnf_fname, const ::ANF* a)
+CNF* Bosphorus::write_cnf(
+    const char* input_cnf_fname,
+    const char* output_cnf_fname,
+    const ::ANF* a)
 {
     auto anf = (const BLib::ANF*)a;
+    assert(input_cnf_fname != NULL);
+    assert(output_cnf_fname != NULL);
 
-    BLib::CNF* cnf = NULL;
-    if (input_cnf_fname != NULL) {
-        cnf = (BLib::CNF*)cnf_from_anf_and_cnf(input_cnf_fname, (ANF*)anf);
-    } else {
-        cnf = (BLib::CNF*)anf_to_cnf((ANF*)anf);
-    }
+    BLib::CNF* cnf = (BLib::CNF*)cnf_from_anf_and_cnf(
+        input_cnf_fname, (ANF*)anf);
+    output_cnf(output_cnf_fname, dat, anf, cnf);
 
-    std::ofstream ofs;
-    ofs.open(output_cnf_fname);
-    if (!ofs) {
-        std::cerr << "c Error opening file \"" << output_cnf_fname
-                  << "\" for writing\n";
-        exit(-1);
-    } else {
-        if (dat->config.writecomments) {
-            ofs << "c Executed arguments: " << dat->config.executedArgs << endl;
-            for (size_t i = 0; i < anf->getRing().nVariables(); i++) {
-                Lit l = anf->getReplaced(i);
-                BooleVariable v(l.var(), anf->getRing());
-                if (l.sign()) {
-                    ofs << "c MAP " << i + 1 << " = 1+x(" << cnf->getVarForMonom(v) << ")"
-                        << endl;
-                } else {
-                    ofs << "c MAP " << i + 1 << " = x(" << cnf->getVarForMonom(v) << ")"
-                        << endl;
-                }
-            }
-            for (size_t i = 0; i < cnf->getNumVars(); ++i) {
-                const BooleMonomial mono = cnf->getMonomForVar(i);
-                if (mono.deg() > 0)
-                    assert(i == cnf->getVarForMonom(mono));
-                if (mono.deg() > 1)
-                    ofs << "c MAP " << i + 1 << " = " << mono << endl;
-            }
-        }
+    return (CNF*)cnf;
+}
 
-        ofs << *cnf;
+CNF* Bosphorus::write_cnf(
+    const char* output_cnf_fname,
+    const ::ANF* a)
+{
+    auto anf = (const BLib::ANF*)a;
+    assert(output_cnf_fname != NULL);
 
-        ofs << "c Learnt " << dat->learnt.size() << " fact(s)\n";
-        if (dat->config.writecomments) {
-            for (const BoolePolynomial& poly : dat->learnt) {
-                ofs << "c " << poly << endl;
-            }
-        }
-    }
-    ofs.close();
+    BLib::CNF* cnf = (BLib::CNF*)anf_to_cnf((ANF*)anf);
+    output_cnf(output_cnf_fname, dat, anf, cnf);
 
     return (CNF*)cnf;
 }
