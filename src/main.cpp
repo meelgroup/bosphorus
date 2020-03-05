@@ -400,31 +400,6 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-/////////
-// Unused functions
-////////
-// void write_xnf(const ANF* anf, const vector<BoolePolynomial>& learnt)
-// {
-//     XNF* xnf = new XNF(*anf, config);
-//     std::ofstream ofs;
-//     ofs.open(config.cnfOutput.c_str());
-//     if (!ofs) {
-//         std::cerr << "c Error opening file \"" << config.cnfOutput
-//                   << "\" for writing\n";
-//         exit(-1);
-//     } else {
-//         xnf->print_without_header(ofs);
-//
-//         ofs << "c Learnt " << learnt.size() << " fact(s)\n";
-//         if (config.writecomments) {
-//             for (const BoolePolynomial& poly : learnt) {
-//                 ofs << "c " << poly << endl;
-//             }
-//         }
-//     }
-//     ofs.close();
-// }
-
 void print_solution(Solution& solution)
 {
     assert(solution.ret != l_Undef);
