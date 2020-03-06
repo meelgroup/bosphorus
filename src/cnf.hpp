@@ -56,6 +56,7 @@ class CNF
         return anf.getRing();
     }
     void print_solution_map(std::ofstream* ofs);
+    void get_solution_map(map<uint32_t, VarMap>& ret) const;
     bool varRepresentsMonomial(const uint32_t var) const;
     BooleMonomial getMonomForVar(const uint32_t& var) const;
     uint32_t getVarForMonom(const BooleMonomial& mono) const;

@@ -273,6 +273,40 @@ void Replacer::print_solution_map(std::ofstream* ofs)
     }
 }
 
+void Replacer::get_solution_map(map<uint32_t, VarMap>& ret) const
+{
+    uint32_t num = 0;
+    for (vector<lbool>::const_iterator it = value.begin(), end = value.end();
+         it != end; it++, num++) {
+        if (*it != l_Undef) {
+            VarMap m;
+            m.type = Bosph::VarMap::fixed;
+            m.value = (*it == l_True);
+            ret[num] = m;
+        }
+    }
+
+    num = 0;
+    for (vector<Lit>::const_iterator it = replaceTable.begin(), end = replaceTable.end();
+        it != end; it++, num++
+    ) {
+        //it is not replaced
+        if (it->var() == num)
+            continue;
+
+        VarMap m;
+        m.type = Bosph::VarMap::must_set;
+        ret[it->var()] = m;
+
+        VarMap m2;
+        m2.type = Bosph::VarMap::anf_repl;
+        m2.other_var = it->var();
+        m2.inv = it->sign();
+        ret[num] = m2;
+    }
+
+}
+
 vector<lbool> Replacer::extendSolution(const vector<lbool>& solution) const
 {
     assert(solution.size() <= value.size());

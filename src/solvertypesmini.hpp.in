@@ -211,6 +211,14 @@ class Clause
     vector<Lit> lits;
 };
 
+struct VarMap
+{
+    enum {cnf_var, anf_repl, must_set, fixed} type;
+    uint32_t other_var;
+    bool inv;
+    bool value;
+};
+
 inline std::ostream& operator<<(std::ostream& os, const Clause& cl)
 {
     for (vector<Lit>::const_iterator it = cl.lits.begin(), end = cl.lits.end();

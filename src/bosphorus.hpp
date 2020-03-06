@@ -25,6 +25,7 @@ SOFTWARE.
 #define MYLIBRARY_H_
 
 #include <vector>
+#include <map>
 #include <fstream>
 #include "bosphorus/solvertypesmini.hpp"
 
@@ -64,10 +65,14 @@ public:
 
     void write_solution_map(CNF* cnf, std::ofstream* ofs);
     void write_solution_map(ANF* anf, std::ofstream* ofs);
+    void get_solution_map(const ANF* a, std::map<uint32_t, VarMap>& ret) const;
+    void get_solution_map(const CNF* c, std::map<uint32_t, VarMap>& ret) const;
 
 
     CNF* anf_to_cnf(const ANF* anf);
     CNF* cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf);
+    uint32_t get_max_var(const CNF* cnf) const;
+    uint32_t get_max_var(const ANF* anf) const;
 
     bool simplify(ANF* anf, const char* orig_cnf_file, uint32_t max_iters = 100);
 
@@ -83,6 +88,7 @@ public:
     static ANF* copy_anf_no_replacer(ANF* anf);
     static void print_anf(ANF* a);
 
+    vector<Clause> get_clauses(CNF* cnf);
     vector<Clause> get_learnt(ANF* anf);
 
 private:

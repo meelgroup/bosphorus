@@ -363,6 +363,26 @@ vector<lbool> CNF::mapSolToOrig(const std::vector<lbool>& solution) const
     return ret;
 }
 
+void CNF::get_solution_map(map<uint32_t, VarMap>& ret) const
+{
+    for (size_t i = 0; i < getNumVars(); ++i) {
+        // only map monomials which are single variables
+        if (varRepresentsMonomial(i)) {
+            const BooleMonomial& m(revCombinedMap[i].lead());
+
+            //Only single-vars
+            if (m.deg() == 1) {
+                const uint32_t var = m.firstVariable().index();
+                VarMap m;
+                m.inv = false;
+                m.other_var = i;
+                m.type = Bosph::VarMap::cnf_var;
+                ret[var] = m;
+            }
+        }
+    }
+}
+
 void CNF::print_solution_map(std::ofstream* ofs)
 {
     for (size_t i = 0; i < getNumVars(); ++i) {

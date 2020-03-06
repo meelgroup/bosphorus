@@ -26,12 +26,18 @@ SOFTWARE.
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <map>
 #include <iomanip>
 
 #include "bosphorus.hpp"
 #include "time_mem.h"
 #include "configdata.hpp"
 
+#define CMS_FOUND
+#ifdef CMS_FOUND
+#include "cryptominisat5/solvertypesmini.h"
+#include "cryptominisat5/cryptominisat.h"
+#endif
 #include "bosphorus/solvertypesmini.hpp"
 #include <boost/program_options.hpp>
 
@@ -65,6 +71,7 @@ BLib::ConfigData config;
 
 void print_solution(Solution& solution);
 void check_solution(ANF* anf, Solution& solution);
+void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf);
 
 
 void parseOptions(int argc, char* argv[])
@@ -384,9 +391,11 @@ int main(int argc, char* argv[])
                 exit(-1);
             }
 
-            mylib.write_solution_map(anf, &ofs);
             mylib.write_solution_map(cnf, &ofs);
+            mylib.write_solution_map(anf, &ofs);
         }
+
+        solve(&mylib, cnf, anf);
     }
 
     if (config.verbosity >= 1) {
@@ -398,6 +407,73 @@ int main(int argc, char* argv[])
     // clean up
     Bosphorus::delete_anf(anf);
     return 0;
+}
+
+void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
+    vector<Clause> cls = mylib-> get_clauses(cnf);
+    CMSat::SATSolver s;
+    s.new_vars(mylib->get_max_var(cnf));
+    for(const Bosph::Clause& c: cls) {
+        const Bosph::Clause* cc = &c;
+        const vector<CMSat::Lit>* cc2 = (vector<CMSat::Lit>*)cc;
+        s.add_clause(*cc2);
+    }
+    CMSat::lbool ret = s.solve();
+    if (ret == CMSat::l_False) {
+        cout << "s ANF-UNSATISFIABLE" << endl;
+        return;
+    }
+    assert(ret == CMSat::l_True);
+    cout << "s ANF-SATISFIABLE" << endl;
+
+    std::map<uint32_t, VarMap> varmap;
+    mylib->get_solution_map(anf, varmap);
+    mylib->get_solution_map(cnf, varmap);
+
+    uint32_t num_anf_vars = mylib->get_max_var(anf);
+    vector<lbool> solution(num_anf_vars);
+    for(auto& s: solution) {
+        s = l_Undef;
+    }
+
+    for(int do_must_set = 0; do_must_set < 2; do_must_set++) {
+        bool changed = true;
+        while(changed) {
+            changed = false;
+            for(const auto& v: varmap) {
+                if (v.first > solution.size()) {
+                    continue;
+                }
+                if (solution[v.first] == l_Undef) {
+                    if (v.second.type == Bosph::VarMap::fixed) {
+                        solution[v.first] = v.second.value ? l_True : l_False;
+                    } else if (v.second.type == Bosph::VarMap::cnf_var) {
+                        solution[v.first] =
+                        (s.get_model()[v.second.other_var] == CMSat::l_True) ? l_True: l_False;
+                    } else if (v.second.type == Bosph::VarMap::anf_repl) {
+                        if (solution[v.second.other_var] != l_Undef) {
+                            solution[v.first] = solution[v.second.other_var] ^ v.second.inv;
+                        }
+                    } else if (v.second.type == Bosph::VarMap::must_set) {
+                        if (do_must_set) {
+                            solution[v.first] = l_True;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    cout << "v ";
+    for(uint32_t i = 0; i < solution.size(); i++) {
+        if (solution[i] != l_Undef) {
+            if (solution[i] == l_True) {
+                cout << "1+";
+            }
+            cout << "x(" << i << ") ";
+        }
+    }
+    cout << endl;
 }
 
 void print_solution(Solution& solution)

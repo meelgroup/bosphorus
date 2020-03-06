@@ -669,6 +669,11 @@ void ANF::checkOccur() const
     }
 }
 
+void ANF::get_solution_map(map<uint32_t, VarMap>& ret) const
+{
+    replacer->get_solution_map(ret);
+}
+
 void ANF::print_solution_map(std::ofstream* ofs)
 {
     replacer->print_solution_map(ofs);

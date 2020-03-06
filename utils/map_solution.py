@@ -203,7 +203,7 @@ if __name__ == "__main__":
                     var = b[1]
                     inv = b[2]
                     if var in anf_map and anf_map[var][0] == "set":
-                        anf_map2[a] = ("set", anf_map[var][1])
+                        anf_map2[a] = ("set", anf_map[var][1] ^ inv)
                         something_done = True
 
                 if also_any and b[0] == "any":

@@ -322,6 +322,18 @@ void Bosphorus::write_solution_map(ANF* a, std::ofstream* ofs)
     anf->print_solution_map(ofs);
 }
 
+void Bosphorus::get_solution_map(const ANF* a, map<uint32_t, VarMap>& ret) const
+{
+    auto anf = (const BLib::ANF*)a;
+    anf->get_solution_map(ret);
+}
+
+void Bosphorus::get_solution_map(const CNF* c, map<uint32_t, VarMap>& ret) const
+{
+    auto cnf = (const BLib::CNF*)c;
+    cnf->get_solution_map(ret);
+}
+
 CNF* Bosphorus::anf_to_cnf(const ANF* a)
 {
     auto anf = (BLib::ANF*)a;
@@ -348,6 +360,18 @@ CNF* Bosphorus::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* a)
         cnf->printStats();
     }
     return (CNF*)cnf;
+}
+
+uint32_t Bosphorus::get_max_var(const CNF* c) const
+{
+    auto cnf = (const BLib::CNF*)c;
+    return cnf->getNumVars();
+}
+
+uint32_t Bosphorus::get_max_var(const ANF* a) const
+{
+    auto anf = (const BLib::ANF*)a;
+    return anf->getNumVars();
 }
 
 bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
@@ -573,6 +597,18 @@ vector<Clause> Bosphorus::get_learnt(ANF* a)
     }
     auto cnf = new BLib::CNF(*anf2, dat->config);
     return cnf->get_clauses_simple();
+}
+
+vector<Clause> Bosphorus::get_clauses(CNF* c)
+{
+    auto cnf = (BLib::CNF*)c;
+    vector<Clause> ret;
+    for(const auto& cls: cnf->getClauses()) {
+        for(const auto&c : cls.first) {
+            ret.push_back(c);
+        }
+    }
+    return ret;
 }
 
 void Bosphorus::set_config(void* cfg)

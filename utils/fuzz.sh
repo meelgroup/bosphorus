@@ -17,6 +17,7 @@ function one_run {
     echo "Doing random seed $r"
     ./anf_gen.py $r > $dir/problem.anf
     ./bosphorus --anfread $dir/problem.anf --cnfwrite $dir/problem.cnf --solmap $dir/map > $dir/bosph_out
+    ./check_solution.py $dir/bosph_out $dir/problem.anf
     ./check_cnf.py $dir/problem.cnf
     /home/soos/development/sat_solvers/cryptominisat/build/cryptominisat5 --verb 0 --zero-exit-status $dir/problem.cnf > $dir/cnfsol
     ./map_solution.py $dir/map $dir/cnfsol > $dir/anfsol
