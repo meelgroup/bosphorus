@@ -39,7 +39,7 @@ SOFTWARE.
 #include "cnf.hpp"
 #include "configdata.hpp"
 
-#ifdef SAT_SIMP
+#ifdef USE_CMS
 #include "simplifybysat.hpp"
 #endif
 
@@ -302,10 +302,10 @@ CNF* Bosphorus::write_cnf(
     const ::ANF* a)
 {
     auto anf = (const BLib::ANF*)a;
-    assert(output_cnf_fname != NULL);
-
     BLib::CNF* cnf = (BLib::CNF*)anf_to_cnf((ANF*)anf);
-    output_cnf(output_cnf_fname, dat, anf, cnf);
+    if (output_cnf_fname != NULL) {
+        output_cnf(output_cnf_fname, dat, anf, cnf);
+    }
 
     return (CNF*)cnf;
 }
@@ -449,7 +449,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                     }
                     break;
                 case 2:
-#ifdef SAT_SIMP
+#ifdef USE_CMS
                     if (dat->config.doSAT) {
                         sub_iter_performed = true;
                         size_t no_cls = 0;

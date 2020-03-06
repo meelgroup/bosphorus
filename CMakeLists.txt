@@ -290,13 +290,13 @@ find_package(ZLIB  REQUIRED)
 link_directories( ${ZLIB_LIBRARY} )
 include_directories( ${ZLIB_INCLUDE_DIR} )
 
-option(SAT_SIMP "Use SAT-based simplification" ON)
-if (SAT_SIMP)
+option(USE_CMS "Use SAT-based simplification" ON)
+if (USE_CMS)
     find_package(cryptominisat5 REQUIRED)
     if (cryptominisat4_FOUND)
         message(STATUS "OK, CryptoMiniSat5 found")
     endif()
-    add_definitions(-DSAT_SIMP)
+    add_definitions(-DUSE_CMS)
 endif()
 
 # -----------------------------------------------------------------------------

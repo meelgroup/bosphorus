@@ -41,7 +41,7 @@ set(bosph_lib_files
     ${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp
 )
 
-if (SAT_SIMP)
+if (USE_CMS)
 set(bosph_lib_files
     ${bosph_lib_files} simplifybysat.cpp)
 endif()

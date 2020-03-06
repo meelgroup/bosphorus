@@ -33,8 +33,7 @@ SOFTWARE.
 #include "time_mem.h"
 #include "configdata.hpp"
 
-#define CMS_FOUND
-#ifdef CMS_FOUND
+#ifdef USE_CMS
 #include "cryptominisat5/solvertypesmini.h"
 #include "cryptominisat5/cryptominisat.h"
 #endif
@@ -64,14 +63,17 @@ bool readANF;
 bool readCNF;
 bool writeANF;
 bool writeCNF;
+bool solve_with_cms;
 
 po::variables_map vm;
 BLib::ConfigData config;
 
 
+#ifdef USE_CMS
 void print_solution(Solution& solution);
 void check_solution(ANF* anf, Solution& solution);
 void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf);
+#endif
 
 
 void parseOptions(int argc, char* argv[])
@@ -100,6 +102,7 @@ void parseOptions(int argc, char* argv[])
      "Verbosity setting: 0(slient) - 3(noisy)")
     ("simplify", po::value<int>(&config.simplify)->default_value(config.simplify),
      "Simplify ANF")
+    ("solve", po::bool_switch(&solve_with_cms), "Solve the resulting ANF")
 
     // Processes
     ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
@@ -370,13 +373,14 @@ int main(int argc, char* argv[])
     if (writeANF) {
         mylib.write_anf(anfOutput.c_str(), anf);
     }
+
+    CNF* cnf = NULL;
     if (writeCNF) {
         const char* cnf_input = NULL;
         if (cnfInput.length() > 0) {
             cnf_input = cnfInput.c_str();
         }
 
-        CNF* cnf = NULL;
         if (cnf_input != NULL) {
             cnf = mylib.write_cnf(cnf_input, cnfOutput.c_str(), anf);
         } else {
@@ -394,8 +398,18 @@ int main(int argc, char* argv[])
             mylib.write_solution_map(cnf, &ofs);
             mylib.write_solution_map(anf, &ofs);
         }
+    }
 
+    if (solve_with_cms) {
+        if (!writeCNF) {
+            cnf = mylib.write_cnf(NULL, anf);
+        }
+        #ifdef USE_CMS
         solve(&mylib, cnf, anf);
+        #else
+        cout << "ERROR: CryptoMiniSat libraries were not found during build. Cannot solve." << endl;
+        exit(-1);
+        #endif
     }
 
     if (config.verbosity >= 1) {
@@ -409,6 +423,7 @@ int main(int argc, char* argv[])
     return 0;
 }
 
+#ifdef USE_CMS
 void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
     vector<Clause> cls = mylib-> get_clauses(cnf);
     CMSat::SATSolver s;
@@ -474,6 +489,12 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
         }
     }
     cout << endl;
+
+    Solution sol;
+    sol.ret = l_True;
+    sol.sol = solution;
+    //print_solution();
+    check_solution(anf, sol);
 }
 
 void print_solution(Solution& solution)
@@ -502,7 +523,8 @@ void check_solution(ANF* anf, Solution& solution)
         cout << "ERROR! Solution found is incorrect!" << endl;
         exit(-1);
     }
-    if (config.verbosity >= 3) {
+    if (config.verbosity) {
         cout << "c Solution found is correct." << endl;
     }
 }
+#endif
