@@ -13,6 +13,13 @@ To find all solutions to `myfile.anf`:
 
 ```
 docker run --rm -v `pwd`/:/dat/ msoos/bosphorus --anfread /dat/myfile.anf --cnfwrite /dat/myfile.cnf --solve --allsol
+[...]
+s ANF-SATISFIABLE
+v x(0) x(1) x(2) x(3)
+s ANF-SATISFIABLE
+v x(0) x(1) 1+x(2) 1+x(3)
+s ANF-UNSATISFIABLE
+c Number of solutions found: 2
 ```
 
 To convert `myfile.anf` to `myfile.cnf` with all the simplifications:

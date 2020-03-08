@@ -1,4 +1,4 @@
-FROM ubuntu:18.04 as builder
+FROM ubuntu:19.04 as builder
 
 LABEL maintainer="Mate Soos"
 LABEL version="1.0"
@@ -6,11 +6,8 @@ LABEL Description="Bosphorus"
 
 # get curl, etc
 RUN apt-get update
-RUN apt-get install --no-install-recommends -y software-properties-common
-
-RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
-RUN apt-get update
-RUN apt-get install --no-install-recommends -y libboost-program-options-dev libbrial-dev libboost-test-dev gcc g++ make cmake zlib1g-dev wget autoconf automake make
+# RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
+RUN apt-get install --no-install-recommends -y software-properties-common libboost-program-options-dev libboost-test-dev gcc g++ make cmake zlib1g-dev wget autoconf automake make
 
 # get M4RI
 WORKDIR /
@@ -24,18 +21,11 @@ RUN ./configure \
 
 
 WORKDIR /
-RUN wget https://github.com/BRiAl/BRiAl/archive/1.2.4.tar.gz \
-    && tar -xvf 1.2.4.tar.gz
-WORKDIR /BRiAl-1.2.4
+RUN wget https://github.com/BRiAl/BRiAl/releases/download/1.2.7/brial-1.2.7.tar.bz2 \
+    && tar -xjf brial-1.2.7.tar.bz2
+WORKDIR /brial-1.2.7
 
-RUN apt-get install --no-install-recommends -y libtool
-
-RUN aclocal
-RUN autoheader
-RUN libtoolize --copy
-RUN automake --copy --add-missing
-RUN automake
-RUN autoconf
+RUN apt-get install --no-install-recommends -y pkg-config libgd-dev
 RUN ./configure
 RUN make -j4
 RUN make install
@@ -57,8 +47,9 @@ RUN cmake -DSTATICCOMPILE=ON .. \
 USER root
 COPY . /bosphorus
 WORKDIR /bosphorus
-RUN mkdir build
+RUN mkdir -p build
 WORKDIR /bosphorus/build
+RUN rm -rf *
 RUN cmake -DSTATICCOMPILE=ON .. \
     && make -j2
 
@@ -73,6 +64,4 @@ ENTRYPOINT ["/usr/local/bin/bosphorus"]
 # HOW TO USE
 # --------------------
 # you want to run the file `myfile.anf`:
-# docker run --rm -v `pwd`/:/dat/ bosphorus --anfread /dat/myfile.anf --cnfwrite /dat/out
-
-
+# docker run --rm -v `pwd`/:/dat/ bosphorus --anfread /dat/myfile.anf --cnfwrite /dat/out --solve --allsol
