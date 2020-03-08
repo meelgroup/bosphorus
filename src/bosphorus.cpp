@@ -633,9 +633,9 @@ const char* Bosphorus::get_version_sha1()
     return ::BLib::get_version_sha1();
 }
 
-bool Bosphorus::evaluate(ANF* a, const vector<lbool>& sol)
+bool Bosphorus::evaluate(const ANF* a, const vector<lbool>& sol)
 {
-    auto anf = (BLib::ANF*)a;
+    auto anf = (const BLib::ANF*)a;
     return anf->evaluate(sol);
 }
 

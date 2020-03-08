@@ -70,8 +70,6 @@ BLib::ConfigData config;
 
 
 #ifdef USE_CMS
-void print_solution(Solution& solution);
-void check_solution(ANF* anf, Solution& solution);
 void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf);
 #endif
 
@@ -424,30 +422,73 @@ int main(int argc, char* argv[])
 }
 
 #ifdef USE_CMS
+void print_solution_cnf_style(const Solution& solution);
+void check_solution(const ANF* anf, const Solution& solution);
+void print_solution_anf_style(const Solution& solution);
+Solution extend_solution(
+    const vector<CMSat::lbool>& model,
+    const std::map<uint32_t, VarMap>& varmap,
+    uint32_t num_anf_vars
+);
+
 void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
     vector<Clause> cls = mylib-> get_clauses(cnf);
-    CMSat::SATSolver s;
-    s.new_vars(mylib->get_max_var(cnf));
+    CMSat::SATSolver solver;
+    solver.new_vars(mylib->get_max_var(cnf));
     for(const Bosph::Clause& c: cls) {
         const Bosph::Clause* cc = &c;
         const vector<CMSat::Lit>* cc2 = (vector<CMSat::Lit>*)cc;
-        s.add_clause(*cc2);
+        solver.add_clause(*cc2);
     }
-    CMSat::lbool ret = s.solve();
-    if (ret == CMSat::l_False) {
+    CMSat::lbool ret = solver.solve();
+    Solution solution;
+    if (ret == CMSat::l_True) {
+        solution.ret = l_True;
+        std::map<uint32_t, VarMap> varmap;
+        mylib->get_solution_map(anf, varmap);
+        mylib->get_solution_map(cnf, varmap);
+        uint32_t num_anf_vars = mylib->get_max_var(anf);
+        solution = extend_solution(solver.get_model(), varmap, num_anf_vars);
+    } else {
+        solution. ret = l_False;
+    }
+    print_solution_anf_style(solution);
+    //print_solution_cnf_style(solution);
+    if (ret == CMSat::l_True) {
+        check_solution(anf, solution);
+    }
+}
+
+void print_solution_anf_style(const Solution& s)
+{
+    if (s.ret == l_False) {
         cout << "s ANF-UNSATISFIABLE" << endl;
         return;
     }
-    assert(ret == CMSat::l_True);
+
+    assert(s.ret == l_True);
     cout << "s ANF-SATISFIABLE" << endl;
+    cout << "v ";
+    for(uint32_t i = 0; i < s.sol.size(); i++) {
+        if (s.sol[i] != l_Undef) {
+            if (s.sol[i] == l_True) {
+                cout << "1+";
+            }
+            cout << "x(" << i << ") ";
+        }
+    }
+    cout << endl;
+}
 
-    std::map<uint32_t, VarMap> varmap;
-    mylib->get_solution_map(anf, varmap);
-    mylib->get_solution_map(cnf, varmap);
-
-    uint32_t num_anf_vars = mylib->get_max_var(anf);
-    vector<lbool> solution(num_anf_vars);
-    for(auto& s: solution) {
+Solution extend_solution(
+    const vector<CMSat::lbool>& model,
+    const std::map<uint32_t, VarMap>& varmap,
+    uint32_t num_anf_vars
+) {
+    Solution s;
+    s.ret = l_True;
+    s.sol.resize(num_anf_vars);
+    for(auto& s: s.sol) {
         s = l_Undef;
     }
 
@@ -456,25 +497,25 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
         while(changed) {
             changed = false;
             for(const auto& v: varmap) {
-                if (v.first > solution.size()) {
+                if (v.first > s.sol.size()) {
                     continue;
                 }
-                if (solution[v.first] == l_Undef) {
+                if (s.sol[v.first] == l_Undef) {
                     if (v.second.type == Bosph::VarMap::fixed) {
-                        solution[v.first] = v.second.value ? l_True : l_False;
+                        s.sol[v.first] = v.second.value ? l_True : l_False;
                         changed = true;
                     } else if (v.second.type == Bosph::VarMap::cnf_var) {
-                        solution[v.first] =
-                        (s.get_model()[v.second.other_var] == CMSat::l_True) ? l_True: l_False;
+                        s.sol[v.first] =
+                        (model[v.second.other_var] == CMSat::l_True) ? l_True: l_False;
                         changed = true;
                     } else if (v.second.type == Bosph::VarMap::anf_repl) {
-                        if (solution[v.second.other_var] != l_Undef) {
-                            solution[v.first] = solution[v.second.other_var] ^ v.second.inv;
+                        if (s.sol[v.second.other_var] != l_Undef) {
+                            s.sol[v.first] = s.sol[v.second.other_var] ^ v.second.inv;
                             changed = true;
                         }
                     } else if (v.second.type == Bosph::VarMap::must_set) {
                         if (do_must_set) {
-                            solution[v.first] = l_True;
+                            s.sol[v.first] = l_True;
                             changed = true;
                         }
                     }
@@ -483,25 +524,10 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
         }
     }
 
-    cout << "v ";
-    for(uint32_t i = 0; i < solution.size(); i++) {
-        if (solution[i] != l_Undef) {
-            if (solution[i] == l_True) {
-                cout << "1+";
-            }
-            cout << "x(" << i << ") ";
-        }
-    }
-    cout << endl;
-
-    Solution sol;
-    sol.ret = l_True;
-    sol.sol = solution;
-    //print_solution();
-    check_solution(anf, sol);
+    return s;
 }
 
-void print_solution(Solution& solution)
+void print_solution_cnf_style(const Solution& solution)
 {
     assert(solution.ret != l_Undef);
     cout << "Solution ";
@@ -519,7 +545,7 @@ void print_solution(Solution& solution)
     cout << toWrite.str() << endl;
 }
 
-void check_solution(ANF* anf, Solution& solution)
+void check_solution(const ANF* anf, const Solution& solution)
 {
     //Checking
     bool goodSol = Bosphorus::evaluate(anf, solution.sol);

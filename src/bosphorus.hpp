@@ -83,7 +83,7 @@ public:
 
     size_t get_learnt_size() const;
     static void delete_anf(ANF* anf);
-    static bool evaluate(ANF* anf, const vector<lbool>& sol);
+    static bool evaluate(const ANF* anf, const vector<lbool>& sol);
     static void print_stats(ANF* anf);
     static ANF* copy_anf_no_replacer(ANF* anf);
     static void print_anf(ANF* a);
