@@ -12,7 +12,10 @@ This work was done by Davin Choo and Kian Ming A. Chai from DSO National Laborat
 To find all solutions to `myfile.anf`:
 
 ```
-docker run --rm -v `pwd`/:/dat/ msoos/bosphorus --anfread /dat/myfile.anf --cnfwrite /dat/myfile.cnf --solve --allsol
+docker run --rm -v `pwd`/:/dat/ msoos/bosphorus \
+    --anfread /dat/myfile.anf \
+    --cnfwrite /dat/myfile.cnf \
+    --solve --allsol
 [...]
 s ANF-SATISFIABLE
 v x(0) x(1) x(2) x(3)
@@ -126,7 +129,8 @@ The system recovered XOR `x(1) + x(2) + x(3)` using ElimLin from the top 4 equat
 You must install M4RI, BriAl, and CryptoMiniSat to use compile Bosphorus. Below, we explain how to compile them all. First, the dependencies:
 
 ```
-sudo apt-get install build-essential cmake zlib1g-dev libboost-program-options-dev libm4ri-dev libboost-test-dev
+sudo apt-get install build-essential cmake zlib1g-dev \
+    libboost-program-options-dev libm4ri-dev libboost-test-dev
 ```
 
 ### Install BRiAl
