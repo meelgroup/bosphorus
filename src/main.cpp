@@ -64,6 +64,7 @@ bool readCNF;
 bool writeANF;
 bool writeCNF;
 bool solve_with_cms;
+bool all_solutions;
 
 po::variables_map vm;
 BLib::ConfigData config;
@@ -101,6 +102,7 @@ void parseOptions(int argc, char* argv[])
     ("simplify", po::value<int>(&config.simplify)->default_value(config.simplify),
      "Simplify ANF")
     ("solve", po::bool_switch(&solve_with_cms), "Solve the resulting ANF")
+    ("allsol", po::bool_switch(&all_solutions), "Find all solutions")
 
     // Processes
     ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
@@ -108,7 +110,6 @@ void parseOptions(int argc, char* argv[])
     // checks
     ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
      "Do not write comments to output files")
-    ("solmap", po::value(&solmap_file_write), "Write solution map to this file")
     ;
 
     po::options_description cnf_conv_options("CNF conversion");
@@ -146,6 +147,7 @@ void parseOptions(int argc, char* argv[])
      "Conflict limit for built-in SAT solver.")
     ("threads,t", po::value<unsigned int>(&config.numThreads)->default_value(config.numThreads),
      "Number of threads to use for SAT solver (same value is used for built-in and external).")
+    ("solmap", po::value(&solmap_file_write), "Write solution map to this file")
     ;
 
     /* clang-format on */
@@ -403,7 +405,9 @@ int main(int argc, char* argv[])
             cnf = mylib.write_cnf(NULL, anf);
         }
         #ifdef USE_CMS
-        solve(&mylib, cnf, anf);
+        if (solve_with_cms || all_solutions) {
+            solve(&mylib, cnf, anf);
+        }
         #else
         cout << "ERROR: CryptoMiniSat libraries were not found during build. Cannot solve." << endl;
         exit(-1);
@@ -425,6 +429,9 @@ int main(int argc, char* argv[])
 void print_solution_cnf_style(const Solution& solution);
 void check_solution(const ANF* anf, const Solution& solution);
 void print_solution_anf_style(const Solution& solution);
+void ban_solution(CMSat::SATSolver& solver, const Solution& solution);
+
+
 Solution extend_solution(
     const vector<CMSat::lbool>& model,
     const std::map<uint32_t, VarMap>& varmap,
@@ -440,23 +447,48 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
         const vector<CMSat::Lit>* cc2 = (vector<CMSat::Lit>*)cc;
         solver.add_clause(*cc2);
     }
-    CMSat::lbool ret = solver.solve();
-    Solution solution;
-    if (ret == CMSat::l_True) {
-        solution.ret = l_True;
-        std::map<uint32_t, VarMap> varmap;
-        mylib->get_solution_map(anf, varmap);
-        mylib->get_solution_map(cnf, varmap);
-        uint32_t num_anf_vars = mylib->get_max_var(anf);
-        solution = extend_solution(solver.get_model(), varmap, num_anf_vars);
-    } else {
-        solution. ret = l_False;
+
+    uint32_t number_of_solutions = 0;
+    while(true) {
+        CMSat::lbool ret = solver.solve();
+        Solution solution;
+        if (ret == CMSat::l_True) {
+            solution.ret = l_True;
+            std::map<uint32_t, VarMap> varmap;
+            mylib->get_solution_map(anf, varmap);
+            mylib->get_solution_map(cnf, varmap);
+            uint32_t num_anf_vars = mylib->get_max_var(anf);
+            solution = extend_solution(solver.get_model(), varmap, num_anf_vars);
+        } else {
+            solution. ret = l_False;
+        }
+        print_solution_anf_style(solution);
+        //print_solution_cnf_style(solution);
+        if (ret == CMSat::l_True) {
+            check_solution(anf, solution);
+        }
+        if (!all_solutions || ret == CMSat::l_False) {
+            break;
+        }
+        ban_solution(solver, solution);
+        number_of_solutions++;
     }
-    print_solution_anf_style(solution);
-    //print_solution_cnf_style(solution);
-    if (ret == CMSat::l_True) {
-        check_solution(anf, solution);
+
+    if (all_solutions) {
+        cout << "c Number of solutions found: " << number_of_solutions << endl;
     }
+}
+
+void ban_solution(CMSat::SATSolver& solver, const Solution& solution)
+{
+    vector<CMSat::Lit> clause;
+    for(uint32_t i = 0; i < solution.sol.size(); i++) {
+        if (solution.sol[i] != l_Undef) {
+            auto lit = CMSat::Lit(i, solution.sol[i] == l_True);
+            clause.push_back(lit);
+        }
+    }
+    solver.add_clause(clause);
 }
 
 void print_solution_anf_style(const Solution& s)
