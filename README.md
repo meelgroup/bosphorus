@@ -18,12 +18,14 @@ docker run --rm -v `pwd`/:/dat/ msoos/bosphorus \
     --solve --allsol
 [...]
 s ANF-SATISFIABLE
-v x(0) x(1) x(2) x(3)
+v x(0) x(1)+1 x(2) x(3)
 s ANF-SATISFIABLE
-v x(0) x(1) 1+x(2) 1+x(3)
+v x(0) x(1)+1 1+x(2) 1+x(3)
 s ANF-UNSATISFIABLE
 c Number of solutions found: 2
 ```
+
+Where `x(0)` means `x(0)` must be FALSE and `x(1)+1` means `x(1)` must be TRUE.
 
 To convert `myfile.anf` to `myfile.cnf` with all the simplifications:
 
