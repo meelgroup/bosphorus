@@ -168,7 +168,7 @@ make -j4
 ./bosphorus -h
 ```
 
-# Testing and Fuzzing
+## Fuzzing
 The tool comes with a built-in ANF fuzzer. To use, install [cryptominisat](https://github.com/msoos/cryptominisat), then run:
 
 ```
