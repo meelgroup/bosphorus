@@ -137,6 +137,7 @@ void Bosphorus::check_library_in_use()
 
 ::ANF* Bosphorus::read_anf(const char* fname)
 {
+    assert(fname != NULL);
     check_library_in_use();
 
     // Find out maxVar in input ANF file
