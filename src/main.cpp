@@ -462,16 +462,20 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
                 if (solution[v.first] == l_Undef) {
                     if (v.second.type == Bosph::VarMap::fixed) {
                         solution[v.first] = v.second.value ? l_True : l_False;
+                        changed = true;
                     } else if (v.second.type == Bosph::VarMap::cnf_var) {
                         solution[v.first] =
                         (s.get_model()[v.second.other_var] == CMSat::l_True) ? l_True: l_False;
+                        changed = true;
                     } else if (v.second.type == Bosph::VarMap::anf_repl) {
                         if (solution[v.second.other_var] != l_Undef) {
                             solution[v.first] = solution[v.second.other_var] ^ v.second.inv;
+                            changed = true;
                         }
                     } else if (v.second.type == Bosph::VarMap::must_set) {
                         if (do_must_set) {
                             solution[v.first] = l_True;
+                            changed = true;
                         }
                     }
                 }
