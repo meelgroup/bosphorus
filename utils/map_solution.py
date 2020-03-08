@@ -130,7 +130,8 @@ def parse_one_map_line(line, anf_map):
             exit(-1)
 
         # any value works, so setting to TRUE
-        anf_map[var] = ("any", None)
+        if var not in anf_map:
+            anf_map[var] = ("any", None)
 
     elif line[0] == "ANF-var":
         try:

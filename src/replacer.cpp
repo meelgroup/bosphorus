@@ -294,9 +294,12 @@ void Replacer::get_solution_map(map<uint32_t, VarMap>& ret) const
         if (it->var() == num)
             continue;
 
-        VarMap m;
-        m.type = Bosph::VarMap::must_set;
-        ret[it->var()] = m;
+        //Don't overwrite existing value with this
+        if (ret.find(it->var()) == ret.end()) {
+            VarMap m;
+            m.type = Bosph::VarMap::must_set;
+            ret[it->var()] = m;
+        }
 
         VarMap m2;
         m2.type = Bosph::VarMap::anf_repl;
