@@ -71,13 +71,21 @@ size_t ANF::readFileForMaxVar(const std::string& filename)
         if (temp.length() == 0 || temp[0] == 'c')
             continue;
 
-        size_t var = 0;
         // simply search for consecutive numbers
+        // however "+1" is a NUMBER but not a MONOMIAL
+        // so we have to take that into consideration
+        size_t var = 0;
+        bool isMonomial = false;
         for (uint32_t i = 0; i < temp.length(); ++i) {
             //At this point, only numbers are valid
-            if (!std::isdigit(temp[i]))
+            if (!std::isdigit(temp[i])) {
                 var = 0;
-            else {
+                if (temp[i] == 'x' || (isMonomial && temp[i] == '(')) {
+                    isMonomial = true;
+                } else {
+                    isMonomial = false;
+                }
+            } else if (isMonomial) {
                 var = var * 10 + (temp[i] - '0');
                 maxVar = std::max(
                     maxVar,
@@ -85,7 +93,6 @@ size_t ANF::readFileForMaxVar(const std::string& filename)
             }
         }
     }
-
     ifs.close();
     return maxVar;
 }
