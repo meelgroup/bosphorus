@@ -25,10 +25,12 @@ SOFTWARE.
 #include "gaussjordan.hpp"
 
 using std::vector;
+
 USING_NAMESPACE_PBORI
+using namespace BLib;
 
 // Implementation based on https://infoscience.epfl.ch/record/176270/files/ElimLin_full_version.pdf
-bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
+bool BLib::elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
              vector<BoolePolynomial>& loop_learnt)
 {
     //don't run if empty
@@ -65,11 +67,13 @@ bool elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
             if (all_equations[i].deg() == 1)
                 linear_idx_nvar.push_back(
                     std::make_pair(i, all_equations[i].nUsedVariables()));
-
         assert(num_linear == linear_idx_nvar.size());
+
+        //No linear equations, reached fixedpoint, exit
         if (num_linear == 0) {
             break;
         }
+
         if (config.verbosity >= 3) {
             cout << "c  Processing " << num_linear << " linear equations "
                  << "in a system of " << all_equations.size() << " equations"

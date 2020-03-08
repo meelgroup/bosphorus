@@ -21,30 +21,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include <boost/program_options.hpp>
-namespace po = boost::program_options;
-
 #include <sys/wait.h>
 #include <deque>
 #include <fstream>
+#include <iostream>
 #include <memory>
+#include <map>
+#include <iomanip>
 
-#include "GitSHA1.h"
-#include "anf.hpp"
-#include "cnf.hpp"
-#include "xnf.hpp"
-#include "dimacscache.hpp"
-#include "gaussjordan.hpp"
-#include "replacer.hpp"
-#ifdef SATSOLVE_ENABLED
-#include "satsolve.hpp"
-#endif
+#include "bosphorus.hpp"
 #include "time_mem.h"
+#include "configdata.hpp"
 
-// ALGOS
-#include "elimlin.hpp"
-#include "extendedlinearization.hpp"
-#include "simplifybysat.hpp"
+#ifdef USE_CMS
+#include "cryptominisat5/solvertypesmini.h"
+#include "cryptominisat5/cryptominisat.h"
+#endif
+#include "bosphorus/solvertypesmini.hpp"
+#include <boost/program_options.hpp>
 
 using std::cerr;
 using std::cout;
@@ -52,9 +46,34 @@ using std::deque;
 using std::endl;
 using std::string;
 
-ConfigData config;
-BoolePolyRing* polybori_ring = nullptr;
+using namespace Bosph;
+namespace po = boost::program_options;
+
+//inputs and outputs
+string anfInput;
+string anfOutput;
+string cnfInput;
+string cnfOutput;
+
+//solution map
+string solmap_file_write;
+
+// read/write
+bool readANF;
+bool readCNF;
+bool writeANF;
+bool writeCNF;
+bool solve_with_cms;
+bool all_solutions;
+
 po::variables_map vm;
+BLib::ConfigData config;
+
+
+#ifdef USE_CMS
+void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf);
+#endif
+
 
 void parseOptions(int argc, char* argv[])
 {
@@ -74,37 +93,37 @@ void parseOptions(int argc, char* argv[])
     ("help,h", "produce help message")
     ("version", "print version number and exit")
     // Input/Output
-    ("anfread", po::value(&config.anfInput), "Read ANF from this file")
-    ("cnfread", po::value(&config.cnfInput), "Read CNF from this file")
-    ("anfwrite", po::value(&config.anfOutput), "Write ANF output to file")
-    ("cnfwrite", po::value(&config.cnfOutput), "Write CNF output to file")
-    ("verb,v", po::value<uint32_t>(&config.verbosity)->default_value(1),
+    ("anfread", po::value(&anfInput), "Read ANF from this file")
+    ("cnfread", po::value(&cnfInput), "Read CNF from this file")
+    ("anfwrite", po::value(&anfOutput), "Write ANF output to file")
+    ("cnfwrite", po::value(&cnfOutput), "Write CNF output to file")
+    ("verb,v", po::value<uint32_t>(&config.verbosity)->default_value(config.verbosity),
      "Verbosity setting: 0(slient) - 3(noisy)")
     ("simplify", po::value<int>(&config.simplify)->default_value(config.simplify),
      "Simplify ANF")
+    ("solve", po::bool_switch(&solve_with_cms), "Solve the resulting ANF")
+    ("allsol", po::bool_switch(&all_solutions), "Find all solutions")
 
     // Processes
     ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
      "Stop solving after this much time (s); Use 0 if you only want to propagate")
     // checks
-    ("paranoid", po::value<int>(&config.paranoid), "Run sanity checks")
     ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
      "Do not write comments to output files")
-    //("xorclause", po::bool_switch(&config.xnf), "Use XOR clauses when outputting the final CNF")
     ;
 
     po::options_description cnf_conv_options("CNF conversion");
     cnf_conv_options.add_options()
     ("cutnum", po::value<uint32_t>(&config.cutNum)->default_value(config.cutNum),
      "Cutting number when not using XOR clauses")
-    ("karn", po::value(&config.maxKarnTableSize)->default_value(8),
-     "Sets Karnaugh map dimension during CNF conversion")
+    ("karn", po::value(&config.brickestein_algo_cutoff)->default_value(config.brickestein_algo_cutoff),
+     "Uses this cutoff for doing Brickenstein's algorithm for translation of complex ANFs")
     ;
 
     po::options_description xl_options("XL");
     xl_options.add_options()
-    ("noxl", po::bool_switch(&config.noXL), "No XL")
-    ("xldeg", po::value<uint32_t>(&config.xlDeg)->default_value(1),
+    ("xl", po::value(&config.doXL), "Turn on/off XL-based simplification. Default: ON")
+    ("xldeg", po::value<uint32_t>(&config.xlDeg)->default_value(config.xlDeg),
      "Expansion degree for XL algorithm. Default = 1 (0 = Just GJE. For now we only support 0 <= xldeg = 3)")
     ("xlsample", po::value<double>(&config.XLsample)->default_value(config.XLsample),
      "Size of matrix to sample for XL, in log2")
@@ -114,33 +133,22 @@ void parseOptions(int argc, char* argv[])
 
     po::options_description elimlin_options("ElimLin options");
     elimlin_options.add_options()
-    ("noel", po::bool_switch(&config.noEL), "no ElimLin")
+    ("el", po::value(&config.doEL), "Turn on/off ElimLin-based simplification. Default: ON")
     ("elsample", po::value<double>(&config.ELsample)->default_value(config.ELsample),
      "Size of matrixto sample for EL, in log2")
     ;
 
     po::options_description sat_options("SAT options");
     sat_options.add_options()
-    ("nosat", po::bool_switch(&config.noSAT),  "No SAT solving")
-    ("stoponsolution", po::bool_switch(&config.stopOnSolution),
-     "Stops further simplifications and store solution if SAT simp finds a solution")
+    ("sat", po::value(&config.doSAT),  "Turn on/off SAT-based simplification. Default: ON")
     ("satinc", po::value<uint64_t>(&config.numConfl_inc)->default_value(config.numConfl_inc),
      "Conflict inc for built-in SAT solver.")
     ("satlim", po::value<uint64_t>(&config.numConfl_lim)->default_value(config.numConfl_lim),
      "Conflict limit for built-in SAT solver.")
     ("threads,t", po::value<unsigned int>(&config.numThreads)->default_value(config.numThreads),
      "Number of threads to use for SAT solver (same value is used for built-in and external).")
+    ("solmap", po::value(&solmap_file_write), "Write solution map to this file")
     ;
-
-#ifdef SATSOLVE_ENABLED
-    po::options_description solving_processed_CNF_opts("CNF solving");
-    solving_processed_CNF_opts.add_options()
-    ("solvesat,s", po::bool_switch(&config.doSolveSAT), "Solve with SAT solver as per '--solverexe")
-    ("solverexe,e", po::value(&config.solverExe)->default_value("/usr/local/bin/cryptominisat5"),
-     "Solver executable for SAT solving CNF")
-    ("solvewrite,o", po::value(&config.solutionOutput), "Write solver output to file")
-    ;
-#endif
 
     /* clang-format on */
     po::options_description cmdline_options;
@@ -149,9 +157,6 @@ void parseOptions(int argc, char* argv[])
     cmdline_options.add(xl_options);
     cmdline_options.add(elimlin_options);
     cmdline_options.add(sat_options);
-#ifdef SATSOLVE_ENABLED
-    cmdline_options.add(solving_processed_CNF_opts);
-#endif
 
     try {
         po::store(
@@ -163,9 +168,6 @@ void parseOptions(int argc, char* argv[])
             cout << xl_options << endl;
             cout << elimlin_options << endl;
             cout << sat_options << endl;
-#ifdef SATSOLVE_ENABLED
-            cout << solving_processed_CNF_opts << endl;
-#endif
             exit(0);
         }
         po::notify(vm);
@@ -202,30 +204,27 @@ void parseOptions(int argc, char* argv[])
     }
 
     if (vm.count("version")) {
-        cout << "bosphorus " << get_version_sha1() << '\n'
-             << get_version_tag() << '\n'
-             << get_compilation_env() << endl;
+        cout << "bosphorus " << Bosphorus::get_version_sha1() << '\n'
+             << Bosphorus::get_version_tag() << '\n'
+             << Bosphorus::get_compilation_env() << endl;
         exit(0);
     }
 
     // I/O checks
     if (vm.count("anfread")) {
-        config.readANF = true;
+        readANF = true;
     }
     if (vm.count("cnfread")) {
-        config.readCNF = true;
+        readCNF = true;
     }
     if (vm.count("anfwrite")) {
-        config.writeANF = true;
+        writeANF = true;
     }
     if (vm.count("cnfwrite")) {
-        config.writeCNF = true;
+        writeCNF = true;
     }
-    if (!config.readANF && !config.readCNF) {
-        cout << "You must give an ANF/CNF file to read in\n";
-        exit(-1);
-    }
-    if (config.readANF && config.readCNF) {
+
+    if (readANF && readCNF) {
         cout << "You cannot give both ANF/CNF files to read in\n";
         exit(-1);
     }
@@ -235,7 +234,7 @@ void parseOptions(int argc, char* argv[])
         cout << "ERROR! For sanity, cutting number must be between 3 and 10\n";
         exit(-1);
     }
-    if (config.maxKarnTableSize > 20) {
+    if (config.brickestein_algo_cutoff > 20) {
         cout << "ERROR! For sanity, max Karnaugh table size is at most 20\n";
         exit(-1);
     }
@@ -243,489 +242,97 @@ void parseOptions(int argc, char* argv[])
         cout << "ERROR! We only currently support up to xldeg = 3\n";
         exit(-1);
     }
-    if (config.doSolveSAT && !vm.count("solvewrite")) {
-        cout << "ERROR! Provide a output file for the solving of the solved "
-                "CNF with '--solvewrite x'\n";
-        exit(-1);
-    }
 
     if (config.verbosity) {
-        cout << "c Bosphorus SHA revision " << get_version_sha1() << endl;
+        cout << "c Bosphorus SHA revision " << Bosphorus::get_version_sha1() << endl;
         cout << "c Executed with command line: " << argv[0];
         for (int i = 1; i < argc; ++i)
             cout << ' ' << argv[i];
-        cout << endl << "c Compilation env " << get_compilation_env() << endl;
+        cout << endl << "c Compilation env " << Bosphorus::get_compilation_env() << endl;
         cout << "c --- Configuration --\n"
              << "c maxTime = " << std::scientific << std::setprecision(2)
              << config.maxTime << std::fixed << endl
              << "c XL simp (deg = " << config.xlDeg
              << "; s = " << config.XLsample << '+' << config.XLsampleX
-             << "): " << !config.noXL << endl
-             << "c EL simp (s = " << config.ELsample << "): " << !config.noEL
+             << "): " << config.doXL << endl
+             << "c EL simp (s = " << config.ELsample << "): " << config.doEL
              << endl
              << "c SAT simp (" << config.numConfl_inc << ':'
-             << config.numConfl_lim << "): " << !config.noSAT
+             << config.numConfl_lim << "): " << config.doSAT << endl
              << " using " << config.numThreads << " threads" << endl
-             << "c Stop simplifying if SAT finds solution? "
-             << (config.stopOnSolution ? "Yes" : "No") << endl
-             << "c Paranoid: " << config.paranoid << endl
              << "c Cut num: " << config.cutNum << endl
-             << "c Karnaugh size: " << config.maxKarnTableSize << endl
+             << "c Brickenstein cutoff: " << config.brickestein_algo_cutoff << endl
              << "c --------------------" << endl;
     }
 }
 
-ANF* read_anf()
-{
-    // Find out maxVar in input ANF file
-    size_t maxVar = ANF::readFileForMaxVar(config.anfInput);
-
-    // Construct ANF
-    // ring size = maxVar + 1, because ANF variables start from x0
-    polybori_ring = new BoolePolyRing(maxVar + 1);
-    ANF* anf = new ANF(polybori_ring, config);
-    anf->readFile(config.anfInput);
-    return anf;
-}
-
-ANF* read_cnf(vector<Clause>& extra_clauses)
-{
-    DIMACSCache dimacs_cache(config.cnfInput.c_str());
-    const vector<Clause>& orig_clauses(dimacs_cache.getClauses());
-    size_t maxVar = dimacs_cache.getMaxVar();
-
-    // Chunk up by L positive literals. L = config.cutNum
-    vector<Clause> chunked_clauses;
-    for (auto clause : orig_clauses) {
-        // small already
-        if (clause.size() <= config.cutNum) {
-            chunked_clauses.push_back(clause);
-            continue;
-        }
-
-        // Count number of positive literals
-        size_t positive_count = 0;
-        for (const Lit& l : clause.getLits()) {
-            positive_count += !l.sign();
-        }
-        if (positive_count <= config.cutNum) {
-            chunked_clauses.push_back(clause);
-            continue;
-        }
-
-        // need to chop it up
-        if (config.verbosity >= 5)
-            cout << clause << " --> ";
-
-        vector<Lit> collect;
-        size_t count = 0;
-        for (auto l : clause.getLits()) {
-            collect.push_back(l);
-            count += !l.sign();
-            if (count > config.cutNum) {
-                // Create new aux
-                Lit aux = Lit(maxVar, false);
-                maxVar++;
-
-                // replace the last one when a negative auxilary
-                Lit prev = collect.back();
-                collect.back() = ~aux;
-
-                extra_clauses.push_back(collect);
-                chunked_clauses.push_back(collect);
-                if (config.verbosity >= 5)
-                    cout << collect << " and ";
-
-                collect.clear();
-                collect.push_back(aux);
-                collect.push_back(prev);
-                count = 2; // because both aux and prev are positives!
-            }
-        } //idx
-        if (!collect.empty()) {
-            extra_clauses.push_back(collect);
-            chunked_clauses.push_back(collect);
-            if (config.verbosity >= 5)
-                cout << collect;
-        }
-        if (config.verbosity >= 5)
-            cout << endl;
-    } //for
-
-    // Construct ANF
-    if (config.verbosity >= 4) {
-        cout << "c Constructing CNF with " << maxVar << " variables." << endl;
-    }
-    // ring size = maxVar, because CNF variables start from 1
-    polybori_ring = new BoolePolyRing(maxVar);
-    ANF* anf = new ANF(polybori_ring, config);
-    for (auto clause : chunked_clauses) {
-        BoolePolynomial poly(1, *polybori_ring);
-        for (const Lit& l : clause.getLits()) {
-            BoolePolynomial alsoAdd(*polybori_ring);
-            if (!l.sign())
-                alsoAdd = poly;
-            poly *= BooleVariable(l.var(), *polybori_ring);
-            poly += alsoAdd;
-        }
-        anf->addBoolePolynomial(poly);
-        if (config.verbosity >= 5) {
-            cout << clause << " -> " << poly << endl;
-        }
-    }
-
-    return anf;
-}
-
-CNF* anf_to_cnf(const ANF* anf, const vector<Clause>& cutting_clauses)
-{
-    double convStartTime = cpuTime();
-    CNF* cnf = new CNF(*anf, cutting_clauses, config);
-    if (config.verbosity >= 2) {
-        cout << "c [CNF conversion] in " << (cpuTime() - convStartTime)
-             << " seconds.\n";
-        cnf->printStats();
-    }
-    return cnf;
-}
-
-void write_anf(const ANF* anf)
+void write_solution_to_file(const char* fname, const Solution& solution)
 {
     std::ofstream ofs;
-    ofs.open(config.anfOutput.c_str());
+    ofs.open(fname);
     if (!ofs) {
-        std::cerr << "c Error opening file \"" << config.anfOutput
-                  << "\" for writing\n";
+        std::cerr << "c Error opening file \"" << fname << "\" for writing\n";
         exit(-1);
-    } else {
-        ofs << "c Executed arguments: " << config.executedArgs << endl;
-        ofs << *anf << endl;
-    }
-    ofs.close();
-}
-
-void write_cnf(const ANF* anf, const vector<Clause>& cutting_clauses,
-               const vector<BoolePolynomial>& learnt)
-{
-    CNF* cnf = anf_to_cnf(anf, cutting_clauses);
-    std::ofstream ofs;
-    ofs.open(config.cnfOutput.c_str());
-    if (!ofs) {
-        std::cerr << "c Error opening file \"" << config.cnfOutput
-                  << "\" for writing\n";
-        exit(-1);
-    } else {
-        if (config.writecomments) {
-            ofs << "c Executed arguments: " << config.executedArgs << endl;
-            for (size_t i = 0; i < anf->getRing().nVariables(); i++) {
-                Lit l = anf->getReplaced(i);
-                BooleVariable v(l.var(), anf->getRing());
-                if (l.sign()) {
-                    ofs << "c MAP " << i + 1 << " = -" << cnf->getVarForMonom(v)
-                        << endl;
-                } else {
-                    ofs << "c MAP " << i + 1 << " = " << cnf->getVarForMonom(v)
-                        << endl;
-                }
-            }
-            for (size_t i = 0; i < cnf->getNumVars(); ++i) {
-                const BooleMonomial mono = cnf->getMonomForVar(i);
-                if (mono.deg() > 0)
-                    assert(i == cnf->getVarForMonom(mono));
-                if (mono.deg() > 1)
-                    ofs << "c MAP " << i + 1 << " = " << mono << endl;
-            }
-        }
-
-        cnf->print_without_header(ofs);
-
-        ofs << "c Learnt " << learnt.size() << " fact(s)\n";
-        if (config.writecomments) {
-            for (const BoolePolynomial& poly : learnt) {
-                ofs << "c " << poly << endl;
-            }
-        }
-    }
-    ofs.close();
-}
-
-void write_xnf(const ANF* anf, const vector<BoolePolynomial>& learnt)
-{
-    XNF* xnf = new XNF(*anf, config);
-    std::ofstream ofs;
-    ofs.open(config.cnfOutput.c_str());
-    if (!ofs) {
-        std::cerr << "c Error opening file \"" << config.cnfOutput
-                  << "\" for writing\n";
-        exit(-1);
-    } else {
-        xnf->print_without_header(ofs);
-
-        ofs << "c Learnt " << learnt.size() << " fact(s)\n";
-        if (config.writecomments) {
-            for (const BoolePolynomial& poly : learnt) {
-                ofs << "c " << poly << endl;
-            }
-        }
-    }
-    ofs.close();
-}
-
-void deduplicate(vector<BoolePolynomial>& learnt)
-{
-    vector<BoolePolynomial> dedup;
-    ANF::eqs_hash_t hash;
-    for (const BoolePolynomial& p : learnt) {
-        if (hash.insert(p.hash()).second)
-            dedup.push_back(p);
-    }
-    if (config.verbosity >= 3) {
-        cout << "c [Dedup] " << learnt.size() << "->" << dedup.size() << endl;
-    }
-    learnt.swap(dedup);
-}
-
-void simplify(ANF* anf, vector<BoolePolynomial>& loop_learnt,
-              const ANF* orig_anf, const vector<Clause>& cutting_clauses)
-{
-    cout << "c [boshp] Running iterative simplification..." << endl;
-    bool timeout = (cpuTime() > config.maxTime);
-    if (timeout) {
-        if (config.verbosity) {
-            cout << "c Timeout before learning" << endl;
-        }
-        return;
     }
 
-    double loopStartTime = cpuTime();
-    // Perform initial propagation to avoid needing >= 2 iterations
-    anf->propagate();
-    timeout = (cpuTime() > config.maxTime);
+    if (solution.ret == l_False) {
+        ofs << "s UNSATISFIABLE" << endl;
+    } else if (solution.ret == l_True) {
+        ofs << "s SATISFIABLE" << endl;
 
-    bool foundSolution = false;
-    bool changes[] = {true, true, true}; // any changes for the strategies
-    size_t waits[] = {0, 0, 0};
-    size_t countdowns[] = {0, 0, 0};
-    uint32_t numIters = 0;
-    unsigned char subIters = 0;
-    CNF* cnf = nullptr;
-    SimplifyBySat* sbs = nullptr;
-
-    while (!timeout && anf->getOK() &&
-           (!config.stopOnSolution || !foundSolution) &&
-           (std::accumulate(changes, changes + 3, false,
-                            std::logical_or<bool>()) ||
-            numIters < config.minIter)) {
-        static const char* strategy_str[] = {"XL", "ElimLin", "SAT"};
-        const double startTime = cpuTime();
-        int num_learnt = 0;
-
-        if (countdowns[subIters] > 0) {
-            if (config.verbosity >= 2) {
-                cout << "c [" << strategy_str[subIters] << "] waiting for "
-                     << countdowns[subIters] << " iteration(s)." << endl;
-            }
-        } else {
-            size_t prevsz = loop_learnt.size();
-            switch (subIters) {
-                case 0:
-                    if (!config.noXL) {
-                        if (!extendedLinearization(config, anf->getEqs(),
-                                                   loop_learnt)) {
-                            anf->setNOTOK();
-                        } else {
-                            for (size_t i = prevsz; i < loop_learnt.size(); ++i)
-                                num_learnt +=
-                                    anf->addBoolePolynomial(loop_learnt[i]);
-                        }
-                    }
-                    break;
-                case 1:
-                    if (!config.noEL) {
-                        if (!elimLin(config, anf->getEqs(), loop_learnt)) {
-                            anf->setNOTOK();
-                        } else {
-                            for (size_t i = prevsz; i < loop_learnt.size(); ++i)
-                                num_learnt +=
-                                    anf->addBoolePolynomial(loop_learnt[i]);
-                        }
-                    }
-                    break;
-                case 2:
-                    if (!config.noSAT) {
-                        size_t beg = 0;
-                        if (cnf == nullptr)
-                            cnf = new CNF(*anf, cutting_clauses, config);
-                        else
-                            beg = cnf->update();
-                        if (sbs == nullptr)
-                            sbs = new SimplifyBySat(*cnf, config);
-                        num_learnt = sbs->simplify(
-                            config.numConfl_lim, config.numConfl_inc,
-                            config.maxTime, beg, loop_learnt, foundSolution,
-                            *anf, orig_anf);
-                    }
-                    break;
-            }
-
-            if (config.verbosity >= 2) {
-                cout << "c [" << strategy_str[subIters] << "] learnt "
-                     << num_learnt << " new facts in "
-                     << (cpuTime() - startTime) << " seconds." << endl;
-            }
-        }
-
-        // Determine if there are any changes to the system
-        if (num_learnt <= 0) {
-            changes[subIters] = false;
-        } else {
-            changes[subIters] = true;
-            bool ok = anf->propagate();
-            if (!ok) {
-                if (config.verbosity >= 1)
-                    cout << "c [ANF Propagation] is false\n";
-            }
-        }
-
-        // Scheduling strategies
-        if (changes[subIters]) {
-            waits[subIters] = 0;
-        } else {
-            if (countdowns[subIters] > 0)
-                --countdowns[subIters];
-            else {
-                static size_t series[] = {0, 1,  1,  2,  3,  5,
-                                          8, 13, 21, 34, 55, 89};
-                countdowns[subIters] = series[std::min(
-                    waits[subIters], sizeof(series) / sizeof(series[0]) - 1)];
-                ++waits[subIters];
-            }
-        }
-
-        if (subIters < 2)
-            ++subIters;
-        else {
-            ++numIters;
-            subIters = 0;
-            deduplicate(loop_learnt); // because this is a good time to do this
-        }
-        timeout = (cpuTime() > config.maxTime);
-    }
-
-    if (config.verbosity >= 2) {
-        cout << "c ["
-             << (timeout
-                     ? "Timeout"
-                     : ((config.stopOnSolution && foundSolution)
-                            ? "Solution"
-                            : (!anf->getOK() ? "No-solution" : "Fixed-Point")))
-             << " after " << numIters << '.' << static_cast<size_t>(subIters)
-             << " iteration(s) in " << (cpuTime() - loopStartTime)
-             << " seconds.]\n";
-    }
-
-    if (sbs != nullptr)
-        delete sbs;
-    if (cnf != nullptr)
-        delete cnf;
-    anf->contextualize(loop_learnt);
-}
-
-void addTrivialFromANF(ANF* anf, vector<BoolePolynomial>& all_learnt,
-                       const ANF::eqs_hash_t& orig_eqs_hash)
-{
-    // Add *NEW* assignments and equivalences
-    for (uint32_t v = 0; v < anf->getRing().nVariables(); v++) {
-        const lbool val = anf->value(v);
-        const Lit lit = anf->getReplaced(v);
-        BooleVariable bv = anf->getRing().variable(v);
-        if (val != l_Undef) {
-            BoolePolynomial assignment(bv + BooleConstant(val == l_True));
-            if (orig_eqs_hash.find(assignment.hash()) == orig_eqs_hash.end())
-                all_learnt.push_back(assignment);
-        } else if (lit != Lit(v, false)) {
-            BooleVariable bv2 = anf->getRing().variable(lit.var());
-            BoolePolynomial equivalence(bv + bv2 + BooleConstant(lit.sign()));
-            if (orig_eqs_hash.find(equivalence.hash()) == orig_eqs_hash.end())
-                all_learnt.push_back(equivalence);
-        }
-    }
-}
-
-#ifdef SATSOLVE_ENABLED
-void solve_by_sat(const ANF* anf, const vector<Clause>& cutting_clauses,
-                  const ANF* orig_anf)
-{
-    CNF* cnf = anf_to_cnf(anf, cutting_clauses);
-    SATSolve solver(config.verbosity, config.paranoid, config.solverExe, config.numThreads);
-    vector<lbool> sol = solver.solveCNF(orig_anf, *anf, *cnf);
-    std::ofstream ofs;
-    ofs.open(config.solutionOutput.c_str());
-    if (!ofs) {
-        std::cerr << "c Error opening file \"" << config.solutionOutput
-                  << "\" for writing\n";
-        exit(-1);
-    } else {
         size_t num = 0;
         ofs << "v ";
-        for (const lbool lit : sol) {
+        for (const lbool lit : solution.sol) {
             if (lit != l_Undef) {
                 ofs << ((lit == l_True) ? "" : "-") << num << " ";
             }
             num++;
         }
         ofs << endl;
+    } else {
+        assert(false);
+        exit(-1);
+    }
+
+    if (config.verbosity >= 2) {
+        cout << "c [SAT] Solution written to " << fname << endl;
     }
     ofs.close();
-
-    //also write to the console
-    size_t num = 0;
-    cout << "v ";
-    for (const lbool lit : sol) {
-        if (lit != l_Undef) {
-            cout << ((lit == l_True) ? "" : "-") << num << " ";
-        }
-        num++;
-    }
-    cout << endl;
-
-    if (config.verbosity) {
-        cout << "c Wrote solution to '" << config.solutionOutput << "'" << endl;
-    }
 }
-#endif
 
 int main(int argc, char* argv[])
 {
     parseOptions(argc, argv);
-    if (config.anfInput.length() == 0 && config.cnfInput.length() == 0) {
+    if (anfInput.length() == 0 && cnfInput.length() == 0) {
         cerr << "c ERROR: you must provide an ANF/CNF input file" << endl;
+        exit(-1);
     }
 
+    Bosphorus mylib;
+    mylib.set_config((void*)&config);
+
     // Read from file
-    ANF* anf = nullptr;
-    if (config.readANF) {
+    ANF* anf = NULL;
+    if (readANF) {
         double parseStartTime = cpuTime();
-        anf = read_anf();
+        anf = mylib.read_anf(anfInput.c_str());
         if (config.verbosity) {
             cout << "c [ANF Input] read in T: " << (cpuTime() - parseStartTime)
-            << endl;
+                 << endl;
         }
     }
 
-    vector<Clause> cutting_clauses; ///<if we cut up the CNFs in the process, we must let the world know
-
-    if (config.readCNF) {
+    if (readCNF) {
         double parseStartTime = cpuTime();
-        anf = read_cnf(cutting_clauses);
+        anf = mylib.read_cnf(cnfInput.c_str());
         if (config.verbosity) {
             cout << "c [CNF Input] read in T: " << (cpuTime() - parseStartTime)
-            << endl;
+                 << endl;
         }
     }
     assert(anf != NULL);
     if (config.verbosity >= 1) {
-        anf->printStats();
+        Bosphorus::print_stats(anf);
     }
 
     // this is needed to check for test solution and the check if it is really a new learnt fact
@@ -733,74 +340,253 @@ int main(int argc, char* argv[])
     if (config.verbosity) {
         cout << "c [ANF hash] Calculating ANF hash..." << endl;
     }
-    ANF* orig_anf = nullptr;
-    ANF::eqs_hash_t* orig_anf_hash = nullptr;
 
-    if (config.paranoid)
-        orig_anf = new ANF(*anf, anf_no_replacer_tag());
-    else
-        orig_anf_hash = new ANF::eqs_hash_t(anf->getEqsHash());
+    auto orig_anf = Bosphorus::copy_anf_no_replacer(anf);
     if (config.verbosity) {
         cout << "c [ANF hash] Done. T: " << (cpuTime() - myTime) << endl;
     }
 
-    // Perform simplifications
-    vector<BoolePolynomial> learnt;
-
     if (config.simplify) {
-        simplify(anf, learnt, orig_anf, cutting_clauses);
+        const char* cnf_orig = NULL;
+        if (cnfInput.length() > 0) {
+            cnf_orig = cnfInput.c_str();
+        }
+        cout << "c Simplifying...." << endl;
+        mylib.simplify(anf, cnf_orig);
+        cout << "c Simplifying finished." << endl;
     }
     if (config.printProcessedANF) {
-        cout << *anf << endl;
+        Bosphorus::print_anf(anf);
     }
     if (config.verbosity >= 1) {
-        anf->printStats();
+        Bosphorus::print_stats(anf);
     }
-
-    #ifdef SATSOLVE_ENABLED
-    // Solve processed CNF
-    if (config.doSolveSAT) {
-        cout << "Solving by SAT..." << endl;
-        solve_by_sat(anf, cutting_clauses, orig_anf);
-    }
-    #endif
 
     // finish up the learnt polynomials
-    if (orig_anf_hash != nullptr)
-        addTrivialFromANF(anf, learnt, *orig_anf_hash);
-    else
-        addTrivialFromANF(anf, learnt, orig_anf->getEqsHash());
-
-    // Free some space in case wee need the memory later
-    if (orig_anf != nullptr)
-        delete orig_anf;
-    if (orig_anf_hash != nullptr)
-        delete orig_anf_hash;
+    mylib.add_trivial_learnt_from_anf_to_learnt(anf, orig_anf);
+    Bosphorus::delete_anf(orig_anf);
 
     // remove duplicates from learnt clauses
-    deduplicate(learnt);
+    mylib.deduplicate();
 
     // Write to file
-    if (config.writeANF) {
-        write_anf(anf);
+    if (writeANF) {
+        mylib.write_anf(anfOutput.c_str(), anf);
     }
 
-    if (config.writeCNF) {
-        if (config.xnf) {
-            write_xnf(anf, learnt);
+    CNF* cnf = NULL;
+    if (writeCNF) {
+        const char* cnf_input = NULL;
+        if (cnfInput.length() > 0) {
+            cnf_input = cnfInput.c_str();
+        }
+
+        if (cnf_input != NULL) {
+            cnf = mylib.write_cnf(cnf_input, cnfOutput.c_str(), anf);
         } else {
-            write_cnf(anf, cutting_clauses, learnt);
+            cnf = mylib.write_cnf(cnfOutput.c_str(), anf);
+        }
+        if (!solmap_file_write.empty()) {
+            std::ofstream ofs;
+            ofs.open(solmap_file_write.c_str()); //std::ios_base::app
+            if (!ofs) {
+                std::cerr << "c Error opening file \"" << solmap_file_write
+                          << "\" for writing solution map: solution -> simplified ANF\n";
+                exit(-1);
+            }
+
+            mylib.write_solution_map(cnf, &ofs);
+            mylib.write_solution_map(anf, &ofs);
         }
     }
 
+    if (solve_with_cms) {
+        if (!writeCNF) {
+            cnf = mylib.write_cnf(NULL, anf);
+        }
+        #ifdef USE_CMS
+        if (solve_with_cms || all_solutions) {
+            solve(&mylib, cnf, anf);
+        }
+        #else
+        cout << "ERROR: CryptoMiniSat libraries were not found during build. Cannot solve." << endl;
+        exit(-1);
+        #endif
+    }
+
     if (config.verbosity >= 1) {
-        cout << "c Learnt " << learnt.size() << " fact(s) in " << cpuTime()
+        cout << "c Learnt " << mylib.get_learnt_size() << " fact(s) in " << cpuTime()
              << " seconds using "
              << static_cast<double>(memUsed()) / 1024.0 / 1024.0 << "MB.\n";
     }
 
     // clean up
-    delete anf;
-    delete polybori_ring;
+    Bosphorus::delete_anf(anf);
     return 0;
 }
+
+#ifdef USE_CMS
+void print_solution_cnf_style(const Solution& solution);
+void check_solution(const ANF* anf, const Solution& solution);
+void print_solution_anf_style(const Solution& solution);
+void ban_solution(CMSat::SATSolver& solver, const Solution& solution);
+
+
+Solution extend_solution(
+    const vector<CMSat::lbool>& model,
+    const std::map<uint32_t, VarMap>& varmap,
+    uint32_t num_anf_vars
+);
+
+void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
+    vector<Clause> cls = mylib-> get_clauses(cnf);
+    CMSat::SATSolver solver;
+    solver.new_vars(mylib->get_max_var(cnf));
+    for(const Bosph::Clause& c: cls) {
+        const Bosph::Clause* cc = &c;
+        const vector<CMSat::Lit>* cc2 = (vector<CMSat::Lit>*)cc;
+        solver.add_clause(*cc2);
+    }
+
+    uint32_t number_of_solutions = 0;
+    while(true) {
+        CMSat::lbool ret = solver.solve();
+        Solution solution;
+        if (ret == CMSat::l_True) {
+            solution.ret = l_True;
+            std::map<uint32_t, VarMap> varmap;
+            mylib->get_solution_map(anf, varmap);
+            mylib->get_solution_map(cnf, varmap);
+            uint32_t num_anf_vars = mylib->get_max_var(anf);
+            solution = extend_solution(solver.get_model(), varmap, num_anf_vars);
+        } else {
+            solution. ret = l_False;
+        }
+        print_solution_anf_style(solution);
+        //print_solution_cnf_style(solution);
+        if (ret == CMSat::l_True) {
+            check_solution(anf, solution);
+        }
+        if (!all_solutions || ret == CMSat::l_False) {
+            break;
+        }
+        ban_solution(solver, solution);
+        number_of_solutions++;
+    }
+
+    if (all_solutions) {
+        cout << "c Number of solutions found: " << number_of_solutions << endl;
+    }
+}
+
+void ban_solution(CMSat::SATSolver& solver, const Solution& solution)
+{
+    vector<CMSat::Lit> clause;
+    for(uint32_t i = 0; i < solution.sol.size(); i++) {
+        if (solution.sol[i] != l_Undef) {
+            auto lit = CMSat::Lit(i, solution.sol[i] == l_True);
+            clause.push_back(lit);
+        }
+    }
+    solver.add_clause(clause);
+}
+
+void print_solution_anf_style(const Solution& s)
+{
+    if (s.ret == l_False) {
+        cout << "s ANF-UNSATISFIABLE" << endl;
+        return;
+    }
+
+    assert(s.ret == l_True);
+    cout << "s ANF-SATISFIABLE" << endl;
+    cout << "v ";
+    for(uint32_t i = 0; i < s.sol.size(); i++) {
+        if (s.sol[i] != l_Undef) {
+            if (s.sol[i] == l_True) {
+                cout << "1+";
+            }
+            cout << "x(" << i << ") ";
+        }
+    }
+    cout << endl;
+}
+
+Solution extend_solution(
+    const vector<CMSat::lbool>& model,
+    const std::map<uint32_t, VarMap>& varmap,
+    uint32_t num_anf_vars
+) {
+    Solution s;
+    s.ret = l_True;
+    s.sol.resize(num_anf_vars);
+    for(auto& s: s.sol) {
+        s = l_Undef;
+    }
+
+    for(int do_must_set = 0; do_must_set < 2; do_must_set++) {
+        bool changed = true;
+        while(changed) {
+            changed = false;
+            for(const auto& v: varmap) {
+                if (v.first > s.sol.size()) {
+                    continue;
+                }
+                if (s.sol[v.first] == l_Undef) {
+                    if (v.second.type == Bosph::VarMap::fixed) {
+                        s.sol[v.first] = v.second.value ? l_True : l_False;
+                        changed = true;
+                    } else if (v.second.type == Bosph::VarMap::cnf_var) {
+                        s.sol[v.first] =
+                        (model[v.second.other_var] == CMSat::l_True) ? l_True: l_False;
+                        changed = true;
+                    } else if (v.second.type == Bosph::VarMap::anf_repl) {
+                        if (s.sol[v.second.other_var] != l_Undef) {
+                            s.sol[v.first] = s.sol[v.second.other_var] ^ v.second.inv;
+                            changed = true;
+                        }
+                    } else if (v.second.type == Bosph::VarMap::must_set) {
+                        if (do_must_set) {
+                            s.sol[v.first] = l_True;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return s;
+}
+
+void print_solution_cnf_style(const Solution& solution)
+{
+    assert(solution.ret != l_Undef);
+    cout << "Solution ";
+    cout << ((solution.ret == l_True) ? "SAT" : "UNSAT");
+
+    size_t num = 0;
+    std::stringstream toWrite;
+    toWrite << "v ";
+    for (const lbool lit : solution.sol) {
+        if (lit != l_Undef) {
+            toWrite << ((lit == l_True) ? "" : "-") << num << " ";
+        }
+        num++;
+    }
+    cout << toWrite.str() << endl;
+}
+
+void check_solution(const ANF* anf, const Solution& solution)
+{
+    //Checking
+    bool goodSol = Bosphorus::evaluate(anf, solution.sol);
+    if (!goodSol) {
+        cout << "ERROR! Solution found is incorrect!" << endl;
+        exit(-1);
+    }
+    if (config.verbosity) {
+        cout << "c Solution found is correct." << endl;
+    }
+}
+#endif

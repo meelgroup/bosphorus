@@ -24,16 +24,18 @@ SOFTWARE.
 #ifndef EVALUATOR_H__
 #define EVALUATOR_H__
 
-#include "cryptominisat5/solvertypesmini.h"
+#include <map>
+
+#include "bosphorus/solvertypesmini.hpp"
 #include "polybori.h"
 
 USING_NAMESPACE_PBORI
+using namespace Bosph;
 
-#include <map>
-
-using CMSat::lbool;
 using std::map;
 using std::vector;
+
+namespace BLib {
 
 inline const lbool evaluatePoly(const BoolePolynomial& poly,
                                 const uint32_t setting,
@@ -51,7 +53,7 @@ inline const lbool evaluatePoly(const BoolePolynomial& poly,
         }
         ret ^= thisMonom;
     }
-    return CMSat::boolToLBool(ret);
+    return boolToLBool(ret);
 }
 
 inline lbool evaluatePoly(const BoolePolynomial& poly, const vector<lbool>& sol)
@@ -69,7 +71,9 @@ inline lbool evaluatePoly(const BoolePolynomial& poly, const vector<lbool>& sol)
         }
         ret += thisSubPoly;
     }
-    return CMSat::boolToLBool(ret.isZero());
+    return boolToLBool(ret.isZero());
+}
+
 }
 
 #endif //__EVALUATOR_H__

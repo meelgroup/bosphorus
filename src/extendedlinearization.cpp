@@ -26,7 +26,9 @@ SOFTWARE.
 
 using std::vector;
 
-bool extendedLinearization(const ConfigData& config,
+using namespace BLib;
+
+bool BLib::extendedLinearization(const ConfigData& config,
                            const vector<BoolePolynomial>& eqs,
                            vector<BoolePolynomial>& loop_learnt)
 {

@@ -32,12 +32,12 @@ SOFTWARE.
 using boost::lexical_cast;
 using std::cout;
 using std::endl;
+using namespace BLib;
 
 ANF::ANF(const polybori::BoolePolyRing* _ring, ConfigData& _config)
     : ring(_ring),
       config(_config),
-      replacer(new Replacer),
-      new_equations_begin(0)
+      replacer(new Replacer)
 {
     //ensure that the variables are not new
     for (size_t i = 0; i < ring->nVariables(); i++) {
@@ -71,13 +71,21 @@ size_t ANF::readFileForMaxVar(const std::string& filename)
         if (temp.length() == 0 || temp[0] == 'c')
             continue;
 
-        size_t var = 0;
         // simply search for consecutive numbers
+        // however "+1" is a NUMBER but not a MONOMIAL
+        // so we have to take that into consideration
+        size_t var = 0;
+        bool isMonomial = false;
         for (uint32_t i = 0; i < temp.length(); ++i) {
             //At this point, only numbers are valid
-            if (!std::isdigit(temp[i]))
+            if (!std::isdigit(temp[i])) {
                 var = 0;
-            else {
+                if (temp[i] == 'x' || (isMonomial && temp[i] == '(')) {
+                    isMonomial = true;
+                } else {
+                    isMonomial = false;
+                }
+            } else if (isMonomial) {
                 var = var * 10 + (temp[i] - '0');
                 maxVar = std::max(
                     maxVar,
@@ -85,7 +93,6 @@ size_t ANF::readFileForMaxVar(const std::string& filename)
             }
         }
     }
-
     ifs.close();
     return maxVar;
 }
@@ -286,22 +293,27 @@ size_t ANF::readFile(const std::string& filename)
     return maxVar;
 }
 
+void print_solution_map(std::ofstream* ofs)
+{
+
+}
+
 // KMA Chai: Check if this polynomial can cause further ANF propagation
 bool ANF::check_if_need_update(const BoolePolynomial& poly,
                                unordered_set<uint32_t>& updatedVars)
 {
-    //
+    //////////////////
     // Assign values
-    //
+    //////////////////
+
     // If polynomial is "x = 0" or "x + 1 = 0", set the value of x
     if (poly.nUsedVariables() == 1 && poly.deg() == 1) {
-        // Make the update
         uint32_t v = poly.usedVariables().firstVariable().index();
-        vector<uint32_t> ret = replacer->setValue(v, poly.hasConstantPart());
+        auto updated_vars = replacer->setValue(v, poly.hasConstantPart());
 
         // Mark updated vars
-        for (const uint32_t& updated_var : ret) {
-            updatedVars.insert(updated_var);
+        for (const uint32_t& var : updated_vars) {
+            updatedVars.insert(var);
         }
         return true;
     }
@@ -309,20 +321,20 @@ bool ANF::check_if_need_update(const BoolePolynomial& poly,
     // If polynomial is "a*b*c*.. + 1 = 0", then all variables must be TRUE
     if (poly.isPair() && poly.hasConstantPart()) {
         for (const uint32_t& var_idx : poly.firstTerm()) {
-            // Make the update
-            vector<uint32_t> ret = replacer->setValue(var_idx, true);
+            auto updated_vars = replacer->setValue(var_idx, true);
 
             // Mark updated vars
-            for (const uint32_t var_idx2 : ret) {
-                updatedVars.insert(var_idx2);
+            for (const uint32_t var : updated_vars) {
+                updatedVars.insert(var);
             }
         }
         return true;
     }
 
-    //
+    //////////////////
     // Assign anti/equivalences
-    //
+    //////////////////
+
     // If polynomial is "x + y = 0" or "x + y + 1 = 0", set the value of x in terms of y
     if (poly.nUsedVariables() == 2 && poly.deg() == 1) {
         uint32_t var[2];
@@ -380,16 +392,6 @@ bool ANF::addLearntBoolePolynomial(const BoolePolynomial& poly)
     }
 
     return added;
-}
-
-void ANF::learnSolution(const vector<lbool>& solution)
-{
-    for (size_t i = 0; i < ring->nVariables(); ++i)
-        if (solution[i] != l_Undef) {
-            BoolePolynomial poly(solution[i] == l_True, *ring);
-            poly += BooleVariable(i, *ring);
-            addLearntBoolePolynomial(poly);
-        }
 }
 
 // Slow. O(n^2) because cannot use set<> for BoolePolynomial; KMACHAI: don't understand this comment.....
@@ -480,18 +482,20 @@ bool ANF::propagate()
         cout << "c [ANF prop] Running ANF propagation..." << endl;
     }
 
-    unordered_set<uint32_t>
-        updatedVars; //When a polynomial updates some var's definition, this set is updated. Used during simplify & addBoolePolynomial
+    //When a polynomial updates some var's definition, this set is updated. Used during simplify & addBoolePolynomial
+    unordered_set<uint32_t> updatedVars;
+    size_t updates = 0;
 
     // Always run through the new equations
-    size_t num_initial_updates = 0;
-    for (size_t eq_idx = new_equations_begin; eq_idx < eqs.size(); ++eq_idx)
-        num_initial_updates +=
-            check_if_need_update(eqs[eq_idx], updatedVars); // changes: replacer
+    for (size_t eq_idx = new_equations_begin; eq_idx < eqs.size(); ++eq_idx) {
+        // changes: replacer
+        updates += check_if_need_update(eqs[eq_idx], updatedVars);
+    }
+
     if (config.verbosity >= 3) {
         cout << "c  "
              << "number of variables to update: " << updatedVars.size()
-             << " (caused by " << num_initial_updates << '/'
+             << " (caused by " << updates << '/'
              << (eqs.size() - new_equations_begin) << " equations)" << endl;
     }
 
@@ -573,7 +577,7 @@ bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars,
     // now remove the empty
     removeEquations(empty_equations);
 
-    if (!timeout && config.paranoid)
+    if (!timeout)
         checkSimplifiedPolysContainNoSetVars(); // May not fully propagate due to timeout
 
     return true;
@@ -670,4 +674,14 @@ void ANF::checkOccur() const
     if (config.verbosity >= 3) {
         cout << "Sanity check passed" << endl;
     }
+}
+
+void ANF::get_solution_map(map<uint32_t, VarMap>& ret) const
+{
+    replacer->get_solution_map(ret);
+}
+
+void ANF::print_solution_map(std::ofstream* ofs)
+{
+    replacer->print_solution_map(ofs);
 }

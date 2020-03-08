@@ -30,8 +30,12 @@ SOFTWARE.
 
 USING_NAMESPACE_PBORI
 
+namespace BLib {
+
 bool extendedLinearization(const ConfigData& config,
                            const std::vector<BoolePolynomial>& eqs,
                            std::vector<BoolePolynomial>& loop_learnt);
+
+}
 
 #endif

@@ -19,69 +19,106 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+include_directories( ${PROJECT_SOURCE_DIR} )
+
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/GitSHA1.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp" @ONLY)
-set(bosphorus_public_headers "")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/solvertypesmini.hpp.in" "${CMAKE_CURRENT_BINARY_DIR}/bosphorus/solvertypesmini.hpp" @ONLY)
 include_directories(${CRYPTOMINISAT5_INCLUDE_DIRS})
 
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
+include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 set(bosph_lib_files
     anf.cpp
     cnf.cpp
-    xnf.cpp
-    karnaugh.cpp
+    anfcnfutils.cpp
     replacer.cpp
     dimacscache.cpp
-    simplifybysat.cpp
     extendedlinearization.cpp
     elimlin.cpp
     anfutils.cpp
+    bosphorus.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp
 )
 
-if (SATSOLVE_ENABLED)
-    set(bosph_lib_files ${bosph_lib_files} satsolve.cpp)
+if (USE_CMS)
+set(bosph_lib_files
+    ${bosph_lib_files} simplifybysat.cpp)
 endif()
 
-add_library(libbosphorus
+add_library(bosphorus
     ${bosph_lib_files}
 )
 
-target_link_libraries(libbosphorus
-  ${M4RI_LIBRARIES}
-  ${BRiAl_LIBRARIES}
+target_link_libraries(bosphorus
+    ${M4RI_LIBRARIES}
+    ${BRiAl_LIBRARIES}
+    ${PNG_LIBRARIES}
+    ${CRYPTOMINISAT5_LIBRARIES}
 )
 
-install(TARGETS libbosphorus
-    EXPORT ${BOSPHORUS_EXPORT_NAME}
-    LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-    PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include/bosphorus"
+set_target_properties(bosphorus PROPERTIES
+    PUBLIC_HEADER "${bosphorus_public_headers}"
+    VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+    SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
 )
 
 ###############
 
-add_executable(bosphorus
+add_executable(bosphorus-bin
     main.cpp
 )
-set_target_properties(bosphorus PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-set_target_properties(bosphorus PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+set_target_properties(bosphorus-bin PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+    OUTPUT_NAME bosphorus
+)
 
 if (STATICCOMPILE)
-    SET_TARGET_PROPERTIES(bosphorus PROPERTIES LINK_SEARCH_START_STATIC 1)
+    SET_TARGET_PROPERTIES(bosphorus-bin PROPERTIES LINK_SEARCH_START_STATIC 1)
 endif()
 
-target_link_libraries(bosphorus
-    libbosphorus
-    MV
+target_link_libraries(bosphorus-bin
+    bosphorus
     ${Boost_LIBRARIES}
-    ${PNG_LIBRARIES}
-    ${M4RI_LIBRARIES}
-    ${BRiAl_LIBRARIES}
-    ${CRYPTOMINISAT5_LIBRARIES}
 )
+
+
+bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.hpp )
+bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_BINARY_DIR}/bosphorus/solvertypesmini.hpp )
+
+# -----------------------------------------------------------------------------
+# Copy public headers into build directory include directory.
+# The bosphorusConfig.cmake we generate in the build directory depends on
+# this.
+# -----------------------------------------------------------------------------
+set(HEADER_DEST "${PROJECT_BINARY_DIR}/include/bosphorus")
+add_custom_target(CopyPublicHeaders ALL)
+get_target_property(bosphorus_public_headers bosphorus PUBLIC_HEADER)
+foreach(public_header ${bosphorus_public_headers})
+    get_filename_component(HEADER_NAME ${public_header} NAME)
+    add_custom_command(TARGET CopyPublicHeaders PRE_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E make_directory
+                               "${HEADER_DEST}"
+                       COMMAND ${CMAKE_COMMAND} -E echo
+                       "Copying ${HEADER_NAME} to ${HEADER_DEST}"
+                       COMMAND ${CMAKE_COMMAND} -E
+                           copy_if_different
+                           ${public_header}
+                           "${HEADER_DEST}"
+                      )
+endforeach()
+
+
 install(TARGETS bosphorus
     EXPORT ${BOSPHORUS_EXPORT_NAME}
-    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/bosphorus"
 )
 
-SET(CPACK_PACKAGE_EXECUTABLES "bosphorus")
 
+install(TARGETS bosphorus-bin
+    # EXPORT ${BOSPHORUS_EXPORT_NAME}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)

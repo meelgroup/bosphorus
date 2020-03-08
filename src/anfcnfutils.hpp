@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (C) 2018  Mate Soos, Davin Choo, Kian Ming A. Chai, DSO National Laboratories
+Copyright (C) 2019  Kian Ming A. Chai, DSO National Laboratories
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,34 +20,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef DIMACSCACHE_H__
-#define DIMACSCACHE_H__
+#ifndef ANFCNFUTILS_HPP
+#define ANFCNFUTILS_HPP
 
 #include <vector>
 #include "bosphorus/solvertypesmini.hpp"
-using namespace Bosph;
+#include "polybori.h"
 
-namespace BLib {
-
-class DIMACSCache
-{
-   public:
-    DIMACSCache(const char* _fname);
-    size_t getMaxVar(void) const
-    {
-        return maxVar;
-    }
-    const std::vector<Clause>& getClauses(void) const
-    {
-        return clauses;
-    }
-
-   private:
-    std::vector<Clause> clauses;
-    size_t maxVar;
-    const char* fname = nullptr;
-};
-
-}
+bool BrickesteinAlgo32(const polybori::BoolePolynomial &poly,
+                       std::vector<Bosph::Clause> &setofClauses);
 
 #endif

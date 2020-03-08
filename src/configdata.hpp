@@ -25,54 +25,38 @@ SOFTWARE.
 #define CONFIGDATA__H
 
 #include <limits>
-#include "polybori.h"
+#include <string>
 
 using std::string;
+
+namespace BLib {
 
 struct ConfigData {
     // Input/Output
     string executedArgs = "";
-    string anfInput;
-    string anfOutput;
-    string cnfInput;
-    string cnfOutput;
-    bool xnf = false;
-    bool readANF;
-    bool readCNF;
-    bool writeANF;
-    bool writeCNF;
     bool writecomments = false;
-    bool printProcessedANF;
-    uint32_t verbosity;
+    bool printProcessedANF = false;
+    uint32_t verbosity = 2;
     int simplify = 1;
 
     // CNF conversion
     uint32_t cutNum = 5;
-    uint32_t maxKarnTableSize;
+    uint32_t brickestein_algo_cutoff = 10;
 
     // Processes
     double maxTime = 1e20;
-    uint32_t minIter = 0;
-    bool noXL = false;
-    bool noEL = false;
-    bool noSAT = false;
+    int doXL = true;
+    int doEL = true;
+    int doSAT = true;
     double XLsample = 30.0;
     double XLsampleX = 4.0;
     double ELsample = 30.0;
-    uint32_t xlDeg;
+    uint32_t xlDeg = 1;
     uint64_t numConfl_inc = 10000;
     uint64_t numConfl_lim = 100000;
     unsigned int numThreads = 1;
-    bool stopOnSolution = false;
-    bool learnSolution = false;
-
-    // checks
-    int paranoid = 1; // the safer but slower option
-
-    // Solve processed CNF
-    bool doSolveSAT = false;
-    string solverExe;
-    string solutionOutput;
 };
+
+}
 
 #endif //CONFIGDATA__H

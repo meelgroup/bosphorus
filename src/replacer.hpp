@@ -27,17 +27,17 @@ SOFTWARE.
 #include <map>
 #include <set>
 #include <vector>
-#include "cryptominisat5/solvertypesmini.h"
+#include "bosphorus/solvertypesmini.hpp"
 #include "polybori.h"
 
-using CMSat::lbool;
-using CMSat::Lit;
-
 USING_NAMESPACE_PBORI
+using namespace Bosph;
 
 using std::map;
 using std::set;
 using std::vector;
+
+namespace BLib {
 
 class ANF;
 
@@ -57,6 +57,7 @@ class Replacer
         replaceTable.push_back(Lit(var, false));
     }
 
+    //returns updated vars
     vector<uint32_t> setValue(uint32_t var, bool value);
     vector<uint32_t> setReplace(uint32_t var, Lit lit);
     BoolePolynomial update(const BooleMonomial& m) const;
@@ -66,6 +67,8 @@ class Replacer
     bool evaluate(const vector<lbool>& vals) const;
     vector<lbool> extendSolution(const vector<lbool>& solution) const;
     void setNOTOK();
+    void print_solution_map(std::ofstream* ofs);
+    void get_solution_map(map<uint32_t, VarMap>& ret) const;
 
     //Get-functions
     lbool getValue(const uint32_t var) const;
@@ -219,6 +222,8 @@ inline std::ostream& operator<<(std::ostream& os, const Replacer& repl)
     os << "c UNSAT : " << std::boolalpha << !repl.ok << std::endl;
 
     return os;
+}
+
 }
 
 #endif //__REPLACER_H__

@@ -28,6 +28,8 @@ SOFTWARE.
 #include "configdata.hpp"
 #include "polybori.h"
 
+namespace BLib {
+
 std::pair<bool, double> if_sample_and_clone(
     const std::vector<polybori::BoolePolynomial>& eqs, double log2size);
 
@@ -44,5 +46,7 @@ double do_sample_and_clone(const uint32_t verbosity,
 void subsitute(const polybori::BooleVariable& from_var,
                const polybori::BoolePolynomial& to_poly,
                polybori::BoolePolynomial& poly);
+
+}
 
 #endif

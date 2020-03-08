@@ -44,8 +44,6 @@ SOFTWARE.
 
 USING_NAMESPACE_PBORI
 
-class Replacer;
-
 using std::cout;
 using std::endl;
 using std::list;
@@ -56,6 +54,10 @@ using std::set;
 using std::string;
 using std::unordered_set;
 using std::vector;
+
+namespace BLib {
+
+class Replacer;
 
 struct anf_no_replacer_tag {
 };
@@ -74,8 +76,9 @@ class ANF
     size_t readFile(const string& filename);
     bool propagate();
     inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
-    void learnSolution(const vector<lbool>& solution);
     void printStats() const;
+    void print_solution_map(std::ofstream* ofs);
+    void get_solution_map(map<uint32_t, VarMap>& ret) const;
 
     // Returns true if polynomial is new and has been added
     bool addBoolePolynomial(const BoolePolynomial& poly);
@@ -138,7 +141,7 @@ class ANF
     vector<vector<size_t> >
         occur; //occur[var] -> index of polys where the variable occurs
 
-    size_t new_equations_begin;
+    size_t new_equations_begin = 0;
 
     friend std::ostream& operator<<(std::ostream& os, const ANF& anf);
 };
@@ -301,6 +304,8 @@ ANF& ANF::operator=(const ANF& other)
     *replacer = *other.replacer;
     occur = other.occur;
     return *this;
+}
+
 }
 
 #endif //ANF_H__

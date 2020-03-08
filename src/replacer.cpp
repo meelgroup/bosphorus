@@ -23,13 +23,13 @@ SOFTWARE.
 
 #include "replacer.hpp"
 #include <iostream>
+#include <fstream>
 #include "anf.hpp"
-
-using CMSat::lbool;
-using CMSat::Lit;
 
 using std::cout;
 using std::endl;
+
+using namespace BLib;
 
 bool Replacer::evaluate(const vector<lbool>& vals) const
 {
@@ -136,13 +136,13 @@ vector<uint32_t> Replacer::setValue(uint32_t var, bool val)
 
     //set value
     if (value[var] != l_Undef) {
-        if (value[var] != CMSat::boolToLBool(val)) {
+        if (value[var] != boolToLBool(val)) {
             ok = false;
         }
         return alsoUpdated;
     }
 
-    value[var] = CMSat::boolToLBool(val);
+    value[var] = boolToLBool(val);
 
     //update anti/equivalent variables
     map<uint32_t, vector<uint32_t> >::iterator it = revReplaceTable.find(var);
@@ -154,7 +154,7 @@ vector<uint32_t> Replacer::setValue(uint32_t var, bool val)
     for (vector<uint32_t>::iterator it2 = vars.begin(), end2 = vars.end();
          it2 != end2; it2++) {
         assert(replaceTable[*it2].var() == var);
-        value[*it2] = CMSat::boolToLBool(replaceTable[*it2].sign() ^ val);
+        value[*it2] = boolToLBool(replaceTable[*it2].sign() ^ val);
         alsoUpdated.push_back(*it2);
     }
 
@@ -245,6 +245,69 @@ vector<uint32_t> Replacer::setReplace(uint32_t var, Lit lit)
     }
 
     return ret;
+}
+
+void Replacer::print_solution_map(std::ofstream* ofs)
+{
+    uint32_t num = 0;
+    for (vector<lbool>::const_iterator it = value.begin(), end = value.end();
+         it != end; it++, num++) {
+        if (*it != l_Undef) {
+            (*ofs) << "ANF-var-val " << num << " = " << *it << endl;
+        }
+    }
+
+    num = 0;
+    for (vector<Lit>::const_iterator it = replaceTable.begin(), end = replaceTable.end();
+        it != end; it++, num++
+    ) {
+        //it is not replaced
+        if (it->var() == num)
+            continue;
+
+        //maybe never solved for, because equation is "a = b", and neither "a", nor "b" appear anywhere else
+        //so, just set the value randomly... to true :)
+        (*ofs) << "must-set-ANF-var-to-any " << it->var() << endl;
+        (*ofs) << "ANF-var " << num << " = "
+               << "ANF-var " << it->var() << " ^ " << it->sign() << endl;
+    }
+}
+
+void Replacer::get_solution_map(map<uint32_t, VarMap>& ret) const
+{
+    uint32_t num = 0;
+    for (vector<lbool>::const_iterator it = value.begin(), end = value.end();
+         it != end; it++, num++) {
+        if (*it != l_Undef) {
+            VarMap m;
+            m.type = Bosph::VarMap::fixed;
+            m.value = (*it == l_True);
+            ret[num] = m;
+        }
+    }
+
+    num = 0;
+    for (vector<Lit>::const_iterator it = replaceTable.begin(), end = replaceTable.end();
+        it != end; it++, num++
+    ) {
+        //it is not replaced
+        if (it->var() == num)
+            continue;
+
+        //Don't overwrite existing value with this
+        if (ret.find(it->var()) == ret.end()) {
+            VarMap m;
+            m.type = Bosph::VarMap::must_set;
+            ret[it->var()] = m;
+        }
+
+        VarMap m2;
+        m2.type = Bosph::VarMap::anf_repl;
+        m2.other_var = it->var();
+        m2.inv = it->sign();
+        ret[num] = m2;
+    }
+
 }
 
 vector<lbool> Replacer::extendSolution(const vector<lbool>& solution) const

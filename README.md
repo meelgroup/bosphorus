@@ -1,15 +1,28 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Bosphorus is an ANF simplification and solving tool. It takes as input an ANF over GF(2) and can simplify it and also solve it. As a plus, it can also take in a CNF, convert it to ANF, simplify it, then either give a (simplified) CNF, an ANF, or can run a SAT solver directly and solve it. It uses the following systems: CryptoMiniSat, espresso, M4RI and PolyBoRi (actually BriAl, a version of PolyBoRi).
+Bosphorus is an ANF simplification and solving tool. It takes as input an ANF over GF(2) and can simplify and solve it. It uses many different algorithms, including XL, SAT, Brickenstein's ANF-to-CNF conversion, Gauss-Jordan elimination, etc. to simplify and solve ANFs.
+
+The main use of the system is to simplify and solve ANF problems. It should give you highly optimised ANFs and CNFs that it can solve. Its ANF simplifications should be useful is many areas, not just direct ANF-to-SAT solving. For example, it could be useful for helping to break [post-quantum cryptograpy problems](https://csrc.nist.gov/projects/post-quantum-cryptography).
 
 This work was done by Davin Choo and Kian Ming A. Chai from DSO National Laboratories Singapore, and Mate Soos and Kuldeep Meel from the National University of Singapore (NUS). If you use Bosphorus, please cite our [paper](https://www.comp.nus.edu.sg/~meel/Papers/date-cscm19.pdf) ([bibtex](https://www.comp.nus.edu.sg/~meel/bib/CSCM19.bib)) published at DATE 2019. Some of the code was generously donated by [Security Research Labs, Berlin](https://srlabs.de/).
 
-# Usage
-The main use of the system is to simplify and solve ANF problems. It excels at this and should give you highly optimised ANFs and also CNFs. Its ANF simplifications should be useful is many areas, not just direct ANF-to-SAT solving. For example, it could well be useful for helping to break [post-quantum cryptograpy problems](https://csrc.nist.gov/projects/post-quantum-cryptography). It can also simplify and solve CNF problems. When simplifying or solving CNF problems, the CNF is (extremely) naively translated to ANF, then simplifications are applied, and a sophisticated system then translates the ANF back to CNF. This CNF can then be optinally solved.
 
-## Simple Docker usage
+## Docker usage
 
-To convert `myfile.anf` to `myfile.cnf` with simplifications:
+To find all solutions to `myfile.anf`:
+
+```
+docker run --rm -v `pwd`/:/dat/ msoos/bosphorus --anfread /dat/myfile.anf --cnfwrite /dat/myfile.cnf --solve --allsol
+[...]
+s ANF-SATISFIABLE
+v x(0) x(1) x(2) x(3)
+s ANF-SATISFIABLE
+v x(0) x(1) 1+x(2) 1+x(3)
+s ANF-UNSATISFIABLE
+c Number of solutions found: 2
+```
+
+To convert `myfile.anf` to `myfile.cnf` with all the simplifications:
 
 ```
 docker run --rm -v `pwd`/:/dat/ msoos/bosphorus --anfread /dat/myfile.anf --cnfwrite /dat/myfile.cnf
@@ -77,6 +90,7 @@ Explanation of simplifications performed:
 * Substituting `x2 + 1 = 0` yields `x1 + x3 + 1 = 0`
 
 ## CNF simplification
+Bosphorus can simplify and solve CNF problems. When simplifying or solving CNF problems, the CNF is (extremely) naively translated to ANF, then simplifications are applied, and a sophisticated system then translates the ANF back to CNF. This CNF can then be optinally solved.
 
 Let's say you have the CNF:
 
@@ -109,10 +123,7 @@ x(4) + x(0) + 1
 The system recovered XOR `x(1) + x(2) + x(3)` using ElimLin from the top 4 equations that encode the CNF's first 4 clauses. This resoution is in fact non-trivial, and can lead to interesting facts that can then be re-injected back into the CNF. Note that the first 4 clauses encode an XOR because the 2nd clause can be extended to the weaker clause `2 -3 4 0`, giving the trivial encoding of `x(1) + x(2) + x(3)` in CNF.
 
 # Building, Testing, Installing
-You must install M4RI, BriAl, and CryptoMiniSat to use compile Bosphorus. Below, we explain how to compile them all.
-
-
-### Install base dependencies
+You must install M4RI, BriAl, and CryptoMiniSat to use compile Bosphorus. Below, we explain how to compile them all. First, the dependencies:
 
 ```
 sudo apt-get install build-essential cmake zlib1g-dev libboost-program-options-dev libm4ri-dev libboost-test-dev
@@ -146,7 +157,7 @@ sudo make install
 ```
 Note (For MacOS): If you encounter `cryptominisat.h:30:10: fatal error: 'atomic' file not found` in `#include <atomic>` during compilation, you may need to use `CFLAGS='-stdlib=libc++' make` instead of just `make`.
 
-### Build Bosphorus (this tool)
+### Build Bosphorus
 ```
 git clone --depth 1 https://github.com/meelgroup/bosphorus
 cd bosphorus
@@ -157,7 +168,20 @@ make -j4
 ./bosphorus -h
 ```
 
-# Testing
+## Fuzzing
+The tool comes with a built-in ANF fuzzer. To use, install [cryptominisat](https://github.com/msoos/cryptominisat), then run:
+
+```
+git clone --depth 1 https://github.com/meelgroup/bosphorus
+cd bosphorus
+mkdir build
+cd build
+ln -s ../utils/* .
+./build_normal.sh
+./fuzz.sh
+```
+
+## Testing
 Must have [LLVM lit](https://github.com/llvm-mirror/llvm/tree/master/utils/lit) and [stp OutputCheck](https://github.com/stp/OutputCheck). Please install with:
 ```
 pip install lit
@@ -167,16 +191,3 @@ Run test suite via `lit bosphorus/tests`
 
 # Known issues
 - PolyBoRi cannot handle ring of sizes over approx 1 million (1048574). Do not run `bosphorus` on instances with over a million variables.
-
-# Parameters used in the paper
-For the paper, the following parameters are used for learning
-```
-bosphorus --anfread a.anf --cnfwrite a-learnt.cnf --stoponsolution --learnsolution --maxtime=1000
-```
-
-for just conversion, use
-```
-bosphorus --anfread a.anf --cnfwrite a-convert.cnf --stoponsolution --learnsolution --maxtime=0
-``` 
-
-For cnfs, use `--cnfread a.cnf' instead of '--anfread a.anf`

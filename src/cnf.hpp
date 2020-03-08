@@ -30,18 +30,20 @@ SOFTWARE.
 #include <vector>
 
 #include "anf.hpp"
-#include "clauses.hpp"
+#include "bosphorus/solvertypesmini.hpp"
 
-using boost::get;
-using boost::variant;
+namespace BLib {
 
 class CNF
 {
    public:
-    CNF(const ANF& _anf, const vector<Clause>& cutting_clauses,
+    CNF(const ANF& _anf, const ConfigData& _config);
+    CNF(const char* fname, const ANF& _anf, const vector<Clause>& extra_clauses,
         const ConfigData& _config);
-    size_t update(
-        void); // update CNF with new equations and facts from the anf-sibling; returns the previous number of clause-sets
+
+    /// update CNF with new equations and facts from the anf-sibling;
+    /// @returns the previous number of clause-sets
+    size_t update();
 
     // Remap solution to CNF to a solution for the original ANF
     vector<lbool> mapSolToOrig(const std::vector<lbool>& solution) const;
@@ -53,6 +55,8 @@ class CNF
     {
         return anf.getRing();
     }
+    void print_solution_map(std::ofstream* ofs);
+    void get_solution_map(map<uint32_t, VarMap>& ret) const;
     bool varRepresentsMonomial(const uint32_t var) const;
     BooleMonomial getMonomForVar(const uint32_t& var) const;
     uint32_t getVarForMonom(const BooleMonomial& mono) const;
@@ -62,6 +66,7 @@ class CNF
     size_t getAddedAsSimpleANF() const;
     size_t getAddedAsComplexANF() const;
     const vector<pair<vector<Clause>, BoolePolynomial> >& getClauses() const;
+    vector<Clause> get_clauses_simple() const;
     uint32_t getNumVars() const;
     uint64_t getNumAllLits() const;
     uint64_t getNumAllClauses() const;
@@ -71,8 +76,6 @@ class CNF
 
    private:
     void init();
-    void addAllEquations();
-    void addOriginalCNF(const vector<Clause>& cutting_clauses);
     void addBoolePolynomial(const BoolePolynomial& eq);
     void addTrivialEquations();
     bool tryAddingPolyWithKarn(const BoolePolynomial& eq,
@@ -114,13 +117,10 @@ class CNF
 
 inline void CNF::print_without_header(std::ostream& os) const
 {
-    for (vector<pair<vector<Clause>, BoolePolynomial> >::const_iterator
-             it = clauses.begin(),
-             end = clauses.end();
-         it != end; it++) {
-        os << it->first;
+    for (const auto& it: clauses) {
+        os << it.first;
         if (config.writecomments) {
-            os << "c " << it->second << std::endl;
+            os << "c " << it.second << std::endl;
             os << "c ------------\n";
         }
     }
@@ -185,6 +185,8 @@ inline void CNF::printStats() const
          << "c Added as simple ANF  : " << getAddedAsSimpleANF() << endl
          << "c Added as complex  ANF: " << getAddedAsComplexANF() << endl
          << "c --------------------" << endl;
+}
+
 }
 
 #endif //CNF_H__

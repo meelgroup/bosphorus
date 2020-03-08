@@ -27,10 +27,13 @@ SOFTWARE.
 #include <fstream>
 #include "anf.hpp"
 #include "cnf.hpp"
+#include "bosphorus/solvertypesmini.hpp"
 
 namespace CMSat {
 class SATSolver;
 }
+
+namespace BLib {
 
 class SimplifyBySat
 {
@@ -38,10 +41,9 @@ class SimplifyBySat
     SimplifyBySat(const CNF& cnf, const ConfigData& _config);
     ~SimplifyBySat();
 
-    int simplify(const uint64_t numConfl_lim, const uint64_t numConfl_inc,
+    lbool simplify(const uint64_t numConfl_lim, const uint64_t numConfl_inc,
                  const double time_limit, const size_t cbeg,
-                 vector<BoolePolynomial>& loop_learnt, bool& foundSolution,
-                 ANF& anf, const ANF* orig_anf);
+                 vector<BoolePolynomial>& loop_learnt, ANF& anf);
 
    private:
     const ConfigData& config;
@@ -57,5 +59,7 @@ class SimplifyBySat
     int process(vector<BoolePolynomial>& loop_learnt,
                 const vector<pair<vector<uint32_t>, bool> >& extracted);
 };
+
+}
 
 #endif //SIMPLIFYBYSAT_H

@@ -20,34 +20,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef DIMACSCACHE_H__
-#define DIMACSCACHE_H__
-
-#include <vector>
-#include "bosphorus/solvertypesmini.hpp"
-using namespace Bosph;
+#ifndef GITSHA_1_H
+#define GITSHA_1_H
 
 namespace BLib {
 
-class DIMACSCache
-{
-   public:
-    DIMACSCache(const char* _fname);
-    size_t getMaxVar(void) const
-    {
-        return maxVar;
-    }
-    const std::vector<Clause>& getClauses(void) const
-    {
-        return clauses;
-    }
-
-   private:
-    std::vector<Clause> clauses;
-    size_t maxVar;
-    const char* fname = nullptr;
-};
+const char* get_version_sha1();
+const char* get_version_tag();
+const char* get_compilation_env();
 
 }
 
-#endif
+#endif //GITSHA_1_H

@@ -27,36 +27,48 @@ SOFTWARE.
 #include <ostream>
 
 #include "dimacscache.hpp"
-#include "karnaugh.hpp"
+#include "anfcnfutils.hpp"
 
-CNF::CNF(const ANF& _anf, const vector<Clause>& cutting_clauses,
-         const ConfigData& _config)
+using namespace BLib;
+
+CNF::CNF(const ANF& _anf, const ConfigData& _config)
     : anf(_anf), config(_config)
 {
-    //Make sure outside var X is inside var X
     init();
+    addTrivialEquations();
 
-    if (config.readCNF) {
-        addOriginalCNF(cutting_clauses);
-    } else {
-        addAllEquations();
+    // Add regular equations
+    const vector<BoolePolynomial>& eqs = anf.getEqs();
+    for (const BoolePolynomial& poly : eqs) {
+        addBoolePolynomial(poly);
     }
 }
 
-size_t CNF::update(void)
+CNF::CNF(const char* fname, const ANF& _anf,
+         const vector<Clause>& extra_clauses, const ConfigData& _config)
+    : anf(_anf), config(_config)
+{
+    init();
+    addTrivialEquations();
+
+    DIMACSCache dimacs_cache(fname);
+    vector<Clause> setOfClauses(dimacs_cache.getClauses());
+    // add cutting clauses
+    setOfClauses.insert(setOfClauses.end(), extra_clauses.begin(),
+                        extra_clauses.end());
+
+    // Associate with 0=0 polynomial
+    BoolePolynomial eq(0, anf.getRing());
+    clauses.push_back(std::make_pair(setOfClauses, eq));
+}
+
+size_t CNF::update()
 {
     size_t prev = clauses.size();
 
     // Add new replaced and set variables to CNF
     addTrivialEquations();
 
-    if (!config.readCNF) {
-        // Because ANF may have changed to give better clauses
-        const vector<BoolePolynomial>& eqs = anf.getEqs();
-        for (const BoolePolynomial& poly : eqs) {
-            addBoolePolynomial(poly);
-        }
-    }
     return prev;
 }
 
@@ -78,34 +90,6 @@ void CNF::init()
     if (!anf.getOK()) {
         addBoolePolynomial(BoolePolynomial(true, anf.getRing()));
     }
-}
-
-void CNF::addAllEquations()
-{
-    // Add replaced and set variables to CNF
-    addTrivialEquations();
-
-    // Add regular equations
-    const vector<BoolePolynomial>& eqs = anf.getEqs();
-    for (const BoolePolynomial& poly : eqs) {
-        addBoolePolynomial(poly);
-    }
-}
-
-void CNF::addOriginalCNF(const vector<Clause>& cutting_clauses)
-{
-    // Add replaced and set variables to CNF
-    addTrivialEquations();
-
-    DIMACSCache dimacs_cache(config.cnfInput.c_str());
-    vector<Clause> setOfClauses(dimacs_cache.getClauses());
-    // add cutting clauses
-    setOfClauses.insert(setOfClauses.end(), cutting_clauses.begin(),
-                        cutting_clauses.end());
-
-    // Associate with 0=0 polynomial
-    BoolePolynomial eq(0, anf.getRing());
-    clauses.push_back(std::make_pair(setOfClauses, eq));
 }
 
 void CNF::addTrivialEquations()
@@ -138,39 +122,6 @@ void CNF::addTrivialEquations()
     }
 }
 
-bool CNF::tryAddingPolyWithKarn(const BoolePolynomial& eq,
-                                vector<Clause>& setOfClauses) const
-{
-    Karnaugh karn(config.maxKarnTableSize);
-    if (!(eq.deg() > 1 && karn.possibleToConv(eq))) {
-        return false;
-    }
-
-    setOfClauses = karn.convert(eq);
-
-    // Estimate CNF cost
-    uint32_t cnfCost = 0;
-    for (const Clause& c : setOfClauses) {
-        cnfCost += c.size();
-        cnfCost += 2;
-    }
-
-    // Estimate ANF cost
-    uint32_t anfCost = 0;
-    for (const BooleMonomial& mono : eq) {
-        anfCost += mono.deg() * 2;
-        anfCost += 5;
-    }
-
-    if (anfCost >= cnfCost ||
-        (eq.terms().size() == (1UL + (size_t)eq.hasConstantPart()))) {
-        return true;
-    }
-
-    setOfClauses.clear();
-    return false;
-}
-
 void CNF::addMonomialsFromPoly(const BoolePolynomial& eq)
 {
     for (BoolePolynomial::const_iterator it = eq.begin(), end = eq.end();
@@ -194,6 +145,7 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
         vector<Lit> lits;
         tmp.push_back(Clause(lits));
         clauses.push_back(std::make_pair(tmp, poly));
+        return;
     }
 
     if (poly.isZero()) {
@@ -201,7 +153,8 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
     }
 
     vector<Clause> setOfClauses;
-    if (tryAddingPolyWithKarn(poly, setOfClauses)) {
+    if (poly.deg() > 1 && poly.nUsedVariables() <= config.brickestein_algo_cutoff &&
+        BrickesteinAlgo32(poly, setOfClauses)) {
         addedAsCNF++;
     } else {
         // Represent using XOR & monomial combination
@@ -226,7 +179,18 @@ BoolePolynomial CNF::addToPolyVarsUntilCutoff(const BoolePolynomial& poly,
 {
     BoolePolynomial thisPoly(getANFRing());
     for (BoolePolynomial::const_iterator it = poly.begin(), end = poly.end();
-         it != end && vars.size() < config.cutNum; it++) {
+         it != end; it++) {
+
+        if (vars.size() >= config.cutNum) {
+            //Check if we can just add ONE more. Then it's easier to add it
+            //instead of cutting and then adding an XOR with 2 variables in it
+            BoolePolynomial::const_iterator it2 = it;
+            it2++;
+            if (it2 != poly.end()) {
+                break;
+            }
+        }
+
         const BooleMonomial& m = *it;
 
         //We will deal with the +1 given cl.getConst()
@@ -281,8 +245,8 @@ void CNF::addPolyWithCuts(BoolePolynomial poly, vector<Clause>& setOfClauses)
             assert(!uptoPoly.isSingleton());
             revCombinedMap.push_back(uptoPoly);
 
-            vars_in_xor.push_back(
-                varAdded); //This will be the definition of the representive
+            //This will be the definition of the representive
+            vars_in_xor.push_back(varAdded);
         }
 
         addEveryCombination(vars_in_xor, result, setOfClauses);
@@ -399,6 +363,42 @@ vector<lbool> CNF::mapSolToOrig(const std::vector<lbool>& solution) const
     return ret;
 }
 
+void CNF::get_solution_map(map<uint32_t, VarMap>& ret) const
+{
+    for (size_t i = 0; i < getNumVars(); ++i) {
+        // only map monomials which are single variables
+        if (varRepresentsMonomial(i)) {
+            const BooleMonomial& m(revCombinedMap[i].lead());
+
+            //Only single-vars
+            if (m.deg() == 1) {
+                const uint32_t var = m.firstVariable().index();
+                VarMap m;
+                m.inv = false;
+                m.other_var = i;
+                m.type = Bosph::VarMap::cnf_var;
+                ret[var] = m;
+            }
+        }
+    }
+}
+
+void CNF::print_solution_map(std::ofstream* ofs)
+{
+    for (size_t i = 0; i < getNumVars(); ++i) {
+        // only map monomials which are single variables
+        if (varRepresentsMonomial(i)) {
+            const BooleMonomial& m(revCombinedMap[i].lead());
+
+            //Only single-vars
+            if (m.deg() == 1) {
+                const uint32_t var = m.firstVariable().index();
+                *ofs << "Internal-ANF-var " << var << " = solution-var " << i << endl;
+            }
+        }
+    }
+}
+
 BooleMonomial CNF::getMonomForVar(const uint32_t& var) const
 {
     if (varRepresentsMonomial(var))
@@ -441,4 +441,15 @@ uint64_t CNF::getNumAllClauses() const
     }
 
     return numClauses;
+}
+
+vector<Clause> CNF::get_clauses_simple() const
+{
+    vector<Clause> ret;
+    for(auto& cls: clauses) {
+        for(auto& cl: cls.first) {
+            ret.push_back(cl);
+        }
+    }
+    return ret;
 }
