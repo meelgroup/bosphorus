@@ -520,8 +520,8 @@ Solution extend_solution(
     Solution s;
     s.ret = l_True;
     s.sol.resize(num_anf_vars);
-    for(auto& s: s.sol) {
-        s = l_Undef;
+    for(auto& x: s.sol) {
+        x = l_Undef;
     }
 
     for(int do_must_set = 0; do_must_set < 2; do_must_set++) {
