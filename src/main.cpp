@@ -54,6 +54,7 @@ string anfInput;
 string anfOutput;
 string cnfInput;
 string cnfOutput;
+string solution_output_file;
 
 //solution map
 string solmap_file_write;
@@ -102,6 +103,7 @@ void parseOptions(int argc, char* argv[])
     ("simplify", po::value<int>(&config.simplify)->default_value(config.simplify),
      "Simplify ANF")
     ("solve", po::bool_switch(&solve_with_cms), "Solve the resulting ANF")
+    ("solvewrite", po::value(&solution_output_file), "Solve the resulting ANF and print the solution to this file")
     ("allsol", po::bool_switch(&all_solutions), "Find all solutions")
 
     // Processes
@@ -222,6 +224,10 @@ void parseOptions(int argc, char* argv[])
     }
     if (vm.count("cnfwrite")) {
         writeCNF = true;
+    }
+
+    if (vm.count(solution_output_file)) {
+        solve_with_cms = true;
     }
 
     if (readANF && readCNF) {
@@ -429,6 +435,7 @@ int main(int argc, char* argv[])
 void print_solution_cnf_style(const Solution& solution);
 void check_solution(const ANF* anf, const Solution& solution);
 void print_solution_anf_style(const Solution& solution);
+void write_solution_to_file_cnf_style(const Solution& solution);
 void ban_solution(CMSat::SATSolver& solver, const Solution& solution);
 
 
@@ -463,7 +470,9 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
             solution. ret = l_False;
         }
         print_solution_anf_style(solution);
-        //print_solution_cnf_style(solution);
+        if (!solution_output_file.empty()) {
+            write_solution_to_file_cnf_style(solution);
+        }
         if (ret == CMSat::l_True) {
             check_solution(anf, solution);
         }
@@ -477,6 +486,34 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
     if (all_solutions) {
         cout << "c Number of solutions found: " << number_of_solutions << endl;
     }
+}
+
+void write_solution_to_file_cnf_style(const Solution& solution)
+{
+    std::ofstream ofs;
+    ofs.open(solution_output_file);
+    if (!ofs) {
+        std::cerr << "c Error opening file \"" << solution_output_file
+                  << "\" for writing\n";
+        exit(-1);
+    }
+    assert(solution.ret != l_Undef);
+    ofs << "Solution ";
+    ofs << ((solution.ret == l_True) ? "SAT" : "UNSAT") << endl;
+    if (solution.ret == l_False) {
+        return;
+    }
+
+
+    size_t num = 0;
+    ofs << "v ";
+    for (const lbool lit : solution.sol) {
+        if (lit != l_Undef) {
+            ofs << ((lit == l_True) ? "" : "-") << num << " ";
+        }
+        num++;
+    }
+    ofs << endl;
 }
 
 void ban_solution(CMSat::SATSolver& solver, const Solution& solution)
@@ -557,24 +594,6 @@ Solution extend_solution(
     }
 
     return s;
-}
-
-void print_solution_cnf_style(const Solution& solution)
-{
-    assert(solution.ret != l_Undef);
-    cout << "Solution ";
-    cout << ((solution.ret == l_True) ? "SAT" : "UNSAT");
-
-    size_t num = 0;
-    std::stringstream toWrite;
-    toWrite << "v ";
-    for (const lbool lit : solution.sol) {
-        if (lit != l_Undef) {
-            toWrite << ((lit == l_True) ? "" : "-") << num << " ";
-        }
-        num++;
-    }
-    cout << toWrite.str() << endl;
 }
 
 void check_solution(const ANF* anf, const Solution& solution)
