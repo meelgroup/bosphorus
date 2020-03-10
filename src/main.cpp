@@ -435,6 +435,7 @@ int main(int argc, char* argv[])
 void print_solution_cnf_style(const Solution& solution);
 void check_solution(const ANF* anf, const Solution& solution);
 void print_solution_anf_style(const Solution& solution);
+void clear_solution_file();
 void write_solution_to_file_cnf_style(const Solution& solution);
 void ban_solution(CMSat::SATSolver& solver, const Solution& solution);
 
@@ -455,6 +456,7 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
         solver.add_clause(*cc2);
     }
 
+    clear_solution_file();
     uint32_t number_of_solutions = 0;
     while(true) {
         CMSat::lbool ret = solver.solve();
@@ -470,9 +472,7 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
             solution. ret = l_False;
         }
         print_solution_anf_style(solution);
-        if (!solution_output_file.empty()) {
-            write_solution_to_file_cnf_style(solution);
-        }
+        write_solution_to_file_cnf_style(solution);
         if (ret == CMSat::l_True) {
             check_solution(anf, solution);
         }
@@ -488,10 +488,30 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
     }
 }
 
-void write_solution_to_file_cnf_style(const Solution& solution)
+void clear_solution_file()
 {
+    if (solution_output_file.empty()) {
+        return;
+    }
+
     std::ofstream ofs;
     ofs.open(solution_output_file);
+    if (!ofs) {
+        std::cerr << "c Error opening file \"" << solution_output_file
+                  << "\" for writing\n";
+        exit(-1);
+    }
+    ofs.close();
+}
+
+void write_solution_to_file_cnf_style(const Solution& solution)
+{
+    if (solution_output_file.empty()) {
+        return;
+    }
+
+    std::ofstream ofs;
+    ofs.open(solution_output_file, std::ios_base::app);
     if (!ofs) {
         std::cerr << "c Error opening file \"" << solution_output_file
                   << "\" for writing\n";
