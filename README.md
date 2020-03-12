@@ -55,7 +55,7 @@ x(1)*x(2) + x(2)*x(3) + 1
 
 Let's simplify, output a simplified ANF, a simplified CNF, solve it and write out the solution:
 ```
-$ ./bosphorus --anfread test.anf --anfwrite out.anf --cnfwrite out.cnf -s --solvewrite solution
+$ ./bosphorus --anfread test.anf --anfwrite out.anf --cnfwrite out.cnf --solvewrite solution
 ```
 
 The simplified ANF is in `out.anf`:
