@@ -226,7 +226,7 @@ void parseOptions(int argc, char* argv[])
         writeCNF = true;
     }
 
-    if (vm.count(solution_output_file)) {
+    if (vm.count("solvewrite")) {
         solve_with_cms = true;
     }
 
