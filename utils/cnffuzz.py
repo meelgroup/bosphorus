@@ -20,6 +20,7 @@
 
 import subprocess
 import random
+import optparse
 
 def myexec(command):
     print("Executing command: " , command)
@@ -31,7 +32,7 @@ def myexec(command):
     return console_out, err
 
 def get_num_vars(fname):
-    with open("out2.cnf", "r") as f:
+    with open(fname, "r") as f:
         for line in f:
             line = line.strip()
             if len(line) == 0:
@@ -80,9 +81,30 @@ def get_new_clauses(fname, orig_num_vars):
 
     return definitions, clauses
 
-if __name__ == "__main__":
 
-    random.seed(0);
+class PlainHelpFormatter(optparse.IndentedHelpFormatter):
+
+    def format_description(self, description):
+        if description:
+            return description + "\n"
+        else:
+            return ""
+
+if __name__ == "__main__":
+    usage = "usage: %prog [options]"
+    desc = """Fuzz the system with fuzz-generator: ./fuzz_test.py
+    """
+
+    parser = optparse.OptionParser(usage=usage, description=desc,
+                                   formatter=PlainHelpFormatter())
+
+    # 9 gives us 1 extra variable
+    # 8 gives us 0 extra variable
+    parser.add_option("--seed", dest="fuzz_seed_start", default=8,
+                      help="Fuzz test start seed", type=int)
+    (options, args) = parser.parse_args()
+    random.seed(options.fuzz_seed_start)
+
 
     command = "../utils/cnf-utils/cnf-fuzz-brummayer.py"
     command += " -s %d" % random.randint(1, 1000000)
@@ -105,6 +127,10 @@ if __name__ == "__main__":
         print("Error, fuzzer didn't work, err: ", err)
         print("console output:", out)
         exit(-1)
+
+    for l in out.split("\n"):
+        if "anf-to-cnf" in l:
+            print(l)
 
     # get orig num vars
     orig_num_vars = get_num_vars("out.cnf")

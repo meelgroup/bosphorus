@@ -56,11 +56,34 @@ class PrivateData {
 public:
     ConfigData config;
     BoolePolyRing* pring = nullptr;
-    vector<Clause> extra_clauses;
+    vector<Clause> clauses_needed_for_anf_import;
     vector<BoolePolynomial> learnt;
 
     bool read_in_data = false;
 };
+
+void output_anf_to_cnf_map(const BLib::ANF* anf, const BLib::CNF* cnf,
+                    std::ofstream& ofs)
+{
+    for (size_t i = 0; i < anf->getRing().nVariables(); i++) {
+        Lit l = anf->getReplaced(i);
+        BooleVariable v(l.var(), anf->getRing());
+        if (l.sign()) {
+            ofs << "c Internal ANF map " << i + 1 << " = 1+x(" << cnf->getVarForMonom(v) << ")"
+                << endl;
+        } else {
+            ofs << "c Internal ANF map " << i + 1 << " = x(" << cnf->getVarForMonom(v) << ")"
+                << endl;
+        }
+    }
+    for (size_t i = 0; i < cnf->getNumVars(); ++i) {
+        const BooleMonomial mono = cnf->getMonomForVar(i);
+        if (mono.deg() > 0)
+            assert(i == cnf->getVarForMonom(mono));
+        if (mono.deg() > 1)
+            ofs << "c Internal ANF map " << i + 1 << " = " << mono << endl;
+    }
+}
 
 void output_cnf(
     std::string output_cnf_fname,
@@ -78,32 +101,16 @@ void output_cnf(
 
     if (dat->config.writecomments) {
         ofs << "c Executed arguments: " << dat->config.executedArgs << endl;
-        for (size_t i = 0; i < anf->getRing().nVariables(); i++) {
-            Lit l = anf->getReplaced(i);
-            BooleVariable v(l.var(), anf->getRing());
-            if (l.sign()) {
-                ofs << "c MAP " << i + 1 << " = 1+x(" << cnf->getVarForMonom(v) << ")"
-                    << endl;
-            } else {
-                ofs << "c MAP " << i + 1 << " = x(" << cnf->getVarForMonom(v) << ")"
-                    << endl;
-            }
-        }
-        for (size_t i = 0; i < cnf->getNumVars(); ++i) {
-            const BooleMonomial mono = cnf->getMonomForVar(i);
-            if (mono.deg() > 0)
-                assert(i == cnf->getVarForMonom(mono));
-            if (mono.deg() > 1)
-                ofs << "c MAP " << i + 1 << " = " << mono << endl;
-        }
     }
     ofs << *cnf;
 
-    ofs << "c Learnt " << dat->learnt.size() << " fact(s)\n";
+    ofs << "c Learnt " << dat->learnt.size() << " fact(s), not all of which have been dumped\n";
     if (dat->config.writecomments) {
         for (const BoolePolynomial& poly : dat->learnt) {
             ofs << "c " << poly << endl;
         }
+        ofs << "c Given mapping below." << endl;
+        output_anf_to_cnf_map(anf, cnf, ofs);
     }
     ofs.close();
 }
@@ -129,7 +136,7 @@ void Bosphorus::check_library_in_use()
     }
     dat->read_in_data = true;
 
-    assert(dat->extra_clauses.empty());
+    assert(dat->clauses_needed_for_anf_import.empty());
     //     assert(anf == nullptr);
     //     assert(cnf = nullptr);
     assert(dat->pring == nullptr);
@@ -179,10 +186,11 @@ void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
 
     BLib::DIMACSCache dimacs_cache(fname);
     const vector<Clause>& orig_clauses(dimacs_cache.getClauses());
-    size_t maxVar = dimacs_cache.getMaxVar();
+    size_t orig_var = dimacs_cache.getMaxVar();
+    size_t maxVar = orig_var;
 
-    if (dat->config.verbosity >= 4) {
-        cout << "c Read CNF with " << maxVar << " variables." << endl;
+    if (dat->config.verbosity >= 1) {
+        cout << "[cnf-to-anf] Read CNF with " << orig_var << " variables." << endl;
     }
 
     // Chunk up by L positive literals. L = config.cutNum
@@ -205,8 +213,9 @@ void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
         }
 
         // need to chop it up
-        if (dat->config.verbosity >= 5)
-            cout << clause << " --> ";
+        if (dat->config.verbosity >= 1) {
+            cout << "[cnf-to-anf] Must chop up clause: " << clause << endl;
+        }
 
         vector<Lit> collect;
         size_t count = 0;
@@ -222,10 +231,10 @@ void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
                 Lit prev = collect.back();
                 collect.back() = ~aux;
 
-                dat->extra_clauses.push_back(collect);
+                dat->clauses_needed_for_anf_import.push_back(collect);
                 chunked_clauses.push_back(collect);
-                if (dat->config.verbosity >= 5)
-                    cout << collect << " and ";
+                if (dat->config.verbosity >= 1)
+                    cout << "[cnf-to-anf] --> " << collect << endl;
 
                 collect.clear();
                 collect.push_back(aux);
@@ -234,18 +243,22 @@ void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
             }
         } //idx
         if (!collect.empty()) {
-            dat->extra_clauses.push_back(collect);
+            dat->clauses_needed_for_anf_import.push_back(collect);
             chunked_clauses.push_back(collect);
-            if (dat->config.verbosity >= 5)
-                cout << collect;
+            if (dat->config.verbosity >= 1) {
+                cout << "[cnf-to-anf] --> " << collect << endl;
+            }
         }
         if (dat->config.verbosity >= 5)
             cout << endl;
     } //for
 
     // Construct ANF
-    if (dat->config.verbosity >= 4) {
-        cout << "c Constructing ANF with " << maxVar << " variables." << endl;
+    if (dat->config.verbosity >= 1) {
+        cout << "[anf-to-cnf] Constructing ANF from CNF. New vars: "
+        << (maxVar-orig_var)
+        << "   Extra clauses needed : " << dat->clauses_needed_for_anf_import.size()
+        << endl;
     }
     // ring size = maxVar, because CNF variables start from 1
     dat->pring = new BoolePolyRing(maxVar);
@@ -287,13 +300,12 @@ CNF* Bosphorus::write_cnf(
     const char* output_cnf_fname,
     const ::ANF* a)
 {
-    auto anf = (const BLib::ANF*)a;
-    assert(input_cnf_fname != NULL);
     assert(output_cnf_fname != NULL);
 
-    BLib::CNF* cnf = (BLib::CNF*)cnf_from_anf_and_cnf(
-        input_cnf_fname, (ANF*)anf);
-    output_cnf(output_cnf_fname, dat, anf, cnf);
+    auto cnf = cnf_from_anf_and_cnf(input_cnf_fname, a);
+    if (output_cnf_fname != NULL) {
+        output_cnf(output_cnf_fname, dat, (BLib::ANF*)a, (BLib::CNF*)cnf);
+    }
 
     return (CNF*)cnf;
 }
@@ -303,7 +315,7 @@ CNF* Bosphorus::write_cnf(
     const ::ANF* a)
 {
     auto anf = (const BLib::ANF*)a;
-    BLib::CNF* cnf = (BLib::CNF*)anf_to_cnf((ANF*)anf);
+    auto cnf = (BLib::CNF*)anf_to_cnf(a);
     if (output_cnf_fname != NULL) {
         output_cnf(output_cnf_fname, dat, anf, cnf);
     }
@@ -352,9 +364,11 @@ CNF* Bosphorus::anf_to_cnf(const ANF* a)
 CNF* Bosphorus::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* a)
 {
     auto anf = (BLib::ANF*)a;
-
     double convStartTime = cpuTime();
-    auto cnf = new BLib::CNF(cnf_fname, *anf, dat->extra_clauses, dat->config);
+
+    //Add init, trivial, and clauses_needed_for_anf_import to CNF + original CNF
+    auto cnf = new BLib::CNF(cnf_fname, *anf, dat->clauses_needed_for_anf_import, dat->config);
+
     if (dat->config.verbosity >= 2) {
         cout << "c [CNF enhancing] in " << (cpuTime() - convStartTime)
              << " seconds.\n";
@@ -458,7 +472,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                             if (cnf == NULL) {
                                 assert(sbs == NULL);
                                 cnf = new BLib::CNF(orig_cnf_file, *anf,
-                                              dat->extra_clauses, dat->config);
+                                              dat->clauses_needed_for_anf_import, dat->config);
                                 sbs = new BLib::SimplifyBySat(*cnf, dat->config);
                             } else {
                                 no_cls = cnf->update();

@@ -38,7 +38,8 @@ class CNF
 {
    public:
     CNF(const ANF& _anf, const ConfigData& _config);
-    CNF(const char* fname, const ANF& _anf, const vector<Clause>& extra_clauses,
+    CNF(const char* fname, const ANF& _anf,
+        const vector<Clause>& clauses_needed_for_anf_import,
         const ConfigData& _config);
 
     /// update CNF with new equations and facts from the anf-sibling;
@@ -117,10 +118,10 @@ class CNF
 
 inline void CNF::print_without_header(std::ostream& os) const
 {
-    for (const auto& it: clauses) {
-        os << it.first;
+    for (const auto& set_of_cls: clauses) {
+        os << set_of_cls.first;
         if (config.writecomments) {
-            os << "c " << it.second << std::endl;
+            os << "c " << set_of_cls.second << std::endl;
             os << "c ------------\n";
         }
     }

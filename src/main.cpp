@@ -66,6 +66,7 @@ bool writeANF;
 bool writeCNF;
 bool solve_with_cms;
 bool all_solutions;
+int only_new_cnf_clauses = 0;
 
 po::variables_map vm;
 BLib::ConfigData config;
@@ -120,6 +121,8 @@ void parseOptions(int argc, char* argv[])
      "Cutting number when not using XOR clauses")
     ("karn", po::value(&config.brickestein_algo_cutoff)->default_value(config.brickestein_algo_cutoff),
      "Uses this cutoff for doing Brickenstein's algorithm for translation of complex ANFs")
+    ("onlynewcnfcls", po::value(&only_new_cnf_clauses)->default_value(only_new_cnf_clauses),
+         "Only output to CNF the newly discovered CNF clauses. Must have CNF as input.")
     ;
 
     po::options_description xl_options("XL");
@@ -382,13 +385,12 @@ int main(int argc, char* argv[])
 
     CNF* cnf = NULL;
     if (writeCNF) {
-        const char* cnf_input = NULL;
-        if (cnfInput.length() > 0) {
-            cnf_input = cnfInput.c_str();
-        }
-
-        if (cnf_input != NULL) {
-            cnf = mylib.write_cnf(cnf_input, cnfOutput.c_str(), anf);
+        if (!cnfInput.empty()) {
+            const char* cnfInputTmp = cnfInput.c_str();
+            if (only_new_cnf_clauses) {
+                cnfInputTmp = NULL;
+            }
+            cnf = mylib.write_cnf(cnfInputTmp, cnfOutput.c_str(), anf);
         } else {
             cnf = mylib.write_cnf(cnfOutput.c_str(), anf);
         }

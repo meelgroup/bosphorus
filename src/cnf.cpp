@@ -44,22 +44,30 @@ CNF::CNF(const ANF& _anf, const ConfigData& _config)
     }
 }
 
-CNF::CNF(const char* fname, const ANF& _anf,
-         const vector<Clause>& extra_clauses, const ConfigData& _config)
+CNF::CNF(const char* fname,
+         const ANF& _anf,
+         const vector<Clause>& clauses_needed_for_anf_import,
+         const ConfigData& _config)
     : anf(_anf), config(_config)
 {
     init();
     addTrivialEquations();
 
-    DIMACSCache dimacs_cache(fname);
-    vector<Clause> setOfClauses(dimacs_cache.getClauses());
-    // add cutting clauses
-    setOfClauses.insert(setOfClauses.end(), extra_clauses.begin(),
-                        extra_clauses.end());
+    vector<Clause> setOfClauses;
+    if (fname) {
+        // add original CNF clauses
+        DIMACSCache dimacs_cache(fname);
+        BoolePolynomial eq(0, anf.getRing());
+        clauses.push_back(std::make_pair(dimacs_cache.getClauses(), eq));
+    }
 
-    // Associate with 0=0 polynomial
-    BoolePolynomial eq(0, anf.getRing());
-    clauses.push_back(std::make_pair(setOfClauses, eq));
+    //Add clauses needed to cut the large clauses into smaller ones
+    //    so as to import into ANF
+    if (!clauses_needed_for_anf_import.empty()) {
+        BoolePolynomial eq(0, anf.getRing());
+        clauses.push_back(std::make_pair(clauses_needed_for_anf_import, eq));
+    }
+
 }
 
 size_t CNF::update()
@@ -89,6 +97,9 @@ void CNF::init()
     // If ANF is not OK, then add polynomial '1'
     if (!anf.getOK()) {
         addBoolePolynomial(BoolePolynomial(true, anf.getRing()));
+        if (config.verbosity >= 1) {
+            cout << "c [CNF-out] added UNSAT to CNF" << endl;
+        }
     }
 }
 
@@ -116,8 +127,8 @@ void CNF::addTrivialEquations()
             ++nr;
         }
     }
-    if (config.verbosity >= 4) {
-        std::cout << "c Number of value assignments = " << nv
+    if (config.verbosity >= 1) {
+        std::cout << "c [CNF-gen] Number of value assignments = " << nv
                   << "\nc Number of equiv assigments = " << nr << std::endl;
     }
 }

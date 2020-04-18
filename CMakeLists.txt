@@ -330,6 +330,8 @@ include_directories(${M4RI_INCLUDE_DIRS})
 find_package(BRiAl REQUIRED)
 include_directories(${BRiAl_INCLUDE_DIRS})
 
+add_subdirectory(${PROJECT_SOURCE_DIR}/utils/cnf-utils)
+
 
 # headers, install locations, etc
 
