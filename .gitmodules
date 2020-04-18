@@ -1,0 +1,3 @@
+[submodule "utils/cnf-utils"]
+	path = utils/cnf-utils
+	url = https://github.com/msoos/cnf-utils/
