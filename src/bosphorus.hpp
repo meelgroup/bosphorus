@@ -32,11 +32,12 @@ SOFTWARE.
 using std::vector;
 
 class PrivateData;
+
+namespace Bosph {
+
 class ANF;
 class CNF;
 class DIMACS;
-
-namespace Bosph {
 
 class Bosphorus
 {
@@ -63,7 +64,7 @@ public:
 
     // Output functions
     void write_anf(const char* fname, const ANF* anf);
-    CNF* write_cnf(const char* output_cnf_fname, const ::ANF* a);
+    CNF* write_cnf(const char* output_cnf_fname, const ANF* a);
     CNF* write_cnf(
         const char* input_cnf_fname,
         const char* output_cnf_fname,
@@ -89,6 +90,7 @@ public:
 
     size_t get_learnt_size() const;
     static void delete_anf(ANF* anf);
+    static void delete_dimacs(DIMACS* d);
     static bool evaluate(const ANF* anf, const vector<lbool>& sol);
     static void print_stats(ANF* anf);
     static ANF* copy_anf_no_replacer(ANF* anf);

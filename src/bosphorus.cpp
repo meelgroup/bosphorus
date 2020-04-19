@@ -142,7 +142,7 @@ void Bosphorus::check_library_in_use()
     assert(dat->pring == nullptr);
 }
 
-::ANF* Bosphorus::read_anf(const char* fname)
+Bosph::ANF* Bosphorus::read_anf(const char* fname)
 {
     assert(fname != NULL);
     check_library_in_use();
@@ -155,17 +155,17 @@ void Bosphorus::check_library_in_use()
     dat->pring = new BoolePolyRing(maxVar + 1);
     auto anf = new BLib::ANF(dat->pring, dat->config);
     anf->readFile(fname);
-    return (ANF*)anf;
+    return (Bosph::ANF*)anf;
 }
 
-::ANF* Bosphorus::start_cnf_input(uint32_t max_vars)
+Bosph::ANF* Bosphorus::start_cnf_input(uint32_t max_vars)
 {
     dat->pring = new BoolePolyRing(max_vars);
     auto anf = new BLib::ANF(dat->pring, dat->config);
-    return (ANF*)anf;
+    return (Bosph::ANF*)anf;
 }
 
-void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
+void Bosphorus::add_clause(Bosph::ANF* anf, const std::vector<int>& clause)
 {
     BoolePolynomial poly(1, *dat->pring);
     for (const int lit: clause) {
@@ -179,33 +179,33 @@ void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
     ((BLib::ANF*)anf)->addBoolePolynomial(poly);
 }
 
-::ANF* Bosphorus::read_cnf(const char* fname)
+Bosph::ANF* Bosphorus::read_cnf(const char* fname)
 {
     check_library_in_use();
 
-    DIMACS* dimacs = parse_cnf(fname);
+    Bosph::DIMACS* dimacs = parse_cnf(fname);
     return chunk_dimacs(dimacs);
 }
 
-::DIMACS* Bosphorus::parse_cnf(const char* fname)
+Bosph::DIMACS* Bosphorus::parse_cnf(const char* fname)
 {
     BLib::DIMACSCache* dimacs = new BLib::DIMACSCache(fname);
-    return (DIMACS*)dimacs;
+    return (Bosph::DIMACS*)dimacs;
 }
 
-::DIMACS* Bosphorus::new_dimacs()
+Bosph::DIMACS* Bosphorus::new_dimacs()
 {
     BLib::DIMACSCache* dimacs = new BLib::DIMACSCache();
-    return (DIMACS*)dimacs;
+    return (Bosph::DIMACS*)dimacs;
 }
 
-void Bosphorus::add_dimacs_cl(DIMACS* dim, Lit* lits, uint32_t size)
+void Bosphorus::add_dimacs_cl(Bosph::DIMACS* dim, Lit* lits, uint32_t size)
 {
     auto dimacs = (BLib::DIMACSCache*)dim;
     dimacs->addClause(lits, size);
 }
 
-::ANF* Bosphorus::chunk_dimacs(DIMACS* dim)
+Bosph::ANF* Bosphorus::chunk_dimacs(Bosph::DIMACS* dim)
 {
     check_library_in_use();
 
@@ -215,7 +215,7 @@ void Bosphorus::add_dimacs_cl(DIMACS* dim, Lit* lits, uint32_t size)
     size_t maxVar = orig_var;
 
     if (dat->config.verbosity >= 1) {
-        cout << "[cnf-to-anf] Read CNF with " << orig_var << " variables." << endl;
+        cout << "c [cnf-to-anf] Chopping up CNF with " << orig_var << " variables." << endl;
     }
 
     // Chunk up by L positive literals. L = config.cutNum
@@ -238,8 +238,8 @@ void Bosphorus::add_dimacs_cl(DIMACS* dim, Lit* lits, uint32_t size)
         }
 
         // need to chop it up
-        if (dat->config.verbosity >= 1) {
-            cout << "[cnf-to-anf] Must chop up clause: " << clause << endl;
+        if (dat->config.verbosity >= 4) {
+            cout << "c [cnf-to-anf] Must chop up clause: " << clause << endl;
         }
 
         vector<Lit> collect;
@@ -258,8 +258,8 @@ void Bosphorus::add_dimacs_cl(DIMACS* dim, Lit* lits, uint32_t size)
 
                 dat->clauses_needed_for_anf_import.push_back(collect);
                 chunked_clauses.push_back(collect);
-                if (dat->config.verbosity >= 1)
-                    cout << "[cnf-to-anf] --> " << collect << endl;
+                if (dat->config.verbosity >= 4)
+                    cout << "c [cnf-to-anf] --> " << collect << endl;
 
                 collect.clear();
                 collect.push_back(aux);
@@ -270,8 +270,8 @@ void Bosphorus::add_dimacs_cl(DIMACS* dim, Lit* lits, uint32_t size)
         if (!collect.empty()) {
             dat->clauses_needed_for_anf_import.push_back(collect);
             chunked_clauses.push_back(collect);
-            if (dat->config.verbosity >= 1) {
-                cout << "[cnf-to-anf] --> " << collect << endl;
+            if (dat->config.verbosity >= 4) {
+                cout << "c [cnf-to-anf] --> " << collect << endl;
             }
         }
         if (dat->config.verbosity >= 5)
@@ -280,11 +280,14 @@ void Bosphorus::add_dimacs_cl(DIMACS* dim, Lit* lits, uint32_t size)
 
     // Construct ANF
     if (dat->config.verbosity >= 1) {
-        cout << "[anf-to-cnf] Constructing ANF from CNF. New vars: "
+        cout << "c [anf-to-cnf] Constructing ANF from CNF. New vars: "
         << (maxVar-orig_var)
-        << "   Extra clauses needed : " << dat->clauses_needed_for_anf_import.size()
+        << " Extra cls needed : " << dat->clauses_needed_for_anf_import.size()
+        << " Chunked cls: " << chunked_clauses.size()
+        << " Vars: " << maxVar
         << endl;
     }
+
     // ring size = maxVar, because CNF variables start from 1
     dat->pring = new BoolePolyRing(maxVar);
     auto anf = new BLib::ANF(dat->pring, dat->config);
@@ -292,8 +295,10 @@ void Bosphorus::add_dimacs_cl(DIMACS* dim, Lit* lits, uint32_t size)
         BoolePolynomial poly(1, *dat->pring);
         for (const Lit& l : clause.getLits()) {
             BoolePolynomial alsoAdd(*dat->pring);
-            if (!l.sign())
+            if (!l.sign()) {
                 alsoAdd = poly;
+            }
+            assert(l.var() < maxVar);
             poly *= BooleVariable(l.var(), *dat->pring);
             poly += alsoAdd;
         }
@@ -303,10 +308,10 @@ void Bosphorus::add_dimacs_cl(DIMACS* dim, Lit* lits, uint32_t size)
         }
     }
 
-    return (ANF*)anf;
+    return (Bosph::ANF*)anf;
 }
 
-void Bosphorus::write_anf(const char* fname, const ANF* anf)
+void Bosphorus::write_anf(const char* fname, const Bosph::ANF* anf)
 {
     std::ofstream ofs;
     ofs.open(fname);
@@ -320,10 +325,10 @@ void Bosphorus::write_anf(const char* fname, const ANF* anf)
     ofs.close();
 }
 
-CNF* Bosphorus::write_cnf(
+Bosph::CNF* Bosphorus::write_cnf(
     const char* input_cnf_fname,
     const char* output_cnf_fname,
-    const ::ANF* a)
+    const Bosph::ANF* a)
 {
     assert(output_cnf_fname != NULL);
 
@@ -332,10 +337,10 @@ CNF* Bosphorus::write_cnf(
         output_cnf(output_cnf_fname, dat, (BLib::ANF*)a, (BLib::CNF*)cnf);
     }
 
-    return (CNF*)cnf;
+    return (Bosph::CNF*)cnf;
 }
 
-CNF* Bosphorus::write_cnf(
+Bosph::CNF* Bosphorus::write_cnf(
     const char* output_cnf_fname,
     const ::ANF* a)
 {
@@ -345,34 +350,34 @@ CNF* Bosphorus::write_cnf(
         output_cnf(output_cnf_fname, dat, anf, cnf);
     }
 
-    return (CNF*)cnf;
+    return (Bosph::CNF*)cnf;
 }
 
-void Bosphorus::write_solution_map(CNF* c, std::ofstream* ofs)
+void Bosphorus::write_solution_map(Bosph::CNF* c, std::ofstream* ofs)
 {
     auto cnf = (BLib::CNF*)c;
     cnf->print_solution_map(ofs);
 }
 
-void Bosphorus::write_solution_map(ANF* a, std::ofstream* ofs)
+void Bosphorus::write_solution_map(Bosph::ANF* a, std::ofstream* ofs)
 {
     auto anf = (BLib::ANF*)a;
     anf->print_solution_map(ofs);
 }
 
-void Bosphorus::get_solution_map(const ANF* a, map<uint32_t, VarMap>& ret) const
+void Bosphorus::get_solution_map(const Bosph::ANF* a, map<uint32_t, VarMap>& ret) const
 {
     auto anf = (const BLib::ANF*)a;
     anf->get_solution_map(ret);
 }
 
-void Bosphorus::get_solution_map(const CNF* c, map<uint32_t, VarMap>& ret) const
+void Bosphorus::get_solution_map(const Bosph::CNF* c, map<uint32_t, VarMap>& ret) const
 {
     auto cnf = (const BLib::CNF*)c;
     cnf->get_solution_map(ret);
 }
 
-CNF* Bosphorus::anf_to_cnf(const ANF* a)
+Bosph::CNF* Bosphorus::anf_to_cnf(const Bosph::ANF* a)
 {
     auto anf = (BLib::ANF*)a;
 
@@ -383,12 +388,12 @@ CNF* Bosphorus::anf_to_cnf(const ANF* a)
              << " seconds.\n";
         cnf->printStats();
     }
-    return (CNF*)cnf;
+    return (Bosph::CNF*)cnf;
 }
 
 //NOTE: cnf_filename is only needed in case SAT-based simplification
 //      is used. NULL is also acceptable here.
-CNF* Bosphorus::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* a)
+Bosph::CNF* Bosphorus::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* a)
 {
     auto anf = (BLib::ANF*)a;
     double convStartTime = cpuTime();
@@ -401,10 +406,10 @@ CNF* Bosphorus::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* a)
              << " seconds.\n";
         cnf->printStats();
     }
-    return (CNF*)cnf;
+    return (Bosph::CNF*)cnf;
 }
 
-uint32_t Bosphorus::get_max_var(const CNF* c) const
+uint32_t Bosphorus::get_max_var(const Bosph::CNF* c) const
 {
     auto cnf = (const BLib::CNF*)c;
     return cnf->getNumVars();
@@ -472,9 +477,14 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                                                    dat->learnt)) {
                             anf->setNOTOK();
                         } else {
-                            for (size_t i = prevsz; i < dat->learnt.size(); ++i)
+                            for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
                                 num_learnt +=
                                     anf->addBoolePolynomial(dat->learnt[i]);
+
+                                if (dat->config.verbosity > 1)  {
+                                    cout << "Xl Learnt poly: " << dat->learnt[i] << endl;
+                                }
+                            }
                         }
                     }
                     break;
@@ -484,9 +494,14 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                         if (!elimLin(dat->config, anf->getEqs(), dat->learnt)) {
                             anf->setNOTOK();
                         } else {
-                            for (size_t i = prevsz; i < dat->learnt.size(); ++i)
+                            for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
                                 num_learnt +=
                                     anf->addBoolePolynomial(dat->learnt[i]);
+
+                                if (dat->config.verbosity > 1)  {
+                                    cout << "EL Learnt poly: " << dat->learnt[i] << endl;
+                                }
+                            }
                         }
                     }
                     break;
@@ -518,6 +533,10 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                         if (ret != l_False) {
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
                                 num_learnt += anf->addLearntBoolePolynomial(dat->learnt[i]);
+
+                                if (dat->config.verbosity > 1)  {
+                                    cout << "SAT Learnt poly: " << dat->learnt[i] << endl;
+                                }
                             }
                         }
                     }
@@ -674,27 +693,27 @@ const char* Bosphorus::get_version_sha1()
     return ::BLib::get_version_sha1();
 }
 
-bool Bosphorus::evaluate(const ANF* a, const vector<lbool>& sol)
+bool Bosphorus::evaluate(const Bosph::ANF* a, const vector<lbool>& sol)
 {
     auto anf = (const BLib::ANF*)a;
     return anf->evaluate(sol);
 }
 
 
-void Bosphorus::print_stats(ANF* a)
+void Bosphorus::print_stats(Bosph::ANF* a)
 {
     auto anf = (BLib::ANF*)a;
     anf->printStats();
 }
 
-ANF* Bosphorus::copy_anf_no_replacer(ANF* a)
+Bosph::ANF* Bosphorus::copy_anf_no_replacer(Bosph::ANF* a)
 {
     auto anf = (BLib::ANF*)a;
     auto orig_anf = new BLib::ANF(*anf, BLib::anf_no_replacer_tag());
-    return (ANF*)orig_anf;
+    return (Bosph::ANF*)orig_anf;
 }
 
-void Bosphorus::print_anf(ANF* a)
+void Bosphorus::print_anf(Bosph::ANF* a)
 {
     auto anf = (BLib::ANF*)a;
     cout << *anf << endl;
@@ -706,8 +725,14 @@ size_t Bosphorus::get_learnt_size() const
 }
 
 
-void Bosphorus::delete_anf(ANF* a)
+void Bosphorus::delete_anf(Bosph::ANF* a)
 {
     auto anf = (BLib::ANF*)a;
     delete anf;
+}
+
+void Bosphorus::delete_dimacs(Bosph::DIMACS* d)
+{
+    auto dimacs = (BLib::DIMACSCache*)d;
+    delete dimacs;
 }

@@ -41,7 +41,7 @@ void DIMACSCache::addClause(const Lit* lits, const uint32_t size)
     std::copy(lits, lits+size, clauses[at].lits.data());
 
     for(uint32_t i = 0; i < size; i ++) {
-        maxVar = std::max<uint32_t>(maxVar, lits[i].var());
+        maxVar = std::max<uint32_t>(maxVar, lits[i].var()+1);
     }
 }
 
