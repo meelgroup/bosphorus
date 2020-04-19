@@ -481,7 +481,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                                 num_learnt +=
                                     anf->addBoolePolynomial(dat->learnt[i]);
 
-                                if (dat->config.verbosity > 1)  {
+                                if (dat->config.verbosity > 4)  {
                                     cout << "Xl Learnt poly: " << dat->learnt[i] << endl;
                                 }
                             }
@@ -498,7 +498,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                                 num_learnt +=
                                     anf->addBoolePolynomial(dat->learnt[i]);
 
-                                if (dat->config.verbosity > 1)  {
+                                if (dat->config.verbosity > 4)  {
                                     cout << "EL Learnt poly: " << dat->learnt[i] << endl;
                                 }
                             }
@@ -534,7 +534,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
                                 num_learnt += anf->addLearntBoolePolynomial(dat->learnt[i]);
 
-                                if (dat->config.verbosity > 1)  {
+                                if (dat->config.verbosity > 4)  {
                                     cout << "SAT Learnt poly: " << dat->learnt[i] << endl;
                                 }
                             }
