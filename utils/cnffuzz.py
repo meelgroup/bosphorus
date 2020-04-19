@@ -113,30 +113,9 @@ def create_cnf(orig_fname, fname, new_facts, new_defs):
                 towrite += "%d " % l
             f.write(towrite+"0\n")
 
-
-def one_fuzz_run(seed):
-    print("Running with seed: %d" % seed)
-    command = "../utils/cnf-utils/cnf-fuzz-brummayer.py"
-    command += " -s %d" % seed
-
-    out, err = myexec(command)
-
-    with open("out.cnf", "w") as f:
-        f.write(out)
-
-    print("OK, out.cnf written")
-
-    command = "./bosphorus --cnfread out.cnf --cnfwrite out2.cnf --comments 1"
-    command = "./bosphorus --cnfread out.cnf --cnfwrite out2.cnf --comments 1 --onlynewcnfcls 1"
-    out, err = myexec(command)
-
-
-    for l in out.split("\n"):
-        if "anf-to-cnf" in l:
-            print(l)
-
+def check_problem(problem_file):
     # get orig num vars
-    orig_num_vars = get_num_vars("out.cnf")
+    orig_num_vars = get_num_vars(problem_file)
     print("orig num vars:", orig_num_vars)
 
     # get new clauses and definitions
@@ -151,7 +130,7 @@ def one_fuzz_run(seed):
             assert l != 0
             new_facts.append([-l])
 
-        create_cnf("out.cnf", "out3.cnf", new_facts, defs)
+        create_cnf(problem_file, "out3.cnf", new_facts, defs)
         command = "lingeling out3.cnf"
         out, err = myexec(command)
         if "s UNSATISFIABLE" not in out:
@@ -159,6 +138,30 @@ def one_fuzz_run(seed):
             exit(-1)
         else:
             print("OK, UNSAT, so clause implied")
+
+
+def one_fuzz_run(seed):
+    print("Running with seed: %d" % seed)
+
+    problem_file = "out.cnf"
+    command = "../utils/cnf-utils/cnf-fuzz-brummayer.py"
+    command += " -s %d" % seed
+    out, err = myexec(command)
+
+    with open(problem_file, "w") as f:
+        f.write(out)
+
+    print("OK, %s written" % problem_file)
+
+    command = "./bosphorus --cnfread %s --cnfwrite out2.cnf --comments 1" % problem_file
+    command = "./bosphorus --cnfread %s --cnfwrite out2.cnf --comments 1 --onlynewcnfcls 1" % problem_file
+    out, err = myexec(command)
+
+    for l in out.split("\n"):
+        if "anf-to-cnf" in l:
+            print(l)
+
+    check_problem(problem_file)
 
 
 class PlainHelpFormatter(optparse.IndentedHelpFormatter):
@@ -184,6 +187,14 @@ if __name__ == "__main__":
     parser.add_option("--onerun", dest="one_seed", default=-1,
                       help="Only run one, with specified seed", type=int)
     (options, args) = parser.parse_args()
+
+    if len(args) > 1:
+        print("ERROR: Max one argument can be given, the problem file")
+        exit(-1)
+
+    if len(args) == 1:
+        check_problem(args[0])
+        exit(0)
 
     if options.one_seed != -1:
         one_fuzz_run(options.one_seed)
