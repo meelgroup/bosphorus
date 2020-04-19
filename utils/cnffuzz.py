@@ -29,6 +29,11 @@ def myexec(command):
 
     console_out, err = p.communicate()
 
+    if err != None:
+        print("Error, fuzzer didn't work, err: ", err)
+        print("console output:", out)
+        exit(-1)
+
     return console_out, err
 
 def get_num_vars(fname):
@@ -45,10 +50,11 @@ def get_num_vars(fname):
             assert line[1].strip() == "cnf"
             return int(line[2])
 
-def get_new_clauses(fname, orig_num_vars):
+
+def get_new_clauses(fname, orig_num_vars = 0):
     clauses = []
     definitions = []
-    with open("out2.cnf", "r") as f:
+    with open(fname, "r") as f:
         for line in f:
             line = line.strip()
             if len(line) == 0:
@@ -82,6 +88,79 @@ def get_new_clauses(fname, orig_num_vars):
     return definitions, clauses
 
 
+def find_max_var(cls):
+    max_var = 0
+    for cl in cls:
+        for l in cl:
+            var = abs(l)
+            max_var = max(var, max_var)
+
+    return max_var
+
+def create_cnf(orig_fname, fname, new_facts, new_defs):
+    cls, x = get_new_clauses(orig_fname)
+    assert len(x) == 0
+
+    max_var = find_max_var(cls+new_defs)
+
+    fullcls = cls+new_defs+new_facts
+    with open(fname, "w") as f:
+
+        f.write("p cnf %d %d\n" % (max_var, len(fullcls)))
+        for cl in fullcls:
+            towrite = ""
+            for l in cl:
+                towrite += "%d " % l
+            f.write(towrite+"0\n")
+
+
+def one_fuzz_run(seed):
+    print("Running with seed: %d" % seed)
+    command = "../utils/cnf-utils/cnf-fuzz-brummayer.py"
+    command += " -s %d" % seed
+
+    out, err = myexec(command)
+
+    with open("out.cnf", "w") as f:
+        f.write(out)
+
+    print("OK, out.cnf written")
+
+    command = "./bosphorus --cnfread out.cnf --cnfwrite out2.cnf --comments 1"
+    command = "./bosphorus --cnfread out.cnf --cnfwrite out2.cnf --comments 1 --onlynewcnfcls 1"
+    out, err = myexec(command)
+
+
+    for l in out.split("\n"):
+        if "anf-to-cnf" in l:
+            print(l)
+
+    # get orig num vars
+    orig_num_vars = get_num_vars("out.cnf")
+    print("orig num vars:", orig_num_vars)
+
+    # get new clauses and definitions
+    defs, cls = get_new_clauses("out2.cnf", orig_num_vars)
+    print("defs:", defs)
+    print("cls:", cls)
+
+    for cl in cls:
+        print("Checking if clause %s is implied" % cl)
+        new_facts = []
+        for l in cl:
+            assert l != 0
+            new_facts.append([-l])
+
+        create_cnf("out.cnf", "out3.cnf", new_facts, defs)
+        command = "lingeling out3.cnf"
+        out, err = myexec(command)
+        if "s UNSATISFIABLE" not in out:
+            print("ERROR: %s is not implied" % cl)
+            exit(-1)
+        else:
+            print("OK, UNSAT, so clause implied")
+
+
 class PlainHelpFormatter(optparse.IndentedHelpFormatter):
 
     def format_description(self, description):
@@ -102,44 +181,14 @@ if __name__ == "__main__":
     # 8 gives us 0 extra variable
     parser.add_option("--seed", dest="fuzz_seed_start", default=8,
                       help="Fuzz test start seed", type=int)
+    parser.add_option("--onerun", dest="one_seed", default=-1,
+                      help="Only run one, with specified seed", type=int)
     (options, args) = parser.parse_args()
-    random.seed(options.fuzz_seed_start)
 
-
-    command = "../utils/cnf-utils/cnf-fuzz-brummayer.py"
-    command += " -s %d" % random.randint(1, 1000000)
-
-    out, err = myexec(command)
-    if err != None:
-        print("Error, fuzzer didn't work, err: ", err)
-        print("console output:", out)
-        exit(-1)
-
-    with open("out.cnf", "w") as f:
-        f.write(out)
-
-    print("OK, out.cnf written")
-
-    command = "./bosphorus --cnfread out.cnf --cnfwrite out2.cnf --comments 1"
-    command = "./bosphorus --cnfread out.cnf --cnfwrite out2.cnf --comments 1 --onlynewcnfcls 1"
-    out, err = myexec(command)
-    if err != None:
-        print("Error, fuzzer didn't work, err: ", err)
-        print("console output:", out)
-        exit(-1)
-
-    for l in out.split("\n"):
-        if "anf-to-cnf" in l:
-            print(l)
-
-    # get orig num vars
-    orig_num_vars = get_num_vars("out.cnf")
-    print("orig num vars:", orig_num_vars)
-
-    # get new clauses and definitions
-    defs, cls = get_new_clauses("out2.cnf", orig_num_vars)
-    print("defs:", defs)
-    print("cls:", cls)
-
-
-
+    if options.one_seed != -1:
+        one_fuzz_run(options.one_seed)
+    else:
+        random.seed(options.fuzz_seed_start)
+        for x in range(10000):
+            seed = random.randint(1, 1000000)
+            one_fuzz_run(seed)
