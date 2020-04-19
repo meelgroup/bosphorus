@@ -114,6 +114,14 @@ def create_cnf(orig_fname, fname, new_facts, new_defs):
             f.write(towrite+"0\n")
 
 def check_problem(problem_file):
+    # get implied clauses
+    command = "./bosphorus --cnfread %s --cnfwrite out2.cnf --comments 1 --maxiters 1" % problem_file
+    command = "./bosphorus --cnfread %s --cnfwrite out2.cnf --comments 1 --onlynewcnfcls 1 --maxiters 1" % problem_file
+    out, err = myexec(command)
+    for l in out.split("\n"):
+        if "anf-to-cnf" in l:
+            print(l)
+
     # get orig num vars
     orig_num_vars = get_num_vars(problem_file)
     print("orig num vars:", orig_num_vars)
@@ -123,6 +131,7 @@ def check_problem(problem_file):
     print("defs:", defs)
     print("cls:", cls)
 
+    # verify new clauses are valid
     for cl in cls:
         print("Checking if clause %s is implied" % cl)
         new_facts = []
@@ -152,14 +161,6 @@ def one_fuzz_run(seed):
         f.write(out)
 
     print("OK, %s written" % problem_file)
-
-    command = "./bosphorus --cnfread %s --cnfwrite out2.cnf --comments 1" % problem_file
-    command = "./bosphorus --cnfread %s --cnfwrite out2.cnf --comments 1 --onlynewcnfcls 1" % problem_file
-    out, err = myexec(command)
-
-    for l in out.split("\n"):
-        if "anf-to-cnf" in l:
-            print(l)
 
     check_problem(problem_file)
 

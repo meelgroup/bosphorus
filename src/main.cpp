@@ -67,6 +67,7 @@ bool writeCNF;
 bool solve_with_cms;
 bool all_solutions;
 int only_new_cnf_clauses = 0;
+uint32_t maxiters = 100;
 
 po::variables_map vm;
 BLib::ConfigData config;
@@ -106,6 +107,8 @@ void parseOptions(int argc, char* argv[])
     ("solve", po::bool_switch(&solve_with_cms), "Solve the resulting ANF")
     ("solvewrite", po::value(&solution_output_file), "Solve the resulting ANF and print the solution to this file")
     ("allsol", po::bool_switch(&all_solutions), "Find all solutions")
+    ("maxiters", po::value(&maxiters)->default_value(maxiters),
+     "Maximum iterations to simplify")
 
     // Processes
     ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
@@ -361,7 +364,7 @@ int main(int argc, char* argv[])
             cnf_orig = cnfInput.c_str();
         }
         cout << "c Simplifying...." << endl;
-        mylib.simplify(anf, cnf_orig);
+        mylib.simplify(anf, cnf_orig, maxiters);
         cout << "c Simplifying finished." << endl;
     }
     if (config.printProcessedANF) {
