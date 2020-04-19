@@ -195,6 +195,8 @@ void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
 
 ::ANF* Bosphorus::chunk_dimacs(DIMACS* dim)
 {
+    check_library_in_use();
+
     auto dimacs = (BLib::DIMACSCache*)dim;
     const vector<Clause>& orig_clauses(dimacs->getClauses());
     size_t orig_var = dimacs->getMaxVar();
