@@ -333,7 +333,8 @@ int main(int argc, char* argv[])
 
     if (readCNF) {
         double parseStartTime = cpuTime();
-        anf = mylib.read_cnf(cnfInput.c_str());
+        DIMACS* dimacs = mylib.parse_cnf(cnfInput.c_str());
+        anf = mylib.chunk_dimacs(dimacs);
         if (config.verbosity) {
             cout << "c [CNF Input] read in T: " << (cpuTime() - parseStartTime)
                  << endl;
