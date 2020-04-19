@@ -193,6 +193,18 @@ void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
     return (DIMACS*)dimacs;
 }
 
+::DIMACS* Bosphorus::new_dimacs()
+{
+    BLib::DIMACSCache* dimacs = new BLib::DIMACSCache();
+    return (DIMACS*)dimacs;
+}
+
+void Bosphorus::add_dimacs_cl(DIMACS* dim, Lit* lits, uint32_t size)
+{
+    auto dimacs = (BLib::DIMACSCache*)dim;
+    dimacs->addClause(lits, size);
+}
+
 ::ANF* Bosphorus::chunk_dimacs(DIMACS* dim)
 {
     check_library_in_use();

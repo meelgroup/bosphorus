@@ -48,11 +48,14 @@ public:
     static const char* get_version_tag();
     static const char* get_version_sha1();
 
-    // To read CNF or ANF from file
+    // To read CNF or ANF
     ANF* read_anf(const char* fname);
     ANF* read_cnf(const char* fname);
     DIMACS* parse_cnf(const char* fname);
     ANF* chunk_dimacs(DIMACS* dimacs);
+    DIMACS* new_dimacs();
+    void add_dimacs_cl(DIMACS* dim, Lit* lits, uint32_t size);
+
 
     // To insert dynamically generated CNF
     ANF* start_cnf_input(uint32_t max_vars);

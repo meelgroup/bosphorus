@@ -32,11 +32,17 @@ namespace BLib {
 class DIMACSCache
 {
    public:
+    DIMACSCache()
+    {}
+
     DIMACSCache(const char* _fname);
-    size_t getMaxVar(void) const
+    void addClause(const Lit* lits, const uint32_t size);
+
+    uint32_t getMaxVar(void) const
     {
         return maxVar;
     }
+
     const std::vector<Clause>& getClauses(void) const
     {
         return clauses;
@@ -44,7 +50,7 @@ class DIMACSCache
 
    private:
     std::vector<Clause> clauses;
-    size_t maxVar;
+    uint32_t maxVar = 0;
     const char* fname = nullptr;
 };
 

@@ -23,6 +23,8 @@ SOFTWARE.
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
+#include <complex>
 
 #include "dimacscache.hpp"
 
@@ -30,6 +32,18 @@ using std::cout;
 using std::endl;
 
 using namespace BLib;
+
+void DIMACSCache::addClause(const Lit* lits, const uint32_t size)
+{
+    clauses.push_back(vector<Lit>());
+    const size_t at = clauses.size()-1;
+    clauses[at].lits.resize(size);
+    std::copy(lits, lits+size, clauses[at].lits.data());
+
+    for(uint32_t i = 0; i < size; i ++) {
+        maxVar = std::max<uint32_t>(maxVar, lits[i].var());
+    }
+}
 
 DIMACSCache::DIMACSCache(const char* _fname)
 {
@@ -67,9 +81,9 @@ DIMACSCache::DIMACSCache(const char* _fname)
                     clauses.push_back(Clause(lits));
                     break;
                 } else {
-                    lits.push_back(Lit(abs(v) - 1, v < 0));
+                    lits.push_back(Lit(std::abs(v) - 1, v < 0));
                 }
-                maxVar = std::max(maxVar, (size_t)abs(stoi(x)));
+                maxVar = std::max<uint32_t>(maxVar, std::abs(stoi(x)));
             }
         }
     }
