@@ -34,6 +34,7 @@ using std::vector;
 class PrivateData;
 class ANF;
 class CNF;
+class DIMACS;
 
 namespace Bosph {
 
@@ -50,6 +51,8 @@ public:
     // To read CNF or ANF from file
     ANF* read_anf(const char* fname);
     ANF* read_cnf(const char* fname);
+    DIMACS* parse_cnf(const char* fname);
+    ANF* chunk_dimacs(DIMACS* dimacs);
 
     // To insert dynamically generated CNF
     ANF* start_cnf_input(uint32_t max_vars);

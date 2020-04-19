@@ -73,13 +73,23 @@ set_target_properties(bosphorus-bin PROPERTIES
     OUTPUT_NAME bosphorus
 )
 
-if (STATICCOMPILE)
-    SET_TARGET_PROPERTIES(bosphorus-bin PROPERTIES LINK_SEARCH_START_STATIC 1)
-endif()
-
 target_link_libraries(bosphorus-bin
     bosphorus
     ${Boost_LIBRARIES}
+)
+
+add_executable(simple-bin
+    main_simple.cpp
+)
+
+set_target_properties(simple-bin PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+    OUTPUT_NAME simple
+)
+
+target_link_libraries(simple-bin
+    bosphorus
 )
 
 

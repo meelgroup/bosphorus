@@ -22,11 +22,9 @@ SOFTWARE.
 ***********************************************/
 
 #include <sys/wait.h>
-#include <deque>
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <map>
 #include <iomanip>
 
 #include "bosphorus.hpp"
@@ -42,7 +40,6 @@ SOFTWARE.
 
 using std::cerr;
 using std::cout;
-using std::deque;
 using std::endl;
 using std::string;
 

@@ -179,14 +179,25 @@ void Bosphorus::add_clause(ANF* anf, const std::vector<int>& clause)
     ((BLib::ANF*)anf)->addBoolePolynomial(poly);
 }
 
-
 ::ANF* Bosphorus::read_cnf(const char* fname)
 {
     check_library_in_use();
 
-    BLib::DIMACSCache dimacs_cache(fname);
-    const vector<Clause>& orig_clauses(dimacs_cache.getClauses());
-    size_t orig_var = dimacs_cache.getMaxVar();
+    DIMACS* dimacs = parse_cnf(fname);
+    return chunk_dimacs(dimacs);
+}
+
+::DIMACS* Bosphorus::parse_cnf(const char* fname)
+{
+    BLib::DIMACSCache* dimacs = new BLib::DIMACSCache(fname);
+    return (DIMACS*)dimacs;
+}
+
+::ANF* Bosphorus::chunk_dimacs(DIMACS* dim)
+{
+    auto dimacs = (BLib::DIMACSCache*)dim;
+    const vector<Clause>& orig_clauses(dimacs->getClauses());
+    size_t orig_var = dimacs->getMaxVar();
     size_t maxVar = orig_var;
 
     if (dat->config.verbosity >= 1) {
@@ -361,6 +372,8 @@ CNF* Bosphorus::anf_to_cnf(const ANF* a)
     return (CNF*)cnf;
 }
 
+//NOTE: cnf_filename is only needed in case SAT-based simplification
+//      is used. NULL is also acceptable here.
 CNF* Bosphorus::cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* a)
 {
     auto anf = (BLib::ANF*)a;
