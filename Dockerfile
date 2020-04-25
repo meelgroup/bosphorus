@@ -1,8 +1,9 @@
-FROM ubuntu:19.04 as builder
+FROM ubuntu:20.04 as builder
 
 LABEL maintainer="Mate Soos"
 LABEL version="1.0"
 LABEL Description="Bosphorus"
+ENV DEBIAN_FRONTEND=noninteractive
 
 # get curl, etc
 RUN apt-get update
@@ -33,11 +34,11 @@ RUN make install
 
 # build CMS
 WORKDIR /
-RUN wget https://github.com/msoos/cryptominisat/archive/5.6.5.tar.gz \
-    && tar -xvf 5.6.5.tar.gz
-WORKDIR /cryptominisat-5.6.5
+RUN wget https://github.com/msoos/cryptominisat/archive/5.7.0.tar.gz \
+    && tar -xvf 5.7.0.tar.gz
+WORKDIR /cryptominisat-5.7.0
 RUN mkdir build
-WORKDIR /cryptominisat-5.6.5/build
+WORKDIR /cryptominisat-5.7.0/build
 RUN cmake -DSTATICCOMPILE=ON .. \
     && make -j2 \
     && make install \
