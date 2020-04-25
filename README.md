@@ -1,4 +1,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker Hub](https://img.shields.io/badge/docker-latest-blue.svg)](https://hub.docker.com/r/msoos/bosphorus/)
+
 
 Bosphorus is an ANF simplification and solving tool. It takes as input an ANF over GF(2) and can simplify and solve it. It uses many different algorithms, including XL, SAT, Brickenstein's ANF-to-CNF conversion, Gauss-Jordan elimination, etc. to simplify and solve ANFs.
 
