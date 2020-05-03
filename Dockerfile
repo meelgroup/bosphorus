@@ -34,11 +34,11 @@ RUN make install
 
 # build CMS
 WORKDIR /
-RUN wget https://github.com/msoos/cryptominisat/archive/5.7.0.tar.gz \
-    && tar -xvf 5.7.0.tar.gz
-WORKDIR /cryptominisat-5.7.0
+RUN wget https://github.com/msoos/cryptominisat/archive/5.7.1.tar.gz \
+    && tar -xvf 5.7.1.tar.gz
+WORKDIR /cryptominisat-5.7.1
 RUN mkdir build
-WORKDIR /cryptominisat-5.7.0/build
+WORKDIR /cryptominisat-5.7.1/build
 RUN cmake -DSTATICCOMPILE=ON .. \
     && make -j2 \
     && make install \
