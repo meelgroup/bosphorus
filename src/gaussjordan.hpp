@@ -28,7 +28,7 @@ SOFTWARE.
 #include <unordered_map>
 
 #include "anf.hpp"
-#include "m4ri.h"
+#include <m4ri/m4ri.h>
 #include "time_mem.h"
 
 using std::cout;
