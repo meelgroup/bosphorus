@@ -115,11 +115,13 @@ bool BLib::extendedLinearization(const ConfigData& config,
 
                             unsigned long i = 0;
                             for (size_t n = 0; n < num_variables_allowed; ++n) {
-                                double p = static_cast<double>(
-                                   num_variables_allowed - n) / (nVars - i);
-
-                                i += floor(log(static_cast<double>(rand()) /
-                                               RAND_MAX) / log(1 - p));
+                                double p = (double)(num_variables_allowed - n) / (double)(nVars - i);
+                                if (p == 0) {
+                                    p = 0.01;
+                                }
+                                i += std::floor(
+                                    std::log(((double)rand()/(double)RAND_MAX)) / std::log(1.0 - p)
+                                );
 
                                 if (i >= nVars) {
                                     i = nVars - 1;
