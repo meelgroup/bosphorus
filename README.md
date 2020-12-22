@@ -176,6 +176,48 @@ make -j4
 ./bosphorus -h
 ```
 
+## Mapping solutions from CNF to ANF
+
+Let's take a simple ANF:
+
+```
+$ cat test.anf
+x(1) + x2 + x3
+x1*x2 + x2*x3 + 1
+```
+
+Let's simplify and it to CNF:
+
+```
+./bosphorus --anfread test.anf  --cnfwrite test.cnf --solmap solution_map
+```
+
+Let's solve with any SAT solver:
+
+```
+lingeling test.cnf > cnf_solution
+```
+
+Let's map the CNF solution back to ANF using the python script under `utils/map_solution.py`:
+
+```
+./map_solution.py solution_map cnf_solution
+c solution below, with variables starting at 0, as per ANF convention.
+s ANF-SATISFIABLE
+v x(0) 1+x(1) 1+x(2) x(3)
+```
+
+This means that `x(0)=FALSE`, `x(1)=TRUE`, `x(2)=TRUE`, and `x(3)=FALSE`.
+
+If you want all solutions:
+
+```
+./cryptominisat x --maxsol 10000000 > cnf_solutions
+```
+
+Then take the solutions from `cnf_solutions` individually, put them in a file, and call `map_solution` on it, as before.
+
+
 ## Fuzzing
 The tool comes with a built-in ANF fuzzer. To use, install [cryptominisat](https://github.com/msoos/cryptominisat), then run:
 
