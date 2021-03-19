@@ -410,6 +410,24 @@ void CNF::print_solution_map(std::ofstream* ofs)
     }
 }
 
+
+void CNF::write_projection_set(std::ofstream* ofs) const
+{
+    *ofs << "c ind ";
+    for (size_t i = 0; i < getNumVars(); ++i) {
+        // only map monomials which are single variables
+        if (varRepresentsMonomial(i)) {
+            const BooleMonomial& m(revCombinedMap[i].lead());
+
+            //Only single-vars
+            if (m.deg() == 1) {
+                *ofs << i+1 << " ";
+            }
+        }
+    }
+    *ofs << "0" << endl;
+}
+
 BooleMonomial CNF::getMonomForVar(const uint32_t& var) const
 {
     if (varRepresentsMonomial(var))
