@@ -96,6 +96,29 @@ Explanation of simplifications performed:
 * The second polynomial becomes `(x2 + x3) * x2 + x2 * x3 + 1 = 0`, which simplifies to `x2 + 1 = 0`
 * Substituting `x2 + 1 = 0` yields `x1 + x3 + 1 = 0`
 
+
+## Counting solutions to ANF problems
+
+You can count the solution to the ANF in `test.anf` by using the standard translation and taking advantage of the projection written inside the CNF. This projection set is written as `c ind var1 var2 ... varn 0`. Many counters, such as [ApproxMC](https://github.com/meelgroup/approxmc) are able to use this format to count the solutions in the CNF. Here is how to do it with ApproxMC:
+
+```
+./bosphorus --anfread test.anf --cnfwrite out.cnf
+approxmc out.cnf
+[...]
+c [appmc] Number of solutions is: 256*2**6
+s mc 16384
+```
+
+If the number of solutions is low (say, less than 1000) you can also use CryptoMiniSat to do the counting:
+
+```
+./bosphorus --anfread test.anf --cnfwrite out.cnf
+cryptominisat --maxsol 100000 out.cnf
+[...]
+c Number of solutions found until now:    16384
+s UNSATISFIABLE
+```
+
 ## CNF simplification
 Bosphorus can simplify and solve CNF problems. When simplifying or solving CNF problems, the CNF is (extremely) naively translated to ANF, then simplifications are applied, and a sophisticated system then translates the ANF back to CNF. This CNF can then be optinally solved.
 
