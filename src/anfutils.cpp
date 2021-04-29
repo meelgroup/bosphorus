@@ -111,24 +111,23 @@ double BLib::do_sample_and_clone(const uint32_t verbosity,
 void BLib::subsitute(const BooleVariable& from_var, const BoolePolynomial& to_poly,
                BoolePolynomial& poly)
 {
-    BoolePolynomial quotient = poly / from_var;
+  BoolePolynomial quotient = poly / from_var;
 
-    /*if( quotient.isZero() ) // don't need this check
-    return;
-  else*/
-    if (poly.isSingleton()) // for some reason, we need this special case to prevent segfault in some cases
-        poly = quotient * to_poly;
-    else if (quotient.isOne()) { // ditto
-        poly -= from_var;
-        poly += to_poly;
-    } else {
-        // construct reminder manually to prevent segfault
-        quotient *= to_poly;
-        for (const BooleMonomial& mono : poly) {
-            if (!mono.reducibleBy(from_var)) {
-                quotient += mono;
-            }
-        }
-        swap(quotient, poly); // because we are returning poly
-    }
+  if( quotient.isZero() ) { // 
+      // `from_var` does not occur in `poly`, so just keep `poly` as it is.
+      return;
+  } else if (quotient.isOne()) { // just
+      // from_var == poly, so return the value of to_poly.
+      quotient *= to_poly;
+      swap(quotient, poly); // because we are returning poly
+  } else {
+      // build up the return value based on the quotient and the remainder
+      quotient *= to_poly;
+      for (const BooleMonomial& mono : poly) {
+          if (!mono.reducibleBy(from_var)) {
+              quotient += mono;
+          }
+      }
+      swap(quotient, poly); // because we are returning poly
+  }
 }
