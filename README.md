@@ -255,12 +255,22 @@ ln -s ../utils/* .
 ```
 
 ## Testing
-Must have [LLVM lit](https://github.com/llvm-mirror/llvm/tree/master/utils/lit) and [stp OutputCheck](https://github.com/stp/OutputCheck). Please install with:
+
+The test suite uses [LLVM lit](https://github.com/llvm-mirror/llvm/tree/master/utils/lit) and [stp OutputCheck](https://github.com/stp/OutputCheck). It's convenient to use a [Python virtual environment](https://docs.python.org/3/library/venv.html):
+
 ```
-pip install lit
-pip install OutputCheck
+cd bosphorus
+python3 -m venv .venv 
+source .venv/bin/activate
+pip install -r requirements.test.txt
 ```
-Run test suite via `lit bosphorus/tests`
+
+Now you can run the tests via:
+
+```
+lit tests
+```
+
 
 # Known issues
 - PolyBoRi cannot handle ring of sizes over approx 1 million (1048574). Do not run `bosphorus` on instances with over a million variables.
