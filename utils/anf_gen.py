@@ -25,7 +25,7 @@ import sys
 import random
 
 def get_monomial():
-    deg = int(random.gammavariate(0.4, 4))+1
+    deg = int(random.gammavariate(0.2, 4))+1
     assert deg >0
 
     already_in = []
@@ -75,7 +75,7 @@ if random.randint(1,3) == 0:
     # for solution counting
     max_var = random.randint(2, 10)
 else:
-    max_var = random.randint(5, 30)
+    max_var = random.randint(5, 50)
 
 num_eqs = random.randint(int(max_var/4), max_var*3)
 for x in range(num_eqs):
