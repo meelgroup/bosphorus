@@ -134,7 +134,7 @@ bool BLib::elimLin(const ConfigData& config, const vector<BoolePolynomial>& eqs,
                     if (linear_idx == idx)
                         poly = 0; // replacing itself
                     else {
-                        subsitute(from_var, to_poly, poly);
+                        substitute(from_var, to_poly, poly);
                         BooleMonomial curr_used(poly.usedVariables());
                         BooleMonomial gcd = prev_used.GCD(curr_used);
                         prev_used /= gcd; // update remove list
