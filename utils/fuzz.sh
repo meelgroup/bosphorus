@@ -33,7 +33,7 @@ function one_run {
 
     # Solve with simplifications turned off
     ./bosphorus --simplify 0 --anfread $dir/problem.anf --cnfwrite $dir/problem_simple.cnf > $dir/bosph_out
-    time $CRYPTOMINISAT --maxconfl 40000 --zero-exit-status $dir/problem_simple.cnf --verb 0 > $dir/simple_sol.out
+    $CRYPTOMINISAT --maxconfl 40000 --zero-exit-status $dir/problem_simple.cnf --verb 0 > $dir/simple_sol.out
     if grep -q "^s SATISFIABLE$" "$dir/simple_sol.out"; then
         echo "Problem is SAT as per simple solving"
         SATISFIABLE=1 # SomeString was not found
@@ -55,7 +55,7 @@ function one_run {
     ./check_cnf.py $dir/problem.cnf
 
     # Solve CNF
-    /home/soos/development/sat_solvers/cryptominisat/build/cryptominisat5 --verb 0 --zero-exit-status $dir/problem.cnf > $dir/cnfsol
+    $CRYPTOMINISAT --verb 0 --zero-exit-status $dir/problem.cnf > $dir/cnfsol
 
     # Map CNF solution to ANF
     ./map_solution.py $dir/map $dir/cnfsol > $dir/anfsol
@@ -64,7 +64,7 @@ function one_run {
     ./check_solution.py $dir/anfsol $dir/problem.anf $SATISFIABLE
 
     # Solve CNF, but this time, count the number of solutions
-    /home/soos/development/sat_solvers/cryptominisat/build/cryptominisat5 --zero-exit-status $dir/problem.cnf --maxsol 1025 > $dir/numsol
+    $CRYPTOMINISAT --zero-exit-status $dir/problem.cnf --maxsol 1025 > $dir/numsol
 
     # If the number of variables is not too high, then:
     #   brute-force count no. solutions to ANF, and check against the CNF
