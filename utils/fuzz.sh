@@ -10,8 +10,8 @@ set -e
 # EOF
 
 
-if [ "$#" -ne 1 ]; then
-  echo "Usage: $0 cryptominisat_binary_location" >&2
+if [ "$#" -ne 1 ] && [ "$#" -ne 2 ] ; then
+  echo "Usage: $0 cryptominisat_binary_location [seed]" >&2
   exit 1
 fi
 
