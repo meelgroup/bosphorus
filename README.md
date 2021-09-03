@@ -251,8 +251,10 @@ mkdir build
 cd build
 ln -s ../utils/* .
 ./build_normal.sh
-./fuzz.sh
+./fuzz.sh /usr/bin/cryptominisat5
 ```
+
+Where the argument to `fuzz.sh` must be the location of the cryptominisat5 binary.
 
 ## Testing
 

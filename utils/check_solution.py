@@ -50,18 +50,17 @@ def evaluate(monom, sol):
 
 def read_solution(fname):
     sol = {}
-    unsat = None
+    satisfiable = None
     with open(fname, "r") as f:
         for line in f:
             line = line.strip()
 
             if line == "s ANF-SATISFIABLE":
-                unsat = False
+                satisfiable = True
 
             if line == "s ANF-UNSATISFIABLE":
-                unsat = True
-                print("Unsatisfiable, cannot check solution")
-                exit(0)
+                satisfiable = False
+                return [], satisfiable
 
             if len(line) == 0:
                 continue
@@ -91,7 +90,7 @@ def read_solution(fname):
 
                 sol[var] = rhs
 
-    return sol, unsat
+    return sol, satisfiable
 
 
 def check_anf_against_solution(anf, sol):
@@ -119,30 +118,59 @@ def check_anf_against_solution(anf, sol):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: check_solution.py solution ANF")
+    if len(sys.argv) != 4 and len(sys.argv) != 3:
+        print("Usage: 'check_solution.py solution ANF [sat]'")
+        print("       where 'sat' is 0 if satisfiable, 1 if unsatisfiable")
         exit(-1)
 
     solfile = sys.argv[1]
     anffile = sys.argv[2]
+    if len(sys.argv) == 4:
+        known_sat = int(sys.argv[3])
+    else:
+        known_sat = 99
+    error_state = False
+    print("known sat:", known_sat)
+    print("known sat:", type(known_sat))
 
     # Read in solution
-    sol, unsat = read_solution(solfile)
-    if unsat is None:
+    sol, satisfiable = read_solution(solfile)
+    if satisfiable is None:
         print("ERROR: Solution file does not say ANF-SATISFIABLE or ANF-UNSATISFIABLE")
         print("ERROR: maybe it's corrupt?")
         exit(-1)
     print("Solution:", sol)
 
+    # Check SAT->UNSAT, UNSAT->SAT
+    if satisfiable:
+        if known_sat == 0:
+            print("ERROR: Straight CNF transformation said UNSAT but simplified CNF says SAT")
+            error_state = True
+    else:
+        if known_sat == 1:
+            print("ERROR: Simple solver found a solution, but simplified version says UNSAT!!")
+            error_state = True
+        elif known_sat == 0:
+            print("OK, UNSAT verified")
+        else:
+            assert known_sat == 99
+            print("Cannot verify SAT->UNSAT")
+
     # check solution against ANF
-    with open(anffile, "r") as f:
-        anf = f.read().split("\n")
+    if satisfiable:
+        with open(anffile, "r") as f:
+            anf = f.read().split("\n")
 
-    ok, eq, monoms = check_anf_against_solution(anf, sol)
-    if not ok:
-        print("ERROR: Equation not satisfied: ", eq)
-        for mon in monoms:
-            print("--> Monomial '%s' evaluates to: %s" % (mon, evaluate(mon, sol)))
+        ok, eq, monoms = check_anf_against_solution(anf, sol)
+        if not ok:
+            print("ERROR: Equation not satisfied: ", eq)
+            for mon in monoms:
+                print("--> Monomial '%s' evaluates to: %s" % (mon, evaluate(mon, sol)))
+            error_state = True
+
+        print("OK, solution is good!")
+
+    if error_state:
         exit(-1)
-
-    print("OK, solution is good!")
+    else:
+        exit(0)
