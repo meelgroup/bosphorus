@@ -1,0 +1,10 @@
+c RUN: %solver --anfread %s --anfwrite /dev/stdout --el 1 --xl 0 --sat 0 | %check %s.out
+c
+c A bug in Bosphorus' variable substitution caused `x(1)` to be incorrectly simplified to 0.
+c This test verifies that doesn't happen anymore.
+c
+
+x(0)*x(7) + x(7)
+x(1) + x(5) + x(7)
+x(2) + x(0)
+x(3) + x(0) + 1
