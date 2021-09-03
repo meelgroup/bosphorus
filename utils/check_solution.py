@@ -130,8 +130,6 @@ if __name__ == "__main__":
     else:
         known_sat = 99
     error_state = False
-    print("known sat:", known_sat)
-    print("known sat:", type(known_sat))
 
     # Read in solution
     sol, satisfiable = read_solution(solfile)
