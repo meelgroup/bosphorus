@@ -1,0 +1,2 @@
+c RUN: %solver --anfread %s --anfwrite /dev/stdout --el 1 --xl 0 --sat 0 | %check %s.out
+(x1*x4 + x0*x5)*x8 + (x3*x4 + x0*x7)*x9 + (x3*x6 + x2*x7)*x10 + (x2*x5 + x1*x6)*x11

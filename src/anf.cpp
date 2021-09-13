@@ -129,6 +129,8 @@ size_t ANF::readFile(const std::string& filename)
         bool startOfVar = false;
         bool readInVar = false;
         bool readInDesc = false;
+        bool start_bracket = false;
+
         size_t var = 0;
         BooleMonomial m(*ring);
         for (uint32_t i = 0; i < temp.length(); i++) {
@@ -149,7 +151,20 @@ size_t ANF::readFile(const std::string& filename)
 
             //Silently ignore brackets.
             //This makes the 'parser' work for both "x3" and "x(3)"
-            if (temp[i] == ')' || temp[i] == '(') {
+            if (temp[i] == ')') {
+                if (!start_bracket) {
+                    cout << "ERROR: close bracket but no start bracket?" << endl;
+                    exit(-1);
+                }
+                start_bracket = false;
+                continue;
+            }
+            if (temp[i] == '(') {
+                if (start_bracket) {
+                    cout << "ERROR: start bracket but previous not closed?" << endl;
+                    exit(-1);
+                }
+                start_bracket = true;
                 continue;
             }
 
@@ -191,6 +206,10 @@ size_t ANF::readFile(const std::string& filename)
             }
 
             if (temp[i] == '+') {
+                if (start_bracket) {
+                    cout << "ERROR: You are adding monomials, but haven't closed the previous one! We can only parse ANF, not e.g. ternary factorized systems" << endl;
+                    exit(-1);
+                }
                 if (readInVar) {
                     m *= BooleVariable(var, *ring);
 
@@ -223,7 +242,7 @@ size_t ANF::readFile(const std::string& filename)
                 continue;
             }
 
-            //Feal with carriage return. Thanks Windows!
+            //Deal with carriage return. Thanks Windows!
             if (temp[i] == 13) {
                 continue;
             }
@@ -287,6 +306,10 @@ size_t ANF::readFile(const std::string& filename)
         }
 
         addBoolePolynomial(eq);
+        if (start_bracket) {
+            cout << "ERROR: end of line but bracket not closed" << endl;
+            exit(-1);
+        }
     }
 
     ifs.close();
