@@ -50,7 +50,7 @@ add_library(bosphorus
 )
 
 target_link_libraries(bosphorus
-    ${M4RI_LIBRARIES}
+    ${m4ri_LIBRARIES}
     ${BRiAl_LIBRARIES}
     ${PNG_LIBRARIES}
     ${CRYPTOMINISAT5_LIBRARIES}

@@ -336,9 +336,9 @@ MESSAGE(STATUS "PROJECT_VERSION_MAJOR: ${PROJECT_VERSION_MAJOR}")
 MESSAGE(STATUS "PROJECT_VERSION_MINOR: ${PROJECT_VERSION_MINOR}")
 MESSAGE(STATUS "PROJECT_VERSION_PATCH: ${PROJECT_VERSION_PATCH}")
 
-find_package(M4RI REQUIRED)
-link_directories( ${M4RI_LIBRARY} )
-include_directories(${M4RI_INCLUDE_DIRS})
+find_package(m4ri REQUIRED)
+link_directories( ${m4ri_LIBRARY} )
+include_directories(${m4ri_INCLUDE_DIRS})
 
 find_package(BRiAl REQUIRED)
 include_directories(${BRiAl_INCLUDE_DIRS})
