@@ -452,6 +452,7 @@ Solution extend_solution(
 void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
     vector<Clause> cls = mylib-> get_clauses(cnf);
     CMSat::SATSolver solver;
+    solver.set_num_threads(config.numThreads);
     solver.new_vars(mylib->get_max_var(cnf));
     for(const Bosph::Clause& c: cls) {
         const Bosph::Clause* cc = &c;
