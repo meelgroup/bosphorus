@@ -9,32 +9,6 @@ The main use of the system is to simplify and solve ANF problems. It should give
 This work was done by Davin Choo and Kian Ming A. Chai from DSO National Laboratories Singapore, and Mate Soos and Kuldeep Meel from the National University of Singapore (NUS). If you use Bosphorus, please cite our [paper](https://www.comp.nus.edu.sg/~meel/Papers/date-cscm19.pdf) ([bibtex](https://www.comp.nus.edu.sg/~meel/bib/CSCM19.bib)) published at DATE 2019. Some of the code was generously donated by [Security Research Labs, Berlin](https://srlabs.de/).
 
 
-## Docker usage
-
-To find all solutions to `myfile.anf`:
-
-```
-docker run --rm -v `pwd`/:/dat/ msoos/bosphorus \
-    --anfread /dat/myfile.anf \
-    --cnfwrite /dat/myfile.cnf \
-    --solve --allsol
-[...]
-s ANF-SATISFIABLE
-v x(0) x(1)+1 x(2) x(3)
-s ANF-SATISFIABLE
-v x(0) x(1)+1 1+x(2) 1+x(3)
-s ANF-UNSATISFIABLE
-c Number of solutions found: 2
-```
-
-Where `x(0)` means `x(0)` must be FALSE and `x(1)+1` means `x(1)` must be TRUE.
-
-To convert `myfile.anf` to `myfile.cnf` with all the simplifications:
-
-```
-docker run --rm -v `pwd`/:/dat/ msoos/bosphorus --anfread /dat/myfile.anf --cnfwrite /dat/myfile.cnf
-```
-
 ## ANF simplification and solving
 Suppose we have a system of two equations:
 ```
@@ -96,14 +70,36 @@ Explanation of simplifications performed:
 * The second polynomial becomes `(x2 + x3) * x2 + x2 * x3 + 1 = 0`, which simplifies to `x2 + 1 = 0`
 * Substituting `x2 + 1 = 0` yields `x1 + x3 + 1 = 0`
 
+## List all solutions of an ANF
 
-## Counting solutions to ANF problems
+To find all solutions to `myfile.anf`:
 
-You can count the solution to the ANF in `test.anf` by using the standard translation and taking advantage of the projection written inside the CNF. This projection set is written as `c ind var1 var2 ... varn 0`. Many counters, such as [ApproxMC](https://github.com/meelgroup/approxmc) are able to use this format to count the solutions in the CNF. Here is how to do it with ApproxMC:
+```
+./bosphorus \
+    --anfread myfile.anf \
+    --cnfwrite myfile.cnf \
+    --solve --allsol
+[...]
+s ANF-SATISFIABLE
+v x(0) x(1)+1 x(2) x(3)
+s ANF-SATISFIABLE
+v x(0) x(1)+1 1+x(2) 1+x(3)
+s ANF-UNSATISFIABLE
+c Number of solutions found: 2
+```
+
+Where `x(0)` means `x(0)` must be FALSE and `x(1)+1` means `x(1)` must be TRUE.
+
+To convert `myfile.anf` to `myfile.cnf` with all the simplifications:
+
+
+## Counting solutions of an ANF
+
+Sometimes, there are too many solutions to an ANF to list them all (e.g. 2**40). You can count the number of solutions of an ANF in `test.anf` by using the standard translation and taking advantage of the projection written inside the CNF. This projection set is written as `c ind var1 var2 ... varn 0`. Many counters, such as [ApproxMC](https://github.com/meelgroup/approxmc) are able to use this format to count the solutions in the CNF. Here is how to do it with ApproxMC:
 
 ```
 ./bosphorus --anfread test.anf --cnfwrite out.cnf
-approxmc out.cnf
+./approxmc out.cnf
 [...]
 c [appmc] Number of solutions is: 256*2**6
 s mc 16384
@@ -113,7 +109,7 @@ If the number of solutions is low (say, less than 1000) you can also use CryptoM
 
 ```
 ./bosphorus --anfread test.anf --cnfwrite out.cnf
-cryptominisat --maxsol 100000 out.cnf
+./cryptominisat --maxsol 100000 out.cnf
 [...]
 c Number of solutions found until now:    16384
 s UNSATISFIABLE
