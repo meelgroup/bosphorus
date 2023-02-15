@@ -63,7 +63,7 @@ class SATSolve
 {
    public:
     SATSolve(const int verbosity, const bool testsolution,
-             string solverExecutable, const int numThreads);
+             string solverExecutable);
 
     vector<lbool> solveCNF(const ANF* orig_anf, const ANF& anf, const CNF& cnf);
     const vector<lbool>& getSolution() const
@@ -93,7 +93,6 @@ class SATSolve
     string solverExecutable;
     int verbosity;
     bool testsolution;
-    int numThreads;
 };
 
 #endif //SATSOLVE__H

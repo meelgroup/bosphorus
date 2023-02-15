@@ -472,7 +472,7 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
             uint32_t num_anf_vars = mylib->get_max_var(anf);
             solution = extend_solution(solver.get_model(), varmap, num_anf_vars);
         } else {
-            solution. ret = l_False;
+            solution.ret = l_False;
         }
         print_solution_anf_style(solution);
         write_solution_to_file_cnf_style(solution);
@@ -580,9 +580,7 @@ Solution extend_solution(
     Solution s;
     s.ret = l_True;
     s.sol.resize(num_anf_vars);
-    for(auto& x: s.sol) {
-        x = l_Undef;
-    }
+    for(auto& x: s.sol) x = l_Undef;
 
     for(int do_must_set = 0; do_must_set < 2; do_must_set++) {
         bool changed = true;
