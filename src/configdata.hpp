@@ -26,6 +26,7 @@ SOFTWARE.
 
 #include <limits>
 #include <string>
+#include <cstdint>
 
 using std::string;
 
