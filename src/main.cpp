@@ -65,6 +65,7 @@ bool solve_with_cms;
 bool all_solutions;
 int only_new_cnf_clauses = 0;
 uint32_t maxiters = 100;
+uint32_t max_sol = 1;
 
 po::variables_map vm;
 BLib::ConfigData config;
@@ -104,6 +105,7 @@ void parseOptions(int argc, char* argv[])
     ("solve", po::bool_switch(&solve_with_cms), "Solve the resulting ANF")
     ("solvewrite", po::value(&solution_output_file), "Solve the resulting ANF and print the solution to this file")
     ("allsol", po::bool_switch(&all_solutions), "Find all solutions")
+    ("maxsol", po::value(&max_sol)->default_value(max_sol), "Find at most this many solutions")
     ("maxiters", po::value(&maxiters)->default_value(maxiters),
      "Maximum iterations to simplify")
 
@@ -414,9 +416,7 @@ int main(int argc, char* argv[])
             cnf = mylib.write_cnf(NULL, anf);
         }
         #ifdef USE_CMS
-        if (solve_with_cms || all_solutions) {
-            solve(&mylib, cnf, anf);
-        }
+        solve(&mylib, cnf, anf);
         #else
         cout << "ERROR: CryptoMiniSat libraries were not found during build. Cannot solve." << endl;
         exit(-1);
@@ -480,14 +480,15 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
         if (ret == CMSat::l_True) {
             check_solution(anf, solution);
         }
-        if (!all_solutions || ret == CMSat::l_False) {
+        if (ret == CMSat::l_False) break;
+        number_of_solutions++;
+        if (!all_solutions && max_sol <= number_of_solutions) {
             break;
         }
         ban_solution(solver, solution);
-        number_of_solutions++;
     }
 
-    if (all_solutions) {
+    if (all_solutions || max_sol > 1) {
         cout << "c Number of solutions found: " << number_of_solutions << endl;
     }
 }
