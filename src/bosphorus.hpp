@@ -26,6 +26,7 @@ SOFTWARE.
 
 #include <vector>
 #include <map>
+#include <set>
 #include <fstream>
 #include "bosphorus/solvertypesmini.hpp"
 
@@ -74,6 +75,7 @@ public:
     void write_solution_map(ANF* anf, std::ofstream* ofs);
     void get_solution_map(const ANF* a, std::map<uint32_t, VarMap>& ret) const;
     void get_solution_map(const CNF* c, std::map<uint32_t, VarMap>& ret) const;
+    const std::set<size_t>& get_proj_set(const Bosph::ANF* a) const;
 
 
     CNF* anf_to_cnf(const ANF* anf);

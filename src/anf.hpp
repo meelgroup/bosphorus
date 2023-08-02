@@ -46,11 +46,7 @@ USING_NAMESPACE_PBORI
 
 using std::cout;
 using std::endl;
-using std::list;
-using std::make_pair;
 using std::map;
-using std::pair;
-using std::set;
 using std::string;
 using std::unordered_set;
 using std::vector;
@@ -110,6 +106,7 @@ class ANF
     inline Lit getReplaced(const uint32_t var) const;
     inline ANF& operator=(const ANF& other);
     static size_t readFileForMaxVar(const std::string& filename);
+    const set<size_t>& get_proj_set() const { return proj_set; }
 
    private:
     bool propagate_iteratively(unordered_set<uint32_t>& updatedVars,
@@ -134,12 +131,14 @@ class ANF
     //Comments from ANF file
     vector<string> comments;
 
+    // Independent variables
+    set<size_t> proj_set;
+
     //State
     vector<BoolePolynomial> eqs;
     eqs_hash_t eqs_hash;
     Replacer* replacer;
-    vector<vector<size_t> >
-        occur; //occur[var] -> index of polys where the variable occurs
+    vector<vector<size_t> > occur; //occur[var] -> index of polys where the variable occurs
 
     size_t new_equations_begin = 0;
 

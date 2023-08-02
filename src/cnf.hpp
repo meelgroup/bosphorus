@@ -32,6 +32,8 @@ SOFTWARE.
 #include "anf.hpp"
 #include "bosphorus/solvertypesmini.hpp"
 
+using std::pair;
+
 namespace BLib {
 
 class CNF

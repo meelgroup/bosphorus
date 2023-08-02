@@ -25,6 +25,7 @@ SOFTWARE.
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <iomanip>
 
 #include "bosphorus.hpp"
@@ -42,6 +43,7 @@ using std::cerr;
 using std::cout;
 using std::endl;
 using std::string;
+using std::set;
 
 using namespace Bosph;
 namespace po = boost::program_options;
@@ -440,7 +442,7 @@ void check_solution(const ANF* anf, const Solution& solution);
 void print_solution_anf_style(const Solution& solution);
 void clear_solution_file();
 void write_solution_to_file_cnf_style(const Solution& solution);
-void ban_solution(CMSat::SATSolver& solver, const Solution& solution);
+void ban_solution(CMSat::SATSolver& solver, const Solution& solution, const std::set<size_t>& proj);
 
 
 Solution extend_solution(
@@ -450,7 +452,7 @@ Solution extend_solution(
 );
 
 void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
-    vector<Clause> cls = mylib-> get_clauses(cnf);
+    vector<Clause> cls = mylib->get_clauses(cnf);
     CMSat::SATSolver solver;
     solver.set_num_threads(config.numThreads);
     solver.new_vars(mylib->get_max_var(cnf));
@@ -485,7 +487,7 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
         if (!all_solutions && max_sol <= number_of_solutions) {
             break;
         }
-        ban_solution(solver, solution);
+        ban_solution(solver, solution, mylib->get_proj_set(anf));
     }
 
     if (all_solutions || max_sol > 1) {
@@ -541,10 +543,11 @@ void write_solution_to_file_cnf_style(const Solution& solution)
     ofs << endl;
 }
 
-void ban_solution(CMSat::SATSolver& solver, const Solution& solution)
+void ban_solution(CMSat::SATSolver& solver, const Solution& solution, const set<size_t>& proj)
 {
     vector<CMSat::Lit> clause;
     for(uint32_t i = 0; i < solution.sol.size(); i++) {
+        if (proj.find(i) == proj.end()) continue;
         if (solution.sol[i] != l_Undef) {
             auto lit = CMSat::Lit(i, solution.sol[i] == l_True);
             clause.push_back(lit);

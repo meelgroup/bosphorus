@@ -49,7 +49,7 @@ inline const lbool evaluatePoly(const BoolePolynomial& poly,
         for (const uint32_t v : mono) {
             map<uint32_t, uint32_t>::const_iterator fit = mapping.find(v);
             assert(fit != mapping.end());
-            thisMonom *= ((setting >> (fit->second)) & 1);
+            thisMonom &= ((setting >> (fit->second)) & 1);
         }
         ret ^= thisMonom;
     }

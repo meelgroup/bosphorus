@@ -29,7 +29,6 @@ SOFTWARE.
 #include "replacer.hpp"
 #include "time_mem.h"
 
-using boost::lexical_cast;
 using std::cout;
 using std::endl;
 using namespace BLib;
@@ -103,6 +102,7 @@ size_t ANF::readFile(const std::string& filename)
     vector<std::string> text_file;
 
     size_t maxVar = 0;
+    bool proj_set_found = false;
 
     std::ifstream ifs;
     ifs.open(filename.c_str());
@@ -121,6 +121,37 @@ size_t ANF::readFile(const std::string& filename)
         // Save comments
         if (temp.length() > 0 && temp[0] == 'c') {
             comments.push_back(temp);
+            if (!proj_set.empty()) {
+                cout << "ERROR: you have more than one 'c p show' in your ANF file, i.e. more than one projection set. This is not allowed." << endl;
+                exit(-1);
+            }
+            std::istringstream iss(temp);
+            std::string txt;
+            iss >> txt;
+            if (txt != "c") break;
+            iss >> txt;
+            if (txt != "p") break;
+            iss >> txt;
+            if (txt != "show") break;
+            proj_set_found = true;
+            while(true) {
+                iss >> txt;
+                if (txt == "END") break;
+                int i;
+                if(sscanf(txt.c_str(), "x%d", &i) != 1) {
+                    cout << "ERROR: in projection set, there is a malformed value, it should be xNUM, but it's: '" << txt << "'" << endl;
+                    exit(-1);
+                }
+                if (i < 0) {
+                    cout << "ERROR: projection set must ONLY contain positive integers" << endl;
+                    exit(-1);
+                }
+                if (proj_set.find(i) != proj_set.end()) {
+                    cout << "ERROR: you are either adding '" << i << "' twice into the projection set, or your forgot to type 'END' at the end of the projection set" << endl;
+                    exit(-1);
+                }
+                proj_set.insert(i);
+            }
             continue;
         }
 
@@ -309,6 +340,20 @@ size_t ANF::readFile(const std::string& filename)
         if (start_bracket) {
             cout << "ERROR: end of line but bracket not closed" << endl;
             exit(-1);
+        }
+    }
+
+    for(const auto& v: proj_set) {
+        if (v > maxVar) {
+            cout << "ERROR: the maximum variable in the ANF was: x" << maxVar << " but your projection set contains var x" << v << " which is higher. This is wrong." << endl;
+            exit(-1);
+        }
+    }
+
+    if (proj_set_found == false) {
+        cout << "c setting projection set to ALL variables since we didn't find a 'c p show ... END'" << endl;
+        for(uint32_t i = 0; i < maxVar; i++) {
+            proj_set.insert(i);
         }
     }
 
