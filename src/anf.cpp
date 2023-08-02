@@ -744,6 +744,10 @@ void ANF::checkOccur() const
     }
 }
 
+set<size_t> ANF::get_proj_set() const {
+    return replacer->get_proj_map(proj_set);
+}
+
 void ANF::get_solution_map(map<uint32_t, VarMap>& ret) const
 {
     replacer->get_solution_map(ret);

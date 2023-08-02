@@ -592,33 +592,34 @@ Solution extend_solution(
         while(changed) {
             changed = false;
             for(const auto& v: varmap) {
-                if (v.first > s.sol.size()) {
-                    continue;
-                }
+                if (v.first > s.sol.size()) continue;
                 if (s.sol[v.first] == l_Undef) {
-                    if (v.second.type == Bosph::VarMap::fixed) {
-                        s.sol[v.first] = v.second.value ? l_True : l_False;
-                        changed = true;
-                    } else if (v.second.type == Bosph::VarMap::cnf_var) {
-                        s.sol[v.first] =
-                        (model[v.second.other_var] == CMSat::l_True) ? l_True: l_False;
-                        changed = true;
-                    } else if (v.second.type == Bosph::VarMap::anf_repl) {
-                        if (s.sol[v.second.other_var] != l_Undef) {
-                            s.sol[v.first] = s.sol[v.second.other_var] ^ v.second.inv;
+                    switch (v.second.type) {
+                        case Bosph::VarMap::fixed:
+                            s.sol[v.first] = v.second.value ? l_True : l_False;
                             changed = true;
-                        }
-                    } else if (v.second.type == Bosph::VarMap::must_set) {
-                        if (do_must_set) {
-                            s.sol[v.first] = l_True;
+                            break;
+                        case Bosph::VarMap::cnf_var:
+                            s.sol[v.first] = (model[v.second.other_var] == CMSat::l_True) ? l_True: l_False;
                             changed = true;
-                        }
+                            break;
+                        case Bosph::VarMap::anf_repl:
+                            if (s.sol[v.second.other_var] != l_Undef) {
+                                s.sol[v.first] = s.sol[v.second.other_var] ^ v.second.inv;
+                                changed = true;
+                            }
+                            break;
+                        case Bosph::VarMap::must_set:
+                            if (do_must_set) {
+                                s.sol[v.first] = l_True;
+                                changed = true;
+                            }
+                            break;
                     }
                 }
             }
         }
     }
-
     return s;
 }
 

@@ -106,7 +106,7 @@ class ANF
     inline Lit getReplaced(const uint32_t var) const;
     inline ANF& operator=(const ANF& other);
     static size_t readFileForMaxVar(const std::string& filename);
-    const set<size_t>& get_proj_set() const { return proj_set; }
+    set<size_t> get_proj_set() const;
 
    private:
     bool propagate_iteratively(unordered_set<uint32_t>& updatedVars,

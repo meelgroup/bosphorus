@@ -273,6 +273,18 @@ void Replacer::print_solution_map(std::ofstream* ofs)
     }
 }
 
+set<size_t> Replacer::get_proj_map(const set<size_t>& vars) const {
+    set<size_t> ret;
+    for(const auto& v: vars) {
+        if (value[v] != l_Undef) continue;
+        Lit l;
+        l = replaceTable[v];
+        if (value[l.var()] != l_Undef) continue;
+        ret.insert(l.var());
+    }
+    return ret;
+}
+
 void Replacer::get_solution_map(map<uint32_t, VarMap>& ret) const
 {
     uint32_t num = 0;

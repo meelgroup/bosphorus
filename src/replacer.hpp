@@ -69,6 +69,7 @@ class Replacer
     void setNOTOK();
     void print_solution_map(std::ofstream* ofs);
     void get_solution_map(map<uint32_t, VarMap>& ret) const;
+    set<size_t> get_proj_map(const set<size_t>& vars) const;
 
     //Get-functions
     lbool getValue(const uint32_t var) const;

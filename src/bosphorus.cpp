@@ -373,7 +373,7 @@ void Bosphorus::get_solution_map(const Bosph::ANF* a, map<uint32_t, VarMap>& ret
 }
 
 
-const std::set<size_t>& Bosphorus::get_proj_set(const Bosph::ANF* a) const
+std::set<size_t> Bosphorus::get_proj_set(const Bosph::ANF* a) const
 {
     auto anf = (const BLib::ANF*)a;
     return anf->get_proj_set();
