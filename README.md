@@ -116,7 +116,8 @@ s UNSATISFIABLE
 ```
 
 ## CNF simplification
-Bosphorus can simplify and solve CNF problems. When simplifying or solving CNF problems, the CNF is (extremely) naively translated to ANF, then simplifications are applied, and a sophisticated system then translates the ANF back to CNF. This CNF can then be optinally solved.
+
+This usage of the tool is **EXPERIMENTAL**. Do not, under any circumstances, rely on its correctness or veracity. In general `--cnfread` is not well-supported. If you are still interested, then Bosphorus can simplify and solve CNF problems. When simplifying or solving CNF problems, the CNF is (extremely) naively translated to ANF, then simplifications are applied, and a sophisticated system then translates the ANF back to CNF. This CNF can then be optinally solved.
 
 Let's say you have the CNF:
 
