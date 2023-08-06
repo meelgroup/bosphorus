@@ -89,7 +89,8 @@ void output_cnf(
     std::string output_cnf_fname,
     PrivateData* dat,
     const BLib::ANF* anf,
-    const BLib::CNF* cnf)
+    const BLib::CNF* cnf,
+    const set<size_t>& proj)
 {
     std::ofstream ofs;
     ofs.open(output_cnf_fname);
@@ -103,7 +104,7 @@ void output_cnf(
         ofs << "c Executed arguments: " << dat->config.executedArgs << endl;
     }
     ofs << *cnf;
-    cnf->write_projection_set(&ofs);
+    cnf->write_projection_set(&ofs, proj);
 
     ofs << "c Learnt " << dat->learnt.size() << " fact(s), not all of which have been dumped\n";
     if (dat->config.writecomments) {
@@ -335,7 +336,7 @@ Bosph::CNF* Bosphorus::write_cnf(
 
     auto cnf = cnf_from_anf_and_cnf(input_cnf_fname, a);
     if (output_cnf_fname != NULL) {
-        output_cnf(output_cnf_fname, dat, (BLib::ANF*)a, (BLib::CNF*)cnf);
+        output_cnf(output_cnf_fname, dat, (BLib::ANF*)a, (BLib::CNF*)cnf, get_proj_set(a));
     }
 
     return (Bosph::CNF*)cnf;
@@ -348,7 +349,7 @@ Bosph::CNF* Bosphorus::write_cnf(
     auto anf = (const BLib::ANF*)a;
     auto cnf = (BLib::CNF*)anf_to_cnf(a);
     if (output_cnf_fname != NULL) {
-        output_cnf(output_cnf_fname, dat, anf, cnf);
+        output_cnf(output_cnf_fname, dat, anf, cnf, get_proj_set(a));
     }
 
     return (Bosph::CNF*)cnf;

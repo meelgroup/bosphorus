@@ -411,10 +411,10 @@ void CNF::print_solution_map(std::ofstream* ofs)
 }
 
 
-void CNF::write_projection_set(std::ofstream* ofs) const
+void CNF::write_projection_set(std::ofstream* ofs, const set<size_t>& proj) const
 {
     *ofs << "c ind ";
-    for (size_t i = 0; i < getNumVars(); ++i) {
+    for(const auto i: proj) {
         // only map monomials which are single variables
         if (varRepresentsMonomial(i)) {
             const BooleMonomial& m(revCombinedMap[i].lead());
