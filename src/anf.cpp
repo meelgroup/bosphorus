@@ -352,7 +352,7 @@ size_t ANF::readFile(const std::string& filename)
 
     if (proj_set_found == false) {
         cout << "c setting projection set to ALL variables since we didn't find a 'c p show ... END'" << endl;
-        for(uint32_t i = 0; i < maxVar; i++) {
+        for(uint32_t i = 0; i <= maxVar; i++) {
             proj_set.insert(i);
         }
     }
