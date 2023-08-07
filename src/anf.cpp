@@ -128,11 +128,11 @@ size_t ANF::readFile(const std::string& filename)
             std::istringstream iss(temp);
             std::string txt;
             iss >> txt;
-            if (txt != "c") break;
+            if (txt != "c") continue;
             iss >> txt;
-            if (txt != "p") break;
+            if (txt != "p") continue;
             iss >> txt;
-            if (txt != "show") break;
+            if (txt != "show") continue;
             proj_set_found = true;
             while(true) {
                 iss >> txt;
