@@ -6,7 +6,7 @@ Bosphorus is an ANF simplification and solving tool. It takes as input an ANF ov
 
 The main use of the system is to simplify and solve ANF problems. It should give you highly optimised ANFs and CNFs that it can solve. Its ANF simplifications should be useful is many areas, not just direct ANF-to-SAT solving. For example, it could be useful for helping to break [post-quantum cryptograpy problems](https://csrc.nist.gov/projects/post-quantum-cryptography).
 
-This work was done by Davin Choo and Kian Ming A. Chai from DSO National Laboratories Singapore, and Mate Soos and Kuldeep Meel from the National University of Singapore (NUS). If you use Bosphorus, please cite our [paper](https://www.comp.nus.edu.sg/~meel/Papers/date-cscm19.pdf) ([bibtex](https://www.comp.nus.edu.sg/~meel/bib/CSCM19.bib)) published at DATE 2019. Some of the code was generously donated by [Security Research Labs, Berlin](https://srlabs.de/).
+This work was done by Davin Choo and Kian Ming A. Chai from DSO National Laboratories Singapore, and Mate Soos and Kuldeep Meel from the National University of Singapore (NUS). If you use Bosphorus, please cite our [paper](https://www.cs.toronto.edu/~meel/Papers/date-cscm19.pdf) ([bibtex](https://www.cs.toronto.edu/~meel/bib/CSCM19.bib)) published at DATE 2019. Some of the code was generously donated by [Security Research Labs, Berlin](https://srlabs.de/).
 
 
 ## ANF simplification and solving
