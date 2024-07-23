@@ -413,7 +413,7 @@ void CNF::print_solution_map(std::ofstream* ofs)
 
 void CNF::write_projection_set(std::ofstream* ofs, const set<size_t>& proj) const
 {
-    *ofs << "c ind ";
+    *ofs << "c p show ";
     for(const auto i: proj) {
         // only map monomials which are single variables
         if (varRepresentsMonomial(i)) {
