@@ -19,14 +19,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
-
-enable_language( CXX )
-
-include (GenerateExportHeader)
-include (GNUInstallDirs)
 
 message(STATUS "LIB directory is '${CMAKE_INSTALL_LIBDIR}'")
 message(STATUS "BIN directory is '${CMAKE_INSTALL_BINDIR}'")
@@ -47,6 +42,10 @@ endif()
 
 if(POLICY CMP0026)
     cmake_policy(SET CMP0026 NEW)
+endif()
+
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
 endif()
 
 # -----------------------------------------------------------------------------
@@ -85,8 +84,10 @@ foreach (build_config ${build_types})
 endforeach()
 
 
-PROJECT(bosphorus)
+PROJECT(bosphorus LANGUAGES CXX)
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+include (GenerateExportHeader)
+include (GNUInstallDirs)
 
 # static compilation
 option(BUILD_SHARED_LIBS "Build the shared library" ON)
@@ -293,24 +294,20 @@ find_package(ZLIB  REQUIRED)
 link_directories( ${ZLIB_LIBRARY} )
 include_directories( ${ZLIB_INCLUDE_DIR} )
 
-option(USE_CMS "Use SAT-based simplification" ON)
-if (USE_CMS)
-    find_package(cryptominisat5 REQUIRED)
-    if (cryptominisat5_FOUND)
-        message(STATUS "OK, CryptoMiniSat5 found")
-        message(STATUS "CryptoMiniSat5 -- found version ${CRYPTOMINISAT5_VERSION_MAJOR}.${CRYPTOMINISAT5_VERSION_MINOR}")
-        message(STATUS "CryptoMiniSat5 -- libraries:    ${CRYPTOMINISAT5_LIBRARIES}")
-        message(STATUS "CryptoMiniSat5 -- include dirs: ${CRYPTOMINISAT5_INCLUDE_DIRS}")
-        find_package(breakid)
-        if (NOT BREAKID_LIBRARIES)
-            message(WARNING "BreakID NOT found")
-        else()
-            message(STATUS "BreakID -- found version ${BREAKID_VERSION_MAJOR}.${BREAKID_VERSION_MINOR}")
-            message(STATUS "BreakID -- libraries: ${BREAKID_LIBRARIES}")
-            message(STATUS "BreakID -- include dirs: ${BREAKID_INCLUDE_DIRS}")
-        endif()
+find_package(cryptominisat5 REQUIRED)
+if (cryptominisat5_FOUND)
+    message(STATUS "OK, CryptoMiniSat5 found")
+    message(STATUS "CryptoMiniSat5 -- found version ${CRYPTOMINISAT5_VERSION_MAJOR}.${CRYPTOMINISAT5_VERSION_MINOR}")
+    message(STATUS "CryptoMiniSat5 -- libraries:    ${CRYPTOMINISAT5_LIBRARIES}")
+    message(STATUS "CryptoMiniSat5 -- include dirs: ${CRYPTOMINISAT5_INCLUDE_DIRS}")
+    find_package(breakid)
+    if (NOT BREAKID_LIBRARIES)
+        message(WARNING "BreakID NOT found")
+    else()
+        message(STATUS "BreakID -- found version ${BREAKID_VERSION_MAJOR}.${BREAKID_VERSION_MINOR}")
+        message(STATUS "BreakID -- libraries: ${BREAKID_LIBRARIES}")
+        message(STATUS "BreakID -- include dirs: ${BREAKID_INCLUDE_DIRS}")
     endif()
-    add_definitions(-DUSE_CMS)
 endif()
 
 # -----------------------------------------------------------------------------
@@ -344,8 +341,8 @@ find_package(BRiAl REQUIRED)
 include_directories(${BRiAl_INCLUDE_DIRS})
 
 
-option(TESTING "Enable testing" OFF)
-if (TESTING)
+option(ENABLE_TESTING "Enable testing" OFF)
+if (ENABLE_TESTING)
     add_subdirectory(${PROJECT_SOURCE_DIR}/utils/cnf-utils)
 endif()
 
@@ -375,6 +372,15 @@ endmacro()
 set(BOSPHORUS_EXPORT_NAME "bosphorusTargets")
 
 add_subdirectory(src)
+if (ENABLE_TESTING)
+    enable_testing()
+
+    message(STATUS "Testing is enabled")
+    set(UNIT_TEST_EXE_SUFFIX "Tests" CACHE STRING "Suffix for Unit test executable")
+    add_subdirectory(tests/anf-files)
+else()
+    message(WARNING "Testing is disabled")
+endif()
 
 # -----------------------------------------------------------------------------
 # Add uninstall target for makefiles

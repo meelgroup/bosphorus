@@ -21,14 +21,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef REPLACER_H__
-#define REPLACER_H__
+#pragma once
 
 #include <map>
 #include <set>
 #include <vector>
-#include "bosphorus/solvertypesmini.hpp"
-#include "polybori.h"
+#include "bosphincludes.hpp"
+#include <polybori/polybori.h>
 
 USING_NAMESPACE_PBORI
 using namespace Bosph;
@@ -226,5 +225,3 @@ inline std::ostream& operator<<(std::ostream& os, const Replacer& repl)
 }
 
 }
-
-#endif //__REPLACER_H__

@@ -21,8 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef GAUSSJORDAN_H__
-#define GAUSSJORDAN_H__
+#pragma once
 
 #include <limits>
 #include <unordered_map>
@@ -223,5 +222,3 @@ class GaussJordan
 };
 
 }
-
-#endif //__GAUSSJORDAN_H__

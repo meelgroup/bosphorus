@@ -22,7 +22,6 @@
 include_directories( ${PROJECT_SOURCE_DIR} )
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/GitSHA1.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp" @ONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/solvertypesmini.hpp.in" "${CMAKE_CURRENT_BINARY_DIR}/bosphorus/solvertypesmini.hpp" @ONLY)
 include_directories(${CRYPTOMINISAT5_INCLUDE_DIRS})
 
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
@@ -37,18 +36,11 @@ set(bosph_lib_files
     elimlin.cpp
     anfutils.cpp
     bosphorus.cpp
+    simplifybysat.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp
 )
 
-if (USE_CMS)
-set(bosph_lib_files
-    ${bosph_lib_files} simplifybysat.cpp)
-endif()
-
-add_library(bosphorus
-    ${bosph_lib_files}
-)
-
+add_library(bosphorus ${bosph_lib_files})
 target_link_libraries(bosphorus
     ${m4ri_LIBRARIES}
     ${BRiAl_LIBRARIES}
@@ -62,8 +54,6 @@ set_target_properties(bosphorus PROPERTIES
     SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
 )
 
-###############
-
 add_executable(bosphorus-bin
     main.cpp
 )
@@ -75,26 +65,10 @@ set_target_properties(bosphorus-bin PROPERTIES
 
 target_link_libraries(bosphorus-bin
     bosphorus
-    ${Boost_LIBRARIES}
+    Boost::program_options
 )
-
-add_executable(simple-bin
-    main_simple.cpp
-)
-
-set_target_properties(simple-bin PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}
-    INSTALL_RPATH_USE_LINK_PATH TRUE
-    OUTPUT_NAME simple
-)
-
-target_link_libraries(simple-bin
-    bosphorus
-)
-
 
 bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.hpp )
-bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_BINARY_DIR}/bosphorus/solvertypesmini.hpp )
 
 # -----------------------------------------------------------------------------
 # Copy public headers into build directory include directory.
@@ -118,7 +92,6 @@ foreach(public_header ${bosphorus_public_headers})
                       )
 endforeach()
 
-
 install(TARGETS bosphorus
     EXPORT ${BOSPHORUS_EXPORT_NAME}
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
@@ -126,7 +99,6 @@ install(TARGETS bosphorus
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
     PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/bosphorus"
 )
-
 
 install(TARGETS bosphorus-bin
     # EXPORT ${BOSPHORUS_EXPORT_NAME}

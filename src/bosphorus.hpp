@@ -21,14 +21,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef MYLIBRARY_H_
-#define MYLIBRARY_H_
+#pragma once
 
 #include <vector>
 #include <map>
 #include <set>
 #include <fstream>
-#include "bosphorus/solvertypesmini.hpp"
+#include "bosphincludes.hpp"
 
 using std::vector;
 
@@ -108,5 +107,3 @@ private:
 };
 
 }
-
-#endif

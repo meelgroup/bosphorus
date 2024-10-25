@@ -1,2 +1,0 @@
-c RUN: %solver --anfread %s --anfwrite /dev/stdout --el 0 --xl 0 --sat 0 | %check %s.out
-x1

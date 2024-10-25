@@ -1,3 +1,9 @@
 build/
+.cache
 bosphorus.kdev4
 .venv
+tests/Output
+tests/.lit_test_times.txt
+__pycache__
+*.diff
+compile_commands.json

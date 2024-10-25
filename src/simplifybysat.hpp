@@ -21,13 +21,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef SIMPLIFYBYSAT_H
-#define SIMPLIFYBYSAT_H
+#pragma once
 
-#include <fstream>
 #include "anf.hpp"
 #include "cnf.hpp"
-#include "bosphorus/solvertypesmini.hpp"
+#include "bosphincludes.hpp"
 
 namespace CMSat {
 class SATSolver;
@@ -61,5 +59,3 @@ class SimplifyBySat
 };
 
 }
-
-#endif //SIMPLIFYBYSAT_H

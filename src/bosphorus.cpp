@@ -31,25 +31,16 @@ SOFTWARE.
 #include "gaussjordan.hpp"
 #include "replacer.hpp"
 #include "time_mem.h"
-#include "bosphorus/solvertypesmini.hpp"
+#include "bosphincludes.hpp"
 #include "elimlin.hpp"
 #include "extendedlinearization.hpp"
 #include "simplifybysat.hpp"
 #include "anf.hpp"
 #include "cnf.hpp"
 #include "configdata.hpp"
-
-#ifdef USE_CMS
 #include "simplifybysat.hpp"
-#endif
 
-using Bosph::Lit;
 using Bosph::Clause;
-using Bosph::Solution;
-using Bosph::lbool;
-using Bosph::l_Undef;
-using Bosph::l_True;
-using Bosph::l_False;
 using BLib::ConfigData;
 
 class PrivateData {
@@ -515,7 +506,6 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                     }
                     break;
                 case 2:
-#ifdef USE_CMS
                     if (dat->config.doSAT) {
                         sub_iter_performed = true;
                         size_t no_cls = 0;
@@ -549,7 +539,6 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                             }
                         }
                     }
-#endif
                     break;
             }
 

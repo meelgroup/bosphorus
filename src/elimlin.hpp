@@ -20,13 +20,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef ELIMLIN_HPP
-#define ELIMLIN_HPP
+#pragma once
 
 #include <vector>
 
 #include "configdata.hpp"
-#include "polybori.h"
+#include <polybori/polybori.h>
 
 namespace BLib {
 
@@ -35,5 +34,3 @@ bool elimLin(const ConfigData& config,
              std::vector<polybori::BoolePolynomial>& loop_learnt);
 
 }
-
-#endif

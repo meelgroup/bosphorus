@@ -20,11 +20,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef DIMACSCACHE_H__
-#define DIMACSCACHE_H__
+#pragma once
 
 #include <vector>
-#include "bosphorus/solvertypesmini.hpp"
+#include "bosphincludes.hpp"
 using namespace Bosph;
 
 namespace BLib {
@@ -55,5 +54,3 @@ class DIMACSCache
 };
 
 }
-
-#endif
