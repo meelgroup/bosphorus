@@ -19,14 +19,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
-
-enable_language( CXX )
-
-include (GenerateExportHeader)
-include (GNUInstallDirs)
 
 message(STATUS "LIB directory is '${CMAKE_INSTALL_LIBDIR}'")
 message(STATUS "BIN directory is '${CMAKE_INSTALL_BINDIR}'")
@@ -47,6 +42,10 @@ endif()
 
 if(POLICY CMP0026)
     cmake_policy(SET CMP0026 NEW)
+endif()
+
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
 endif()
 
 # -----------------------------------------------------------------------------
@@ -85,8 +84,10 @@ foreach (build_config ${build_types})
 endforeach()
 
 
-PROJECT(bosphorus)
+PROJECT(bosphorus LANGUAGES CXX)
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+include (GenerateExportHeader)
+include (GNUInstallDirs)
 
 # static compilation
 option(BUILD_SHARED_LIBS "Build the shared library" ON)

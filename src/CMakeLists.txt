@@ -75,7 +75,7 @@ set_target_properties(bosphorus-bin PROPERTIES
 
 target_link_libraries(bosphorus-bin
     bosphorus
-    ${Boost_LIBRARIES}
+    Boost::program_options
 )
 
 add_executable(simple-bin
