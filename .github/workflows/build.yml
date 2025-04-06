@@ -153,11 +153,23 @@ jobs:
         cd ..
 
     - name: Install BRiAl
+      if: matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-24.04-arm'
       run: |
         wget https://github.com/BRiAl/BRiAl/releases/download/1.2.12/brial-1.2.12.tar.bz2
         tar xvf brial-1.2.12.tar.bz2
         cd brial-1.2.12
         ./configure --enable-static --enable-shared
+        make -j8
+        sudo make install
+        cd ..
+
+    - name: Install BRiAl
+      if: matrix.os == 'macos-14'
+      run: |
+        wget https://github.com/BRiAl/BRiAl/releases/download/1.2.12/brial-1.2.12.tar.bz2
+        tar xvf brial-1.2.12.tar.bz2
+        cd brial-1.2.12
+        ./configure --with-boost=$BOOST_ROOT --enable-static --enable-shared
         make -j8
         sudo make install
         cd ..
