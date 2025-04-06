@@ -33,6 +33,7 @@ jobs:
       if: matrix.os == 'macos-14'
       run: |
         brew install automake libtool boost pkg-config
+        export BOOST_ROOT=$(brew --prefix boost)
 
     - name: Install gmp for Mac
       if: matrix.os == 'macos-14'
