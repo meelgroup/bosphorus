@@ -32,7 +32,7 @@ jobs:
     - name: Install boost for Mac
       if: matrix.os == 'macos-14'
       run: |
-        brew install boost
+        brew install automake libtool boost pkg-config
 
     - name: Install gmp for Mac
       if: matrix.os == 'macos-14'
