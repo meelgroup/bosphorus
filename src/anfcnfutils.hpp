@@ -20,14 +20,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef ANFCNFUTILS_HPP
-#define ANFCNFUTILS_HPP
+#pragma once
 
-#include <vector>
-#include "bosphorus/solvertypesmini.hpp"
-#include "polybori.h"
+#include <cryptominisat5/solvertypesmini.h>
+#include "bosphincludes.hpp"
+#include <polybori/polybori.h>
 
 bool BrickesteinAlgo32(const polybori::BoolePolynomial &poly,
                        std::vector<Bosph::Clause> &setofClauses);
 
-#endif

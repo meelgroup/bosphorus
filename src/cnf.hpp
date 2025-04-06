@@ -21,8 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef CNF_H__
-#define CNF_H__
+#pragma once
 
 #include <boost/variant.hpp>
 #include <fstream>
@@ -30,7 +29,7 @@ SOFTWARE.
 #include <vector>
 
 #include "anf.hpp"
-#include "bosphorus/solvertypesmini.hpp"
+#include "bosphincludes.hpp"
 
 using std::pair;
 
@@ -192,5 +191,3 @@ inline void CNF::printStats() const
 }
 
 }
-
-#endif //CNF_H__

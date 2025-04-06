@@ -22,10 +22,13 @@ SOFTWARE.
 ***********************************************/
 
 #include "anf.hpp"
-#include <boost/lexical_cast.hpp>
+
 #include <cctype>
 #include <fstream>
 #include <string>
+#include <boost/lexical_cast.hpp>
+#include <iomanip>
+
 #include "replacer.hpp"
 #include "time_mem.h"
 #include <map>
@@ -450,10 +453,7 @@ size_t ANF::readFile(const std::string& filename)
     return currentVar;
 }
 
-void print_solution_map(std::ofstream* ofs)
-{
-
-}
+void print_solution_map(std::ofstream* ) { }
 
 // KMA Chai: Check if this polynomial can cause further ANF propagation
 bool ANF::check_if_need_update(const BoolePolynomial& poly,

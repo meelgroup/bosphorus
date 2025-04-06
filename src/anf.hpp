@@ -21,26 +21,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef ANF_H__
-#define ANF_H__
+#pragma once
 
 #include <assert.h>
 #include <stdint.h>
 #include <algorithm>
-#include <iomanip>
 #include <iostream>
-#include <limits>
-#include <list>
 #include <map>
-#include <set>
 #include <string>
 #include <unordered_set>
 #include <vector>
 
 #include "configdata.hpp"
 #include "evaluator.hpp"
-#include "polybori.h"
 #include "replacer.hpp"
+#include <polybori/polybori.h>
 
 USING_NAMESPACE_PBORI
 
@@ -329,5 +324,3 @@ ANF& ANF::operator=(const ANF& other)
 }
 
 }
-
-#endif //ANF_H__

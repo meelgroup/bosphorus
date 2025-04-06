@@ -1,0 +1,6 @@
+c RUN: %solver --anfread %s --anfwrite /dev/stdout --el 0 --xl 1 --sat 0 | %OutputCheck %s
+x1*x2 + x1 + 1
+x2*x3 + x3
+c CHECK-L: x(1) + 1
+c CHECK-L: x(2)
+c CHECK-L: x(3)

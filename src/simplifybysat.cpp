@@ -222,9 +222,7 @@ lbool SimplifyBySat::simplify(const uint64_t numConfl_lim,
     solver->set_max_time(time_left);
     solver->set_timeout_all_calls(time_left);
     solver->set_max_confl(std::min(numConflinc, numConfl_left));
-    CMSat::lbool ret = solver->solve();
-    Bosph::lbool* ret2 = (Bosph::lbool*)&ret;
-    sol.ret = *ret2;
+    sol.ret = solver->solve();
     time_left = time_limit - cpuTime();
     numConfl_left =
         (numConfl_left > numConflinc) ? (numConfl_left - numConflinc) : 0;
@@ -236,10 +234,7 @@ lbool SimplifyBySat::simplify(const uint64_t numConfl_lim,
              << time_left << std::fixed << " seconds" << endl;
 
     //Extract data
-    const size_t prev_loop_learnt_sz = loop_learnt.size();
-    if (config.verbosity >= 3) {
-        cout << "c  Number of unit/assigns/binary/(anti-)equiv/linear ";
-    }
+    if (config.verbosity >= 3) cout << "c  Number of unit/assigns/binary/(anti-)equiv/linear ";
     extractUnitaries(loop_learnt);
     extractBinaries(loop_learnt);
     extractLinear(loop_learnt);

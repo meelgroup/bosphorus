@@ -23,6 +23,7 @@ SOFTWARE.
 #include "elimlin.hpp"
 #include "anfutils.hpp"
 #include "gaussjordan.hpp"
+#include <iomanip>
 
 using std::vector;
 

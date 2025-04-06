@@ -1,6 +1,5 @@
 /*****************************************************************************
-Copyright (C) 2016  Security Research Labs
-Copyright (C) 2018  Mate Soos, Davin Choo, Kian Ming A. Chai, DSO National Laboratories
+Copyright (C) 2019  Kian Ming A. Chai, DSO National Laboratories
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,56 +23,87 @@ SOFTWARE.
 #pragma once
 
 #include <vector>
-#include "assert.h"
+#include <iostream>
+#include <cassert>
 #include <cryptominisat5/solvertypesmini.h>
 
-namespace BLib {
-
 using std::vector;
+using std::ostream;
+using std::endl;
+using std::cout;
+using std::cerr;
+using CMSat::Lit;
+using CMSat::lbool;
+using CMSat::l_Undef;
+using CMSat::l_True;
+using CMSat::l_False;
 
-class XClause
+namespace Bosph {
+
+class Solution
+{
+public:
+    vector<lbool> sol;
+    lbool ret = l_Undef;
+};
+
+class Clause
 {
    public:
-    XClause(const vector<uint32_t>& _vars, bool _rhs) : vars(_vars), rhs(_rhs)
+    Clause(const vector<Lit>& _lits) : lits(_lits)
     {
+    }
+
+    const vector<Lit>& getLits() const
+    {
+        return lits;
     }
 
     size_t size() const
     {
-        return vars.size();
+        return lits.size();
     }
 
     bool empty() const
     {
-        return vars.empty();
+        return lits.empty();
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const XClause& xcl);
+    std::vector<Lit> getClause() const
+    {
+        assert(!lits.empty());
+        return lits;
+    }
 
-   private:
-    vector<uint32_t> vars;
-    bool rhs;
+    friend std::ostream& operator<<(std::ostream& os, const Clause& cl);
+
+    vector<Lit> lits;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const XClause& xcl)
+struct VarMap
 {
-    //Empty is special
-    if (xcl.size() == 0) {
-        if (xcl.rhs == 1) {
-            os << "0" << std::endl;
-        }
-        return os;
-    }
+    enum {cnf_var, anf_repl, must_set, fixed} type;
+    uint32_t other_var;
+    bool inv;
+    bool value;
+};
 
-    os << "x";
-    if (!xcl.rhs) {
-        os << "-";
+inline std::ostream& operator<<(std::ostream& os, const Clause& cl)
+{
+    for (vector<Lit>::const_iterator it = cl.lits.begin(), end = cl.lits.end();
+         it != end; it++) {
+        os << *it << " ";
     }
-    for (const auto it: xcl.vars) {
-        os << (it+1) << " ";
-    }
-    os << "0" << std::endl;
+    os << "0";
 
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const vector<Clause>& clauses)
+{
+    for (const auto& it: clauses) {
+        os << it << std::endl;
+    }
     return os;
 }
 

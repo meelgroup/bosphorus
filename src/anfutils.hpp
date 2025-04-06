@@ -20,13 +20,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef ANFUTILS_HPP
-#define ANFUTILS_HPP
+#pragma once
 
 #include <vector>
-
-#include "configdata.hpp"
-#include "polybori.h"
+#include <polybori/polybori.h>
 
 namespace BLib {
 
@@ -48,5 +45,3 @@ void substitute(const polybori::BooleVariable& from_var,
                polybori::BoolePolynomial& poly);
 
 }
-
-#endif

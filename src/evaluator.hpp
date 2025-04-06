@@ -21,19 +21,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef EVALUATOR_H__
-#define EVALUATOR_H__
+#pragma once
 
 #include <map>
-
-#include "bosphorus/solvertypesmini.hpp"
-#include "polybori.h"
+#include <cryptominisat5/solvertypesmini.h>
+#include <polybori/polybori.h>
 
 USING_NAMESPACE_PBORI
-using namespace Bosph;
 
 using std::map;
 using std::vector;
+using CMSat::lbool;
+using CMSat::l_True;
+using CMSat::l_False;
+using CMSat::l_Undef;
+using CMSat::Lit;
+using CMSat::boolToLBool;
 
 namespace BLib {
 
@@ -75,5 +78,3 @@ inline lbool evaluatePoly(const BoolePolynomial& poly, const vector<lbool>& sol)
 }
 
 }
-
-#endif //__EVALUATOR_H__

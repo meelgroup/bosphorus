@@ -21,29 +21,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include <sys/wait.h>
 #include <fstream>
 #include <iostream>
-#include <memory>
-#include <set>
 #include <iomanip>
 
 #include "bosphorus.hpp"
 #include "time_mem.h"
 #include "configdata.hpp"
 
-#ifdef USE_CMS
-#include "cryptominisat5/solvertypesmini.h"
-#include "cryptominisat5/cryptominisat.h"
-#endif
-#include "bosphorus/solvertypesmini.hpp"
+#include <cryptominisat5/solvertypesmini.h>
+#include <cryptominisat5/cryptominisat.h>
 #include <boost/program_options.hpp>
 
 using std::cerr;
 using std::cout;
 using std::endl;
 using std::string;
-using std::set;
 
 using namespace Bosph;
 namespace po = boost::program_options;
@@ -72,11 +65,7 @@ uint32_t max_sol = 1;
 po::variables_map vm;
 BLib::ConfigData config;
 
-
-#ifdef USE_CMS
 void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf);
-#endif
-
 
 void parseOptions(int argc, char* argv[])
 {
@@ -414,15 +403,8 @@ int main(int argc, char* argv[])
     }
 
     if (solve_with_cms) {
-        if (!writeCNF) {
-            cnf = mylib.write_cnf(NULL, anf);
-        }
-        #ifdef USE_CMS
+        if (!writeCNF) cnf = mylib.write_cnf(NULL, anf);
         solve(&mylib, cnf, anf);
-        #else
-        cout << "ERROR: CryptoMiniSat libraries were not found during build. Cannot solve." << endl;
-        exit(-1);
-        #endif
     }
 
     if (config.verbosity >= 1) {
@@ -436,7 +418,6 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-#ifdef USE_CMS
 void print_solution_cnf_style(const Solution& solution);
 void check_solution(const ANF* anf, const Solution& solution);
 void print_solution_anf_style(const Solution& solution);
@@ -543,7 +524,7 @@ void write_solution_to_file_cnf_style(const Solution& solution)
     ofs << endl;
 }
 
-void ban_solution(CMSat::SATSolver& solver, const Solution& solution, const set<size_t>& proj)
+void ban_solution(CMSat::SATSolver& solver, const Solution& solution, const std::set<size_t>& proj)
 {
     vector<CMSat::Lit> clause;
     for(uint32_t i = 0; i < solution.sol.size(); i++) {
@@ -635,4 +616,3 @@ void check_solution(const ANF* anf, const Solution& solution)
         cout << "c Solution found is correct." << endl;
     }
 }
-#endif

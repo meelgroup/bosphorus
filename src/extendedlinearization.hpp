@@ -20,13 +20,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#ifndef EXTENDEDLINEARIZATION_HPP
-#define EXTENDEDLINEARIZATION_HPP
+#pragma once
 
 #include <vector>
-
 #include "configdata.hpp"
-#include "polybori.h"
+#include <polybori/polybori.h>
 
 USING_NAMESPACE_PBORI
 
@@ -37,5 +35,3 @@ bool extendedLinearization(const ConfigData& config,
                            std::vector<BoolePolynomial>& loop_learnt);
 
 }
-
-#endif

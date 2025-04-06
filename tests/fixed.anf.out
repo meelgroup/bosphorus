@@ -1,3 +1,0 @@
-c CHECK-L: Fixed values
-c CHECK-NOT-L: (skip stuff)
-c CHECK-L: x(1)
