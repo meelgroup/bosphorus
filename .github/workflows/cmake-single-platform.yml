@@ -136,18 +136,22 @@ jobs:
         cmake --build . --config ${{matrix.build_type}} -v
         cd ../..
 
-    - name: Checkout BRiAl
-      uses: actions/checkout@v4
-      with:
-        repository: BRiAl/BRiAl
-        ref: master
-        path: BRiAl
-        submodules: 'true'
-
-    - name: Build BRiAl
+    - name: Install m4ri
       run: |
-        cd BRiAl
-        ./bootstrap.sh
+        wget https://github.com/malb/m4ri/releases/download/20250128/m4ri-20250128.tar.gz
+        tar xzvf m4ri-20250128.tar.gz
+        cd m4ri-20250128
+        ./configure --enable-static --enable-shared
+        make -j8
+        sudo make install
+        cd ..
+
+    - name: Install BRiAl
+      run: |
+        wget https://github.com/BRiAl/BRiAl/releases/download/1.2.12/brial-1.2.12.tar.bz2
+        tar xzvf brial-1.2.12.tar.bz2
+        cd brial-1.2.12
+        ./configure --enable-static --enable-shared
         make -j8
         sudo make install
         cd ..
