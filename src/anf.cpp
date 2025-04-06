@@ -69,9 +69,10 @@ bool isCharInStr(const char c, const std::string& s) {
 size_t ANF::readFileForMaxVar(const std::string& filename)
 {
     // Read in the file line by line
-    size_t maxVar = 0;
     size_t maxes[26]  = {0};
     char varLetter;
+    size_t var = 0;
+    bool start_bracket = false;
 
     std::ifstream ifs(filename.c_str());
     if (!ifs) {
@@ -93,16 +94,35 @@ size_t ANF::readFileForMaxVar(const std::string& filename)
         // simply search for consecutive numbers
         // however "+1" is a NUMBER but not a MONOMIAL
         // so we have to take that into consideration
-        size_t var = 0;
+
         bool isMonomial = false;
         for (uint32_t i = 0; i < temp.length(); ++i) {
             //At this point, only numbers are valid
             if (!std::isdigit(temp[i])) {
                 var = 0;
-                char temp_char = tolower(temp[i]);
+                char temp_char = temp[i];
+                if (temp_char >= 'A' && temp_char <= 'Z')
+                    temp_char += 'a' - 'A';
                 if (temp[i] == '_')
                     continue;
-                if (isCharInStr(temp_char,var_letters) || (isMonomial && temp[i] == '(')) {
+
+                if (temp[i] == ')') {
+                    if (!start_bracket) {
+                        cout << "ERROR: close bracket but no start bracket?" << endl;
+                        exit(-1);
+                    }
+                    start_bracket = false;
+                    continue;
+                }
+                if (temp[i] == '(') {
+                    if (start_bracket) {
+                        cout << "ERROR: start bracket but previous not closed?" << endl;
+                        exit(-1);
+                    }
+                    start_bracket = true;
+                    continue;
+                }
+                if (isCharInStr(temp_char,var_letters)) {
                     varLetter = temp_char;
                     isMonomial = true;
                 } else {
@@ -111,13 +131,16 @@ size_t ANF::readFileForMaxVar(const std::string& filename)
             } else if (isMonomial) {
                 var = var * 10 + (temp[i] - '0');
                 int index = (varLetter-'a'); // variables are zero based
-                if (maxes[index] < (var+1)) {
-                    maxes[index] = (var+1);
+                printf("%c %zu ", varLetter, var);
+                if (maxes[index] <= var) {
+                    maxes[index] = var+1;
                 }
             }
         }
     }
     ifs.close();
+
+    size_t maxVar = 0;
     for(size_t i=0;i<26;i++) {
         maxVar += maxes[i];
     }
@@ -129,7 +152,7 @@ size_t ANF::readFile(const std::string& filename)
 {
     // Read in the file line by line
     vector<std::string> text_file;
-    int maxes[26]  = {0};
+    size_t maxes[26]  = {0};
 
     size_t currentVar = 2;
     bool proj_set_found = false;
