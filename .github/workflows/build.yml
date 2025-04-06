@@ -29,6 +29,11 @@ jobs:
       run: |
         pip install numpy lit
 
+    - name: Install boost for Mac
+      if: matrix.os == 'macos-14'
+      run: |
+        brew install boost
+
     - name: Install gmp for Mac
       if: matrix.os == 'macos-14'
       run: |
@@ -75,7 +80,7 @@ jobs:
 
     - name: Install dependencies for Linux
       if: matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-24.04-arm'
-      run: sudo apt-get update && sudo apt-get install -yq help2man libgmp-dev libmpfr-dev
+      run: sudo apt-get update && sudo apt-get install -yq help2man libgmp-dev libmpfr-dev libboost-all-dev
 
     - name: Checkout Cadical
       uses: actions/checkout@v4
