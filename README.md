@@ -1,7 +1,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker Hub](https://img.shields.io/badge/docker-latest-blue.svg)](https://hub.docker.com/r/msoos/bosphorus/)
 
-
 Bosphorus is an ANF simplification and solving tool. It takes as input an ANF
 over GF(2) and can simplify and solve it. It uses many different algorithms,
 including XL, SAT, Brickenstein's ANF-to-CNF conversion, Gauss-Jordan
@@ -180,47 +179,6 @@ back into the CNF. Note that the first 4 clauses encode an XOR because the 2nd
 clause can be extended to the weaker clause `2 -3 4 0`, giving the trivial
 encoding of `x(1) + x(2) + x(3)` in CNF.
 
-# Building, Testing, Installing
-You must install M4RI, BriAl, and CryptoMiniSat to use compile Bosphorus.
-Below, we explain how to compile them all. First, the dependencies:
-
-```
-sudo apt-get install build-essential cmake zlib1g-dev \
-    libboost-program-options-dev libm4ri-dev libboost-test-dev
-```
-
-### Install BRiAl
-Try installing using `apt-get install brial-dev`. If that does not work, compile and install from source:
-```
-git clone --depth 1 https://github.com/BRiAl/BRiAl
-cd BRiAl
-aclocal
-autoheader
-libtoolize --copy
-automake --copy --add-missing
-automake
-autoconf
-./configure
-make -j4
-sudo make install
-```
-
-### Install CryptoMiniSat
-Follow instructions at CryptoMiniSat's [GitHub
-repository](www.githubcom/msoos/cryptominisat).
-
-
-### Build Bosphorus
-```
-git clone --depth 1 https://github.com/meelgroup/bosphorus
-cd bosphorus
-mkdir build
-cd build
-cmake ..
-make -j4
-./bosphorus -h
-```
-
 ## Mapping solutions from CNF to ANF
 
 Let's take a simple ANF:
@@ -263,6 +221,12 @@ If you want all solutions:
 Then take the solutions from `cnf_solutions` individually, put them in a file,
 and call `map_solution` on it, as before.
 
+# Building, Testing, Installing
+
+I suggest checking out the [GitHub
+action](https://github.com/meelgroup/bosphorus/blob/master/.github/workflows/build.yml)
+to see how to build and test the system.
+
 ## Fuzzing
 The tool comes with a built-in ANF fuzzer. To use, install
 [cryptominisat](https://github.com/msoos/cryptominisat), then run:
@@ -278,20 +242,6 @@ ln -s ../utils/* .
 ```
 
 Where the argument to `fuzz.sh` must be the location of the cryptominisat5 binary.
-
-## Testing
-
-The test suite uses [LLVM
-lit](https://github.com/llvm-mirror/llvm/tree/master/utils/lit) and [stp
-OutputCheck](https://github.com/stp/OutputCheck). It's convenient to use a
-[Python virtual environment](https://docs.python.org/3/library/venv.html):
-
-```
-cd bosphorus
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.test.txt
-lit -v tests
 
 ## Known issues
 - PolyBoRi cannot handle ring of sizes over approx 1 million (1048574). Do not
