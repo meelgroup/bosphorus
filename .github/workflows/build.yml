@@ -175,6 +175,7 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
         -DSTATICCOMPILE=${{ matrix.staticcompile }} \
+        -DENABLE_TESTING=ON \
         -S ..
         cmake --build . --config ${{matrix.build_type}} -v
         ctest -V
