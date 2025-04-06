@@ -131,7 +131,7 @@ size_t ANF::readFileForMaxVar(const std::string& filename)
             } else if (isMonomial) {
                 var = var * 10 + (temp[i] - '0');
                 int index = (varLetter-'a'); // variables are zero based
-                printf("%c %zu ", varLetter, var);
+                //printf("%c %zu ", varLetter, var);
                 if (maxes[index] <= var) {
                     maxes[index] = var+1;
                 }
