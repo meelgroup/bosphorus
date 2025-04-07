@@ -630,7 +630,7 @@ bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
     poly = newpoly;
 
     if (poly.isConstant()) {
-        //Check UNSAT
+        // Check UNSAT
         if (poly.isOne()) {
             replacer->setNOTOK();
             cout << "Replacer NOT OK" << endl;
