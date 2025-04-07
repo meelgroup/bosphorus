@@ -140,14 +140,14 @@ Bosph::ANF* Bosphorus::read_anf(const char* fname)
     assert(fname != NULL);
     check_library_in_use();
 
-    // Find out maxVar in input ANF file
-    size_t maxVar = BLib::ANF::readFileForMaxVar(fname);
+    // Find out number of variables in input ANF file
+    size_t numVars = BLib::ANF::readFileForNumVars(fname);
 
     // Construct ANF
-    // ring size = maxVar + 1, because ANF variables start from x0
-    dat->pring = new BoolePolyRing(maxVar + 1);
+    // ring size = numVars,
+    dat->pring = new BoolePolyRing(numVars);
     auto anf = new BLib::ANF(dat->pring, dat->config);
-    anf->readFile(fname);
+    anf->readANFFromFile(fname);
     return (Bosph::ANF*)anf;
 }
 

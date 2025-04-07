@@ -86,7 +86,7 @@ class ANF
     ANF(const ANF&) = delete;
     ~ANF();
 
-    size_t readFile(const string& filename);
+    size_t readANFFromFile(const string& filename);
     bool propagate();
     inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
     void printStats() const;
@@ -122,7 +122,7 @@ class ANF
     inline lbool value(const uint32_t var) const;
     inline Lit getReplaced(const uint32_t var) const;
     inline ANF& operator=(const ANF& other);
-    static size_t readFileForMaxVar(const std::string& filename);
+    static size_t readFileForNumVars(const std::string& filename);
     set<size_t> get_proj_set() const;
 
    private:

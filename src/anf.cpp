@@ -24,6 +24,7 @@ SOFTWARE.
 #include "anf.hpp"
 
 #include <cctype>
+#include <cstdio>
 #include <fstream>
 #include <string>
 #include <boost/lexical_cast.hpp>
@@ -66,7 +67,7 @@ bool isCharInStr(const char c, const std::string& s) {
     return false;
 }
 
-size_t ANF::readFileForMaxVar(const std::string& filename)
+size_t ANF::readFileForNumVars(const std::string& filename)
 {
     // Read in the file line by line
     size_t maxes[26]  = {0};
@@ -100,9 +101,7 @@ size_t ANF::readFileForMaxVar(const std::string& filename)
             //At this point, only numbers are valid
             if (!std::isdigit(temp[i])) {
                 var = 0;
-                char temp_char = temp[i];
-                if (temp_char >= 'A' && temp_char <= 'Z')
-                    temp_char += 'a' - 'A';
+
                 if (temp[i] == '_')
                     continue;
 
@@ -122,10 +121,17 @@ size_t ANF::readFileForMaxVar(const std::string& filename)
                     start_bracket = true;
                     continue;
                 }
-                if (isCharInStr(temp_char,var_letters)) {
-                    varLetter = temp_char;
+                tmp_char = tolower(temp[i]);
+                if (isCharInStr(tmp_char,var_letters)) {
+                    varLetter = tmp_char;
                     isMonomial = true;
                 } else {
+                    if (!isascii(temp[i])) {
+                        cout << "ERROR: Unknown character 0x" << (int)temp[i] << " (" << temp[i] << ")"
+                             << " at position " << i
+                             << " in equation: \"" << temp << "\"" << endl;
+                        exit(-1);
+                    }
                     isMonomial = false;
                 }
             } else if (isMonomial) {
@@ -148,7 +154,7 @@ size_t ANF::readFileForMaxVar(const std::string& filename)
     return maxVar+2;
 }
 
-size_t ANF::readFile(const std::string& filename)
+size_t ANF::readANFFromFile(const std::string& filename)
 {
     // Read in the file line by line
     vector<std::string> text_file;
@@ -381,9 +387,9 @@ size_t ANF::readFile(const std::string& filename)
 
             //At this point, only numbers are valid
             if (temp[i] < '0' || temp[i] > '9') {
-                cout << "ERROR: Unknown character 0x" << (int)temp[i]
+                cout << "ERROR: Unknown character 0x" << (int)temp[i] << " (" << temp[i] << ")"
                      << " at position " << i
-                     << " in equation: " << temp << "\"" << endl;
+                     << " in equation: \"" << temp << "\"" << endl;
                 exit(-1);
             }
 
