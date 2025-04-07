@@ -70,7 +70,10 @@ bool isCharInStr(const char c, const std::string& s) {
 size_t ANF::readFileForNumVars(const std::string& filename)
 {
     // Read in the file line by line
-    size_t maxes[26]  = {0}; // only 26 because we allow only a-z and A-Z as variable names (case insensitive)
+
+    // Only 26 because we allow only a-z and A-Z as variable names (case insensitive) (note we skip c, p)
+    size_t maxes[26]  = {0};
+
     char varLetter;
     size_t var = 0;
     bool start_bracket = false;
