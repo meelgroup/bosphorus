@@ -1,4 +1,7 @@
+.DS_Store
+.venv/*
 build/
+tests/Output/
 .cache
 bosphorus.kdev4
 .venv

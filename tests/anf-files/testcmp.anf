@@ -1,0 +1,6 @@
+p cnf 4 3
+3 0
+2 4 0
+-2 -4 0
+c p show 1 2 0
+c Learnt 3 fact(s), not all of which have been dumped
