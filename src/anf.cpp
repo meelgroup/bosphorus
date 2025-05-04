@@ -72,7 +72,7 @@ size_t ANF::readFileForNumVars(const std::string& filename)
     // Read in the file line by line
 
     // Only 26 because we allow only a-z and A-Z as variable names (case insensitive) (note we skip c, p)
-    size_t maxes[26]  = {0};
+    vector<uint32_t> maxVarForLetter(26,0);
 
     char varLetter;
     size_t var = 0;
@@ -141,8 +141,8 @@ size_t ANF::readFileForNumVars(const std::string& filename)
                 var = var * 10 + (temp[i] - '0');
                 int index = (varLetter-'a'); // variables are zero based
                 //printf("%c %zu ", varLetter, var);
-                if (maxes[index] <= var) {
-                    maxes[index] = var+1;
+                if (maxVarForLetter[index] <= var) {
+                    maxVarForLetter[index] = var+1;
                 }
             }
         }
@@ -151,19 +151,19 @@ size_t ANF::readFileForNumVars(const std::string& filename)
 
     size_t maxVar = 0;
     for(size_t i=0;i<26;i++) {
-        maxVar += maxes[i];
+        maxVar += maxVarForLetter[i];
     }
     cout << "c readFileForMaxVar: Variables used: " << maxVar << endl;
-    return maxVar+2;
+    return maxVar;
 }
 
 size_t ANF::readANFFromFile(const std::string& filename)
 {
     // Read in the file line by line
     vector<std::string> text_file;
-    size_t maxes[26]  = {0};
+    vector<uint32_t> maxVarForLetter(26,0);
 
-    size_t currentVar = 2;
+    size_t currentVar = 0;
     bool proj_set_found = false;
 
     std::ifstream ifs;
@@ -173,16 +173,14 @@ size_t ANF::readANFFromFile(const std::string& filename)
         exit(-1);
     }
 
-    std::string resolve_filename;
-    resolve_filename = filename + ".resolve";
-    std::ofstream rfs(resolve_filename.c_str());
+    std::string mapping_filename;
+    mapping_filename = filename + ".mapping";
+    std::ofstream rfs(mapping_filename.c_str());
     if (!rfs) {
-        cout << "Problem creating file: \"" << resolve_filename << "\" for writing\n";
+        cout << "Problem creating file: \"" << mapping_filename << "\" for writing\n";
         ifs.close();
         exit(-1);
     }
-
-    rfs << "0 signifies 0" << endl << "1 signifies 1" << endl;
 
     std::string temp;
 
@@ -407,8 +405,8 @@ size_t ANF::readANFFromFile(const std::string& filename)
             var *= 10;
             var += vartmp;
             int index = varLetter-'a';
-            if (maxes[index] <= var) {
-                maxes[index] = var+1;
+            if (maxVarForLetter[index] <= var) {
+                maxVarForLetter[index] = var+1;
             }
         }
 
