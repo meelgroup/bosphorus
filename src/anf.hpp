@@ -53,6 +53,28 @@ class Replacer;
 struct anf_no_replacer_tag {
 };
 
+class PairMap
+{
+private:
+    std::map<std::pair<char, int>, int> forward;
+
+public:
+    void insert(char c, int n1, int n2) {
+        std::pair<char, int> p(c, n1);
+        forward[p] = n2;
+    }
+
+    int getVarFromPair(char c, int n) {
+        std::pair<char, int> p(c, n);
+        return forward[p];
+    }
+
+    bool containsPair(char c, int n) {
+        std::pair<char, int> p(c, n);
+        return forward.count(p) == 1; // c++20 has contains() but this is also ok
+    }
+};
+
 class ANF
 {
    public:
@@ -64,7 +86,7 @@ class ANF
     ANF(const ANF&) = delete;
     ~ANF();
 
-    size_t readFile(const string& filename);
+    size_t readANFFromFile(const string& filename);
     bool propagate();
     inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
     void printStats() const;
@@ -100,10 +122,11 @@ class ANF
     inline lbool value(const uint32_t var) const;
     inline Lit getReplaced(const uint32_t var) const;
     inline ANF& operator=(const ANF& other);
-    static size_t readFileForMaxVar(const std::string& filename);
+    static size_t readFileForNumVars(const std::string& filename);
     set<size_t> get_proj_set() const;
 
    private:
+    PairMap varMapping;
     bool propagate_iteratively(unordered_set<uint32_t>& updatedVars,
                                std::vector<size_t>& empty_equations);
     bool check_if_need_update(const BoolePolynomial& poly,

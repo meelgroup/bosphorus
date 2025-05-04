@@ -24,6 +24,7 @@ SOFTWARE.
 #include "anf.hpp"
 
 #include <cctype>
+#include <cstdio>
 #include <fstream>
 #include <string>
 #include <boost/lexical_cast.hpp>
@@ -31,6 +32,7 @@ SOFTWARE.
 
 #include "replacer.hpp"
 #include "time_mem.h"
+#include <map>
 
 using std::cout;
 using std::endl;
@@ -56,10 +58,25 @@ ANF::~ANF()
         delete replacer;
 }
 
-size_t ANF::readFileForMaxVar(const std::string& filename)
+const std::string var_letters = "abdefghijklmnoqrstuvwxyz"; // no 'c' or 'p'
+
+bool isCharInStr(const char c, const std::string& s) {
+    for (uint32_t i = 0; i < s.length(); i++) {
+        if (s[i] == c) return true;
+    }
+    return false;
+}
+
+size_t ANF::readFileForNumVars(const std::string& filename)
 {
     // Read in the file line by line
-    size_t maxVar = 0;
+
+    // Only 26 because we allow only a-z and A-Z as variable names (case insensitive) (note we skip c, p)
+    vector<uint32_t> maxVarForLetter(26,0);
+
+    char varLetter;
+    size_t var = 0;
+    bool start_bracket = false;
 
     std::ifstream ifs(filename.c_str());
     if (!ifs) {
@@ -70,41 +87,83 @@ size_t ANF::readFileForMaxVar(const std::string& filename)
     std::string temp;
     while (std::getline(ifs, temp)) {
         // Empty lines and comments (esp numbers within) are ignored
-        if (temp.length() == 0 || temp[0] == 'c')
+        if (temp.length() == 0)
+            continue;
+
+        char tmp_char =  temp[0];
+
+        if (isCharInStr(tmp_char, "cC"))
             continue;
 
         // simply search for consecutive numbers
         // however "+1" is a NUMBER but not a MONOMIAL
         // so we have to take that into consideration
-        size_t var = 0;
+
         bool isMonomial = false;
         for (uint32_t i = 0; i < temp.length(); ++i) {
             //At this point, only numbers are valid
             if (!std::isdigit(temp[i])) {
                 var = 0;
-                if (temp[i] == 'x' || (isMonomial && temp[i] == '(')) {
+
+                if (temp[i] == '_')
+                    continue;
+
+                if (temp[i] == ')') {
+                    if (!start_bracket) {
+                        cout << "ERROR: close bracket but no start bracket?" << endl;
+                        exit(-1);
+                    }
+                    start_bracket = false;
+                    continue;
+                }
+                if (temp[i] == '(') {
+                    if (start_bracket) {
+                        cout << "ERROR: start bracket but previous not closed?" << endl;
+                        exit(-1);
+                    }
+                    start_bracket = true;
+                    continue;
+                }
+                tmp_char = tolower(temp[i]);
+                if (isCharInStr(tmp_char,var_letters)) {
+                    varLetter = tmp_char;
                     isMonomial = true;
                 } else {
+                    if (!isascii(temp[i])) {
+                        cout << "ERROR: Unknown character 0x" << (int)temp[i] << " (" << temp[i] << ")"
+                             << " at position " << i
+                             << " in equation: \"" << temp << "\"" << endl;
+                        exit(-1);
+                    }
                     isMonomial = false;
                 }
             } else if (isMonomial) {
                 var = var * 10 + (temp[i] - '0');
-                maxVar = std::max(
-                    maxVar,
-                    var); //This variable will be used, no matter what, so use it as max
+                int index = (varLetter-'a'); // variables are zero based
+                //printf("%c %zu ", varLetter, var);
+                if (maxVarForLetter[index] <= var) {
+                    maxVarForLetter[index] = var+1;
+                }
             }
         }
     }
     ifs.close();
+
+    size_t maxVar = 0;
+    for(size_t i=0;i<26;i++) {
+        maxVar += maxVarForLetter[i];
+    }
+    cout << "c readFileForMaxVar: Variables used: " << maxVar << endl;
     return maxVar;
 }
 
-size_t ANF::readFile(const std::string& filename)
+size_t ANF::readANFFromFile(const std::string& filename)
 {
     // Read in the file line by line
     vector<std::string> text_file;
+    vector<uint32_t> maxVarForLetter(26,0);
 
-    size_t maxVar = 0;
+    size_t currentVar = 0;
     bool proj_set_found = false;
 
     std::ifstream ifs;
@@ -113,6 +172,16 @@ size_t ANF::readFile(const std::string& filename)
         cout << "Problem opening file: \"" << filename << "\" for reading\n";
         exit(-1);
     }
+
+    std::string mapping_filename;
+    mapping_filename = filename + ".mapping";
+    std::ofstream rfs(mapping_filename.c_str());
+    if (!rfs) {
+        cout << "Problem creating file: \"" << mapping_filename << "\" for writing\n";
+        ifs.close();
+        exit(-1);
+    }
+
     std::string temp;
 
     while (std::getline(ifs, temp)) {
@@ -161,20 +230,31 @@ size_t ANF::readFile(const std::string& filename)
         BoolePolynomial eq(*ring);
         BoolePolynomial eqDesc(*ring);
         bool startOfVar = false;
+        char varLetter;
+        char temp_char;
         bool readInVar = false;
         bool readInDesc = false;
         bool start_bracket = false;
 
         size_t var = 0;
         BooleMonomial m(*ring);
+
         for (uint32_t i = 0; i < temp.length(); i++) {
             //Handle description separator ','
             if (temp[i] == ',') {
                 if (readInVar) {
+                    if (!varMapping.containsPair(varLetter, var)) {
+                        varMapping.insert(varLetter,var,currentVar);
+                        rfs << currentVar << " signifies " << varLetter << "_" << var << endl;
+                        var = currentVar;
+                        currentVar ++;
+                    }
+                    else
+                        var = varMapping.getVarFromPair(varLetter, var);
+
                     m *= BooleVariable(var, *ring);
                     eq += m;
                 }
-
                 startOfVar = false;
                 readInVar = false;
                 var = 0;
@@ -183,8 +263,12 @@ size_t ANF::readFile(const std::string& filename)
                 continue;
             }
 
-            //Silently ignore brackets.
-            //This makes the 'parser' work for both "x3" and "x(3)"
+            // Silently ignore brackets and _
+            // This makes the 'parser' work for both "x3" and "x(3)"
+            if (temp[i] == '_') {
+                continue;
+            }
+
             if (temp[i] == ')') {
                 if (!start_bracket) {
                     cout << "ERROR: close bracket but no start bracket?" << endl;
@@ -202,7 +286,7 @@ size_t ANF::readFile(const std::string& filename)
                 continue;
             }
 
-            //Space means end of variable
+            // Space means end of variable
             if (temp[i] == ' ') {
                 if (startOfVar && !readInVar) {
                     cout << "x is not followed by number at this line : \""
@@ -213,8 +297,10 @@ size_t ANF::readFile(const std::string& filename)
                 continue;
             }
 
-            if (temp[i] == 'x' || temp[i] == 'X') {
+            temp_char = tolower(temp[i]);
+            if (isCharInStr(temp_char,var_letters)) {
                 startOfVar = true;
+                varLetter = temp_char;
                 readInVar = false;
                 continue;
             }
@@ -239,12 +325,21 @@ size_t ANF::readFile(const std::string& filename)
                 continue;
             }
 
-            if (temp[i] == '+') {
+            if (temp[i] == '+' || temp[i] == '=') {
                 if (start_bracket) {
                     cout << "ERROR: You are adding monomials, but haven't closed the previous one! We can only parse ANF, not e.g. ternary factorized systems" << endl;
                     exit(-1);
                 }
                 if (readInVar) {
+                    if (!varMapping.containsPair(varLetter, var)) {
+                        varMapping.insert(varLetter,var,currentVar);
+                        rfs << currentVar << " signifies " << varLetter << "_" << var << endl;
+                        var = currentVar;
+                        currentVar ++;
+                    }
+                    else
+                        var = varMapping.getVarFromPair(varLetter, var);
+
                     m *= BooleVariable(var, *ring);
 
                     if (!readInDesc)
@@ -262,12 +357,22 @@ size_t ANF::readFile(const std::string& filename)
 
             if (temp[i] == '*') {
                 if (!readInVar) {
-                    cout << "ERROR: No variable before \"*\" in equation: \"" << temp
+                    cout << "ERROR: No variable before \"*\" at position "
+                        << i << " in equation: \"" << temp
                          << "\"" << endl;
                     exit(-1);
                 }
 
                 //Multiplying current var into monomial
+                if (!varMapping.containsPair(varLetter, var)) {
+                    varMapping.insert(varLetter,var,currentVar);
+                    rfs << currentVar << " signifies " << varLetter << "_" << var << endl;
+                    var = currentVar;
+                    currentVar ++;
+                }
+                else
+                    var = varMapping.getVarFromPair(varLetter, var);
+
                 m *= BooleVariable(var, *ring);
 
                 startOfVar = false;
@@ -283,8 +388,9 @@ size_t ANF::readFile(const std::string& filename)
 
             //At this point, only numbers are valid
             if (temp[i] < '0' || temp[i] > '9') {
-                cout << "ERROR: Unknown character 0x" << (int)temp[i]
-                     << " in equation: " << temp << "\"" << endl;
+                cout << "ERROR: Unknown character 0x" << (int)temp[i] << " (" << temp[i] << ")"
+                     << " at position " << i
+                     << " in equation: \"" << temp << "\"" << endl;
                 exit(-1);
             }
 
@@ -298,13 +404,23 @@ size_t ANF::readFile(const std::string& filename)
             assert(vartmp >= 0 && vartmp <= 9);
             var *= 10;
             var += vartmp;
-
-            //This variable will be used, no matter what, so use it as max
-            maxVar = std::max(maxVar, var);
+            int index = varLetter-'a';
+            if (maxVarForLetter[index] <= var) {
+                maxVarForLetter[index] = var+1;
+            }
         }
 
         //If variable was being built up when the line ended, add it
         if (readInVar) {
+            if (!varMapping.containsPair(varLetter, var)) {
+                varMapping.insert(varLetter,var,currentVar);
+                rfs << currentVar << " signifies " << varLetter << "_" << var << endl;
+                var = currentVar;
+                currentVar ++;
+            }
+            else
+                var = varMapping.getVarFromPair(varLetter, var);
+
             m *= BooleVariable(var, *ring);
 
             if (!readInDesc)
@@ -346,22 +462,25 @@ size_t ANF::readFile(const std::string& filename)
         }
     }
 
+    currentVar --;
     for(const auto& v: proj_set) {
-        if (v > maxVar) {
-            cout << "ERROR: the maximum variable in the ANF was: x" << maxVar << " but your projection set contains var x" << v << " which is higher. This is wrong." << endl;
+        if (v > currentVar) {
+            cout << "ERROR: the maximum variable in the ANF was: x" << currentVar << " but your projection set contains var x" << v << " which is higher. This is wrong." << endl;
             exit(-1);
         }
     }
 
     if (proj_set_found == false) {
         cout << "c setting projection set to ALL variables since we didn't find a 'c p show ... END'" << endl;
-        for(uint32_t i = 0; i <= maxVar; i++) {
+        for(uint32_t i = 0; i <= currentVar; i++) {
             proj_set.insert(i);
         }
     }
 
+    rfs.close();
     ifs.close();
-    return maxVar;
+    cout << "c readFile: Variables used: " << currentVar << endl;
+    return currentVar;
 }
 
 void print_solution_map(std::ofstream* ) { }
@@ -512,7 +631,7 @@ bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
     poly = newpoly;
 
     if (poly.isConstant()) {
-        //Check UNSAT
+        // Check UNSAT
         if (poly.isOne()) {
             replacer->setNOTOK();
             cout << "Replacer NOT OK" << endl;
