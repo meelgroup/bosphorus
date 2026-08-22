@@ -57,6 +57,7 @@ bool readCNF;
 bool writeANF;
 bool writeCNF;
 bool solve_with_cms;
+bool solve_xnf;
 bool all_solutions;
 int only_new_cnf_clauses = 0;
 uint32_t maxiters = 100;
@@ -94,6 +95,7 @@ void parseOptions(int argc, char* argv[])
     ("simplify", po::value<int>(&config.simplify)->default_value(config.simplify),
      "Simplify ANF")
     ("solve", po::bool_switch(&solve_with_cms), "Solve the resulting ANF")
+    ("solve-xnf", po::bool_switch(&solve_xnf), "Solve the resulting ANF, tuning the SAT solver for XOR-heavy (XNF) problems")
     ("solvewrite", po::value(&solution_output_file), "Solve the resulting ANF and print the solution to this file")
     ("allsol", po::bool_switch(&all_solutions), "Find all solutions")
     ("maxsol", po::value(&max_sol)->default_value(max_sol), "Find at most this many solutions")
@@ -223,6 +225,10 @@ void parseOptions(int argc, char* argv[])
     }
 
     if (vm.count("solvewrite")) {
+        solve_with_cms = true;
+    }
+
+    if (solve_xnf) {
         solve_with_cms = true;
     }
 
@@ -436,6 +442,14 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
     vector<Clause> cls = mylib->get_clauses(cnf);
     CMSat::SATSolver solver;
     solver.set_num_threads(config.numThreads);
+    if (solve_xnf) {
+        solver.set_sls(0);
+        solver.set_find_xors(true);
+        solver.set_allow_otf_gauss();
+        solver.set_max_num_matrices(1000000);
+        solver.set_min_matrix_rows(1);
+        solver.set_simplify_at_startup(1);
+    }
     solver.new_vars(mylib->get_max_var(cnf));
     for(const Bosph::Clause& c: cls) {
         const Bosph::Clause* cc = &c;
