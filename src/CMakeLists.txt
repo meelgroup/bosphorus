@@ -19,13 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-include_directories( ${PROJECT_SOURCE_DIR} )
-
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/GitSHA1.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/GitSHA1.cpp" @ONLY)
-include_directories(${CRYPTOMINISAT5_INCLUDE_DIRS})
 
-include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
-include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 set(bosph_lib_files
     anf.cpp
     cnf.cpp
@@ -41,15 +36,29 @@ set(bosph_lib_files
 )
 
 add_library(bosphorus ${bosph_lib_files})
+
+target_include_directories(bosphorus
+  PRIVATE
+    ${PROJECT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
+  PUBLIC
+    ${CRYPTOMINISAT5_INCLUDE_DIRS}
+    ${m4ri_INCLUDE_DIRS}
+    ${BRiAl_INCLUDE_DIRS}
+    ${ZLIB_INCLUDE_DIR}
+)
+
 target_link_libraries(bosphorus
+  PUBLIC
     ${m4ri_LIBRARIES}
     ${BRiAl_LIBRARIES}
     ${PNG_LIBRARIES}
     ${CRYPTOMINISAT5_LIBRARIES}
+    ${ZLIB_LIBRARY}
 )
 
 set_target_properties(bosphorus PROPERTIES
-    PUBLIC_HEADER "${bosphorus_public_headers}"
     VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
 )
@@ -63,12 +72,22 @@ set_target_properties(bosphorus-bin PROPERTIES
     OUTPUT_NAME bosphorus
 )
 
-target_link_libraries(bosphorus-bin
+target_include_directories(bosphorus-bin PRIVATE
+    ${PROJECT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(bosphorus-bin PRIVATE
     bosphorus
     Boost::program_options
 )
 
-bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.hpp )
+bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.hpp)
+
+# Public headers are fully known now; the CopyPublicHeaders target below reads
+# this property, so it must be set before that target is created.
+get_target_property(bosphorus_public_headers bosphorus PUBLIC_HEADER)
+set_target_properties(bosphorus PROPERTIES PUBLIC_HEADER "${bosphorus_public_headers}")
 
 # -----------------------------------------------------------------------------
 # Copy public headers into build directory include directory.
@@ -77,7 +96,6 @@ bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.hpp 
 # -----------------------------------------------------------------------------
 set(HEADER_DEST "${PROJECT_BINARY_DIR}/include/bosphorus")
 add_custom_target(CopyPublicHeaders ALL)
-get_target_property(bosphorus_public_headers bosphorus PUBLIC_HEADER)
 foreach(public_header ${bosphorus_public_headers})
     get_filename_component(HEADER_NAME ${public_header} NAME)
     add_custom_command(TARGET CopyPublicHeaders PRE_BUILD
