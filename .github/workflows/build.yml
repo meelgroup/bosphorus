@@ -40,7 +40,7 @@ jobs:
       if: contains(matrix.os, 'macos')
       run: brew install automake libtool boost pkg-config gmp
 
-    - name: Build m4ri and BRiAl
+    - name: Build dependencies
       uses: ./.github/actions/build-deps
       with:
         static: ${{ matrix.staticcompile }}

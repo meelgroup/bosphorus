@@ -1,8 +1,8 @@
-name: Build m4ri and BRiAl
+name: Build Bosphorus dependencies
 description: >-
   Builds and installs m4ri and BRiAl into /usr/local. Neither is packaged on
   current Ubuntu or in Homebrew, so CI has to build them from the release
-  tarballs.
+  tarballs. Also builds a static zlib on macOS, whose SDK ships only libz.dylib.
 
 inputs:
   static:
@@ -54,3 +54,16 @@ runs:
         make -j8
         sudo make install
         if [ "$RUNNER_OS" = "Linux" ]; then sudo ldconfig; fi
+
+    - name: Build and install static zlib (macOS)
+      if: inputs.static == 'ON' && runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -e
+        cd "$RUNNER_TEMP"
+        curl -sSfL -O https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
+        tar xf zlib-1.3.1.tar.gz
+        cd zlib-1.3.1
+        ./configure --static
+        make -j8
+        sudo make install

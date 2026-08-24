@@ -91,7 +91,9 @@ cmake --build .
 ```
 
 For a fully static binary (no shared-library dependencies at runtime), add
-`-DSTATICCOMPILE=ON`.
+`-DSTATICCOMPILE=ON`. On macOS this additionally needs a static zlib, which the
+SDK does not ship -- build [zlib](https://github.com/madler/zlib) with
+`./configure --static` first.
 
 ## ANF simplification and solving
 Suppose we have a system of two equations:
