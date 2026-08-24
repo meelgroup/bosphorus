@@ -47,7 +47,9 @@ jobs:
         cmake --build . --config ${{ matrix.build_type }}
 
     - name: Run it to check it executes
-      run: ./build/bosphorus --version
+      run: |
+        ./build/bosphorus --version
+        ./build/bosphorus --help | grep -q -- --anfread
 
     - name: Smoke-test the binary on a real problem
       run: |

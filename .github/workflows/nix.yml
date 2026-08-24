@@ -16,3 +16,11 @@ jobs:
         install_url: https://releases.nixos.org/nix/nix-2.26.3/install
         nix_path: nixpkgs=channel:nixos-unstable
     - run: nix build
+
+    - name: Run it to check it executes
+      run: |
+        ./result/bin/bosphorus --version
+        ./result/bin/bosphorus --help | grep -q -- --anfread
+        printf 'x1 + x2 + x3\nx2 + x3 + 1\n' > smoke.anf
+        ./result/bin/bosphorus --anfread smoke.anf --solve --verb 0 | tee smoke.out
+        grep -q "^s ANF-SATISFIABLE" smoke.out
