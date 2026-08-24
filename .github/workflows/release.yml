@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, macos-15-intel]
         build_type: [Release]
@@ -48,6 +48,21 @@ jobs:
 
     - name: Run it to check it executes
       run: ./build/bosphorus --version
+
+    - name: Smoke-test the binary on a real problem
+      run: |
+        printf 'x1 + x2 + x3\nx2 + x3 + 1\n' > smoke.anf
+        ./build/bosphorus --anfread smoke.anf --solve --verb 0 | tee smoke.out
+        grep -q "^s ANF-SATISFIABLE" smoke.out
+
+    - name: Check the binary has no non-system dependencies (macOS)
+      if: contains(matrix.os, 'macos')
+      run: |
+        otool -L ./build/bosphorus
+        if otool -L ./build/bosphorus | tail -n +2 | grep -qE '/opt/homebrew|/usr/local'; then
+          echo "ERROR: bosphorus links a Homebrew library, so it will not run elsewhere"
+          exit 1
+        fi
 
     - name: Check the binary is statically linked (Linux)
       if: contains(matrix.os, 'ubuntu')
