@@ -73,8 +73,7 @@ cmake --build .
 ```
 
 For a fully static binary (no shared-library dependencies at runtime), add
-`-DSTATICCOMPILE=ON`. To run the test suite, configure with
-`-DENABLE_TESTING=ON` and then run `ctest`.
+`-DSTATICCOMPILE=ON`.
 
 ### CMake arguments
 - `-DCMAKE_BUILD_TYPE=<Release/RelWithDebInfo/Debug>` -- build type, `RelWithDebInfo` by default.
