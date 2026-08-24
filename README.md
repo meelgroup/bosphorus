@@ -39,7 +39,7 @@ The build uses CMake and automatically fetches and compiles CryptoMiniSat (and
 in turn its own dependencies), so the only C++ dependencies you need to provide
 are Boost, zlib, GMP, m4ri and BRiAl. Install the system packages:
 
-```shell
+```bash
 # Debian/Ubuntu
 sudo apt-get install build-essential cmake pkg-config git zlib1g-dev libgmp-dev \
                      libboost-program-options-dev libboost-test-dev
@@ -50,39 +50,8 @@ brew install cmake pkg-config automake libtool boost gmp
 
 Neither [m4ri](https://github.com/malb/m4ri) nor
 [BRiAl](https://github.com/BRiAl/BRiAl) is packaged on current Ubuntu or in
-Homebrew, so install them from their release tarballs. On Debian/Ubuntu:
-```shell
-curl -sSfL -O https://github.com/malb/m4ri/releases/download/20250128/m4ri-20250128.tar.gz
-tar xf m4ri-20250128.tar.gz && cd m4ri-20250128
-./configure --enable-static --enable-shared --with-pic --disable-png
-make -j$(nproc) && sudo make install && cd ..
-
-curl -sSfL -O https://github.com/BRiAl/BRiAl/releases/download/1.2.12/brial-1.2.12.tar.bz2
-tar xf brial-1.2.12.tar.bz2 && cd brial-1.2.12
-./configure --enable-static --enable-shared --with-pic CXXFLAGS="-O2 -g -std=gnu++17"
-make -j$(nproc) && sudo make install && cd ..
-```
-
-On macOS, BRiAl needs Homebrew's Boost pointed at explicitly:
-```shell
-curl -sSfL -O https://github.com/malb/m4ri/releases/download/20250128/m4ri-20250128.tar.gz
-tar xf m4ri-20250128.tar.gz && cd m4ri-20250128
-./configure --enable-static --enable-shared --with-pic --disable-png
-make -j8 && sudo make install && cd ..
-
-curl -sSfL -O https://github.com/BRiAl/BRiAl/releases/download/1.2.12/brial-1.2.12.tar.bz2
-tar xf brial-1.2.12.tar.bz2 && cd brial-1.2.12
-./configure --enable-static --enable-shared --with-pic \
-    --with-boost=$(brew --prefix boost) \
-    CXXFLAGS="-O2 -g -std=gnu++17 -I$(brew --prefix boost)/include" \
-    LDFLAGS="-L$(brew --prefix boost)/lib"
-make -j8 && sudo make install && cd ..
-```
-
-BRiAl 1.2.12 does not compile as C++20, hence the pinned `-std=gnu++17`.
-
-Then build Bosphorus:
-```shell
+Homebrew, so install them from their release tarballs. Then build Bosphorus:
+```bash
 git clone --recurse-submodules https://github.com/meelgroup/bosphorus
 cd bosphorus
 mkdir build && cd build
@@ -90,10 +59,8 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build .
 ```
 
-For a fully static binary (no shared-library dependencies at runtime), add
-`-DSTATICCOMPILE=ON`. On macOS this additionally needs a static zlib, which the
-SDK does not ship -- build [zlib](https://github.com/madler/zlib) with
-`./configure --static` first.
+If the above is complicated, please use the release binaries, or Nix, as
+described above.
 
 ### Testing
 The test suite is driven by [lit](https://pypi.org/project/lit/) and checks
