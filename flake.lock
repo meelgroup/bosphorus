@@ -1,0 +1,100 @@
+{
+  "nodes": {
+    "cadiback": {
+      "inputs": {
+        "cadical": "cadical",
+        "nixpkgs": [
+          "cryptominisat",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1781356163,
+        "narHash": "sha256-pLGyzOpr5+j44ORtJr9GslySxHK/6n+x5lQM14JG+mE=",
+        "owner": "meelgroup",
+        "repo": "cadiback",
+        "rev": "3b6a84062b1304433eb8960a4bff6b9a80de9c54",
+        "type": "github"
+      },
+      "original": {
+        "owner": "meelgroup",
+        "ref": "main",
+        "repo": "cadiback",
+        "type": "github"
+      }
+    },
+    "cadical": {
+      "inputs": {
+        "nixpkgs": [
+          "cryptominisat",
+          "cadiback",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1781356108,
+        "narHash": "sha256-vOkBGnRWR1lT0Ik1WmoNjfIILM7Sk6ofSIbkiIdA68U=",
+        "owner": "meelgroup",
+        "repo": "cadical",
+        "rev": "394c3f72858c2fe8cd35321f74f11f0f61c91123",
+        "type": "github"
+      },
+      "original": {
+        "owner": "meelgroup",
+        "ref": "master",
+        "repo": "cadical",
+        "type": "github"
+      }
+    },
+    "cryptominisat": {
+      "inputs": {
+        "cadiback": "cadiback",
+        "cadical": [
+          "cryptominisat",
+          "cadiback",
+          "cadical"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787495194,
+        "narHash": "sha256-ZB9MJDQfy+4BK3OWHf8kP/dludarjL3S7bUCzWn37is=",
+        "owner": "msoos",
+        "repo": "cryptominisat",
+        "rev": "3970aaf24fad0e9bb0baa3dccdf7f75ce85b7dc2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "msoos",
+        "repo": "cryptominisat",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1787394516,
+        "narHash": "sha256-pRGOQSClnXNI2iLUG6DYpsGvYcuw0drOutVZFTJNw90=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "c8f90650c15282fa8656a041bfbbd2403997a9a7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "cryptominisat": "cryptominisat",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

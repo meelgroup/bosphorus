@@ -43,9 +43,9 @@ target_include_directories(bosphorus
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
   PUBLIC
-    ${CRYPTOMINISAT5_INCLUDE_DIRS}
-    ${m4ri_INCLUDE_DIRS}
-    ${BRiAl_INCLUDE_DIRS}
+    "$<BUILD_INTERFACE:${CRYPTOMINISAT5_INCLUDE_DIRS}>"
+    "$<BUILD_INTERFACE:${m4ri_INCLUDE_DIRS}>"
+    "$<BUILD_INTERFACE:${BRiAl_INCLUDE_DIRS}>"
     ${ZLIB_INCLUDE_DIR}
 )
 
@@ -53,7 +53,6 @@ target_link_libraries(bosphorus
   PUBLIC
     ${m4ri_LIBRARIES}
     ${BRiAl_LIBRARIES}
-    ${PNG_LIBRARIES}
     ${CRYPTOMINISAT5_LIBRARIES}
     ${ZLIB_LIBRARY}
 )

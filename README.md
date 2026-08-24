@@ -1,5 +1,5 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Docker Hub](https://img.shields.io/badge/docker-latest-blue.svg)](https://hub.docker.com/r/msoos/bosphorus/)
+![build](https://github.com/meelgroup/bosphorus/workflows/build/badge.svg)
 
 Bosphorus is an ANF simplification and solving tool. It takes as input an ANF
 over GF(2) and can simplify and solve it. It uses many different algorithms,
@@ -21,6 +21,67 @@ University of Singapore (NUS). If you use Bosphorus, please cite our
 2019. Some of the code was generously donated by [Security Research Labs,
 Berlin](https://srlabs.de/).
 
+
+## Compiling
+Use of the [release
+binaries](https://github.com/meelgroup/bosphorus/releases) is _strongly_
+encouraged. The second best thing to use is Nix. Simply [install
+nix](https://nixos.org/download/) and then:
+```shell
+nix shell github:meelgroup/bosphorus
+```
+
+Then you will have the `bosphorus` binary available and ready to use.
+
+### Building from source
+
+The build uses CMake and automatically fetches and compiles CryptoMiniSat (and
+in turn its own dependencies), so the only C++ dependencies you need to provide
+are Boost, zlib, GMP, m4ri and BRiAl. Install the system packages:
+
+```shell
+# Debian/Ubuntu
+sudo apt-get install build-essential cmake pkg-config git \
+                     libboost-program-options-dev zlib1g-dev libgmp-dev
+
+# macOS (brew)
+brew install cmake pkg-config boost gmp
+```
+
+Neither [m4ri](https://github.com/malb/m4ri) nor
+[BRiAl](https://github.com/BRiAl/BRiAl) is packaged on current Ubuntu or in
+Homebrew, so install them from their release tarballs:
+```shell
+curl -sSfL -O https://github.com/malb/m4ri/releases/download/20250128/m4ri-20250128.tar.gz
+tar xf m4ri-20250128.tar.gz && cd m4ri-20250128
+./configure --enable-static --enable-shared --with-pic --disable-png
+make -j$(nproc) && sudo make install && cd ..
+
+curl -sSfL -O https://github.com/BRiAl/BRiAl/releases/download/1.2.12/brial-1.2.12.tar.bz2
+tar xf brial-1.2.12.tar.bz2 && cd brial-1.2.12
+./configure --enable-static --enable-shared --with-pic CXXFLAGS="-O2 -g -std=gnu++17"
+make -j$(nproc) && sudo make install && cd ..
+```
+
+Then build Bosphorus:
+```shell
+git clone --recurse-submodules https://github.com/meelgroup/bosphorus
+cd bosphorus
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build .
+```
+
+For a fully static binary (no shared-library dependencies at runtime), add
+`-DSTATICCOMPILE=ON`. To run the test suite, configure with
+`-DENABLE_TESTING=ON` and then run `ctest`.
+
+### CMake arguments
+- `-DCMAKE_BUILD_TYPE=<Release/RelWithDebInfo/Debug>` -- build type, `RelWithDebInfo` by default.
+- `-DSTATICCOMPILE=<ON/OFF>` -- link the binary fully statically.
+- `-DENABLE_TESTING=<ON/OFF>` -- build the test suite.
+- `-Dcryptominisat5_DIR=<path>` -- install prefix of a pre-built CryptoMiniSat. Fetched and built automatically if not set.
+- `-Dm4ri_ROOT_DIR=<path>` / `-DBRiAl_ROOT_DIR=<path>` -- install prefixes for m4ri and BRiAl, if not in a standard location.
 
 ## ANF simplification and solving
 Suppose we have a system of two equations:
@@ -220,12 +281,6 @@ If you want all solutions:
 
 Then take the solutions from `cnf_solutions` individually, put them in a file,
 and call `map_solution` on it, as before.
-
-# Building, Testing, Installing
-
-I suggest checking out the [GitHub
-action](https://github.com/meelgroup/bosphorus/blob/master/.github/workflows/build.yml)
-to see how to build and test the system.
 
 ## Fuzzing
 The tool comes with a built-in ANF fuzzer. To use, install

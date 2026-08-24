@@ -59,7 +59,7 @@ DBG_MSG("BRiAl_LIBRARIES=${BRiAl_LIBRARIES}")
 include(FindPackageHandleStandardArgs)
 # handle the QUIETLY and REQUIRED arguments and set BRiAl_FOUND to TRUE
 # if all listed variables are TRUE
-find_package_handle_standard_args(brial  DEFAULT_MSG
+find_package_handle_standard_args(BRiAl  DEFAULT_MSG
                                   BRiAl_LIBRARIES BRiAl_INCLUDE_DIRS)
 
 mark_as_advanced(BRiAl_INCLUDE_DIRS BRiAl_LIBRARIES)

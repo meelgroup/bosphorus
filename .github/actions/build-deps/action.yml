@@ -1,0 +1,46 @@
+name: Build m4ri and BRiAl
+description: >-
+  Builds and installs m4ri and BRiAl into /usr/local. Neither is packaged on
+  current Ubuntu or in Homebrew, so CI has to build them from the release
+  tarballs.
+
+inputs:
+  static:
+    description: Build static-only libraries (ON/OFF)
+    required: false
+    default: 'OFF'
+
+runs:
+  using: composite
+  steps:
+    - name: Build and install m4ri
+      shell: bash
+      run: |
+        set -e
+        cd "$RUNNER_TEMP"
+        if [ "${{ inputs.static }}" = "ON" ]; then SHARED=--disable-shared; else SHARED=--enable-shared; fi
+        curl -sSfL -O https://github.com/malb/m4ri/releases/download/20250128/m4ri-20250128.tar.gz
+        tar xf m4ri-20250128.tar.gz
+        cd m4ri-20250128
+        ./configure --enable-static $SHARED --with-pic --disable-png
+        make -j8
+        sudo make install
+
+    - name: Build and install BRiAl
+      shell: bash
+      run: |
+        set -e
+        cd "$RUNNER_TEMP"
+        if [ "${{ inputs.static }}" = "ON" ]; then SHARED=--disable-shared; else SHARED=--enable-shared; fi
+        BOOST=
+        if [ "$RUNNER_OS" = "macOS" ]; then BOOST="--with-boost=$(brew --prefix boost)"; fi
+        export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+        curl -sSfL -O https://github.com/BRiAl/BRiAl/releases/download/1.2.12/brial-1.2.12.tar.bz2
+        tar xf brial-1.2.12.tar.bz2
+        cd brial-1.2.12
+        # BRiAl 1.2.12 does not compile as C++20, so pin the standard rather
+        # than inherit whatever the compiler defaults to.
+        ./configure --enable-static $SHARED --with-pic $BOOST CXXFLAGS="-O2 -g -std=gnu++17"
+        make -j8
+        sudo make install
+        if [ "$RUNNER_OS" = "Linux" ]; then sudo ldconfig; fi

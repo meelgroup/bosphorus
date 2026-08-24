@@ -244,7 +244,7 @@ if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR (${CMAKE_SYSTEM_NAME} MATCHES "Darw
         message(STATUS "Compiling for static library use")
         if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
             #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -Wl,--whole-archive -ldl -lpthread -Wl,--no-whole-archive -static ")
-            set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -static ")
+            set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
         endif()
 
         set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
@@ -265,25 +265,39 @@ if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR (${CMAKE_SYSTEM_NAME} MATCHES "Darw
     endif()
 endif()
 
+# -----------------------------------------------------------------------------
+# Dependencies
+#
+# Boost, zlib, GMP, m4ri and BRiAl must come from the system. CryptoMiniSat is
+# fetched and built automatically; point -Dcryptominisat5_DIR at an install
+# prefix to use a pre-built one instead.
+# -----------------------------------------------------------------------------
 find_package(Boost 1.34 REQUIRED COMPONENTS program_options)
-
 find_package(ZLIB REQUIRED)
+find_package(m4ri REQUIRED)
+find_package(BRiAl REQUIRED)
 
-find_package(cryptominisat5 REQUIRED)
-if(cryptominisat5_FOUND)
-    message(STATUS "OK, CryptoMiniSat5 found")
+set(cryptominisat5_DIR "" CACHE PATH "CryptoMiniSat5 install prefix. Fetched and built if empty.")
+if(cryptominisat5_DIR)
+    find_package(cryptominisat5 CONFIG REQUIRED HINTS "${cryptominisat5_DIR}")
+    message(STATUS "CryptoMiniSat5: using pre-built at ${cryptominisat5_DIR}")
     message(STATUS "CryptoMiniSat5 -- found version ${CRYPTOMINISAT5_VERSION_MAJOR}.${CRYPTOMINISAT5_VERSION_MINOR}")
-    message(STATUS "CryptoMiniSat5 -- libraries:    ${CRYPTOMINISAT5_LIBRARIES}")
-    message(STATUS "CryptoMiniSat5 -- include dirs: ${CRYPTOMINISAT5_INCLUDE_DIRS}")
-    find_package(breakid)
-    if(NOT BREAKID_LIBRARIES)
-        message(WARNING "BreakID NOT found")
-    else()
-        message(STATUS "BreakID -- found version ${BREAKID_VERSION_MAJOR}.${BREAKID_VERSION_MINOR}")
-        message(STATUS "BreakID -- libraries: ${BREAKID_LIBRARIES}")
-        message(STATUS "BreakID -- include dirs: ${BREAKID_INCLUDE_DIRS}")
-    endif()
+else()
+    include(FetchContent)
+    # CMS declares the same ENABLE_TESTING option we do; hide ours from it so
+    # our test suite doesn't drag in CMS's (and gtest).
+    set(ENABLE_TESTING OFF)
+    FetchContent_Declare(cryptominisat5
+        GIT_REPOSITORY https://github.com/msoos/cryptominisat
+        GIT_TAG        master
+        GIT_SHALLOW    TRUE)
+    FetchContent_MakeAvailable(cryptominisat5)
+    unset(ENABLE_TESTING)
+    set(CRYPTOMINISAT5_LIBRARIES cryptominisat5)
+    set(CRYPTOMINISAT5_INCLUDE_DIRS "")
+    message(STATUS "CryptoMiniSat5: fetched from GitHub")
 endif()
+message(STATUS "CryptoMiniSat5 -- libraries: ${CRYPTOMINISAT5_LIBRARIES}")
 
 # -----------------------------------------------------------------------------
 # Add GIT version
@@ -307,10 +321,6 @@ message(STATUS "PROJECT_VERSION: ${PROJECT_VERSION}")
 message(STATUS "PROJECT_VERSION_MAJOR: ${PROJECT_VERSION_MAJOR}")
 message(STATUS "PROJECT_VERSION_MINOR: ${PROJECT_VERSION_MINOR}")
 message(STATUS "PROJECT_VERSION_PATCH: ${PROJECT_VERSION_PATCH}")
-
-find_package(m4ri REQUIRED)
-find_package(BRiAl REQUIRED)
-
 
 option(ENABLE_TESTING "Enable testing" OFF)
 if(ENABLE_TESTING)

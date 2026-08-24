@@ -1,0 +1,101 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'release/v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, macos-15-intel]
+        build_type: [Release]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+
+    - name: Install dependencies for Linux
+      if: contains(matrix.os, 'ubuntu')
+      run: |
+        sudo apt-get update
+        sudo apt-get install -yq build-essential cmake pkg-config \
+          libgmp-dev zlib1g-dev libboost-program-options-dev
+
+    - name: Install dependencies for Mac
+      if: contains(matrix.os, 'macos')
+      run: brew install automake libtool boost pkg-config gmp
+
+    - name: Build m4ri and BRiAl
+      uses: ./.github/actions/build-deps
+      with:
+        static: 'ON'
+
+    - name: Configure & build
+      run: |
+        mkdir -p build && cd build
+        cmake \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DSTATICCOMPILE=ON \
+          -DENABLE_TESTING=OFF \
+          ..
+        cmake --build . --config ${{ matrix.build_type }}
+
+    - name: Run it to check it executes
+      run: ./build/bosphorus --version
+
+    - name: Check the binary is statically linked (Linux)
+      if: contains(matrix.os, 'ubuntu')
+      run: |
+        file ./build/bosphorus
+        if ! file ./build/bosphorus | grep -q "statically linked"; then
+          echo "ERROR: bosphorus is not statically linked"
+          ldd ./build/bosphorus || true
+          exit 1
+        fi
+
+    - name: Package artifact
+      run: |
+        TAG="${{ github.ref_name }}"
+        TAG="${TAG#release/}"
+        case "${{ matrix.os }}" in
+          ubuntu-latest)     ARCH="linux-amd64" ;;
+          ubuntu-24.04-arm)  ARCH="linux-arm64" ;;
+          macos-14)          ARCH="mac-arm64" ;;
+          macos-15-intel)    ARCH="mac-x86_64" ;;
+        esac
+        ARCHIVE="bosphorus-${TAG}-${ARCH}.tar.gz"
+        tar czf "${ARCHIVE}" -C build bosphorus
+        echo "ARCHIVE=${ARCHIVE}" >> $GITHUB_ENV
+
+    - name: Upload release asset
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.ARCHIVE }}
+        path: ${{ env.ARCHIVE }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        merge-multiple: true
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Bosphorus ${{ github.ref_name }}
+        generate_release_notes: true
+        files: artifacts/*
