@@ -37,11 +37,15 @@ set(bosph_lib_files
 
 add_library(bosphorus ${bosph_lib_files})
 
+# polybori's headers include Boost, so the library needs Boost's include dir
+# even though only bosphorus-bin links a Boost library. Matters wherever Boost
+# is not in the default search path, e.g. Homebrew.
 target_include_directories(bosphorus
   PRIVATE
     ${PROJECT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${Boost_INCLUDE_DIRS}
   PUBLIC
     "$<BUILD_INTERFACE:${CRYPTOMINISAT5_INCLUDE_DIRS}>"
     "$<BUILD_INTERFACE:${m4ri_INCLUDE_DIRS}>"
