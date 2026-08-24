@@ -1,0 +1,6 @@
+c RUN: %solver --anfread %s --solve --allsol --verb 0 | %verify allsol %s
+c
+c Quadratic monomials, so ElimLin and XL both have work to do.
+x1*x2 + x3
+x2*x3 + x1
+x1 + x2 + 1

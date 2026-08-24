@@ -1,0 +1,7 @@
+c RUN: %solver --anfread %s --solvewrite %t.sol --verb 0
+c RUN: %verify solvewrite %s %t.sol
+c
+c An unsatisfiable system must be reported as UNSAT, not given a solution.
+x1*x2 + x1
+x1 + 1
+x2 + 1

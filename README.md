@@ -95,6 +95,17 @@ For a fully static binary (no shared-library dependencies at runtime), add
 SDK does not ship -- build [zlib](https://github.com/madler/zlib) with
 `./configure --static` first.
 
+### Testing
+The test suite is driven by [lit](https://pypi.org/project/lit/) and checks
+Bosphorus end-to-end: solutions and written CNFs are verified against a
+brute-forced ground truth computed independently of Bosphorus.
+```shell
+pip install lit
+cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=ON ..
+cmake --build .
+ctest --verbose
+```
+
 ## ANF simplification and solving
 Suppose we have a system of two equations:
 ```

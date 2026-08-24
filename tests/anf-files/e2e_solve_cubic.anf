@@ -1,0 +1,5 @@
+c RUN: %solver --anfread %s --solve --allsol --verb 0 | %verify allsol %s
+c
+c A degree-3 monomial, which needs Brickenstein's conversion to reach CNF.
+x1*x2*x3 + x1
+x2 + x3 + 1

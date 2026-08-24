@@ -1,0 +1,7 @@
+c RUN: %solver --anfread %s --cnfwrite %t.cnf --verb 0
+c RUN: %verify cnf %s %t.cnf
+c
+c Same, for a system that does not collapse to pure XORs.
+x1*x2 + x2*x3 + 1
+x1 + x2 + x3
+x2*x4 + x1

@@ -1,0 +1,6 @@
+c RUN: %solver --anfread %s --solvewrite %t.sol --verb 0
+c RUN: %verify solvewrite %s %t.sol
+c
+c --solvewrite must emit an assignment that really satisfies the system.
+x1 + x2 + x3
+x2 + x3 + 1

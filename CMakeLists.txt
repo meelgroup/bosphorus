@@ -324,6 +324,9 @@ message(STATUS "PROJECT_VERSION_PATCH: ${PROJECT_VERSION_PATCH}")
 
 option(ENABLE_TESTING "Enable testing" OFF)
 if(ENABLE_TESTING)
+    # lit.site.cfg needs a real interpreter path; without it the test tools are
+    # only reachable via their shebang, which is fragile.
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
     add_subdirectory(${PROJECT_SOURCE_DIR}/utils/cnf-utils)
 endif()
 
