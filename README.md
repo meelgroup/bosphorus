@@ -75,13 +75,6 @@ cmake --build .
 For a fully static binary (no shared-library dependencies at runtime), add
 `-DSTATICCOMPILE=ON`.
 
-### CMake arguments
-- `-DCMAKE_BUILD_TYPE=<Release/RelWithDebInfo/Debug>` -- build type, `RelWithDebInfo` by default.
-- `-DSTATICCOMPILE=<ON/OFF>` -- link the binary fully statically.
-- `-DENABLE_TESTING=<ON/OFF>` -- build the test suite.
-- `-Dcryptominisat5_DIR=<path>` -- install prefix of a pre-built CryptoMiniSat. Fetched and built automatically if not set.
-- `-Dm4ri_ROOT_DIR=<path>` / `-DBRiAl_ROOT_DIR=<path>` -- install prefixes for m4ri and BRiAl, if not in a standard location.
-
 ## ANF simplification and solving
 Suppose we have a system of two equations:
 ```
