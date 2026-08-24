@@ -33,46 +33,6 @@ nix shell github:meelgroup/bosphorus
 
 Then you will have the `bosphorus` binary available and ready to use.
 
-### Building from source
-
-The build uses CMake and automatically fetches and compiles CryptoMiniSat (and
-in turn its own dependencies), so the only C++ dependencies you need to provide
-are Boost, zlib, GMP, m4ri and BRiAl. Install the system packages:
-
-```bash
-# Debian/Ubuntu
-sudo apt-get install build-essential cmake pkg-config git zlib1g-dev libgmp-dev \
-                     libboost-program-options-dev libboost-test-dev
-
-# macOS (brew)
-brew install cmake pkg-config automake libtool boost gmp
-```
-
-Neither [m4ri](https://github.com/malb/m4ri) nor
-[BRiAl](https://github.com/BRiAl/BRiAl) is packaged on current Ubuntu or in
-Homebrew, so install them from their release tarballs. Then build Bosphorus:
-```bash
-git clone --recurse-submodules https://github.com/meelgroup/bosphorus
-cd bosphorus
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build .
-```
-
-If the above is complicated, please use the release binaries, or Nix, as
-described above.
-
-### Testing
-The test suite is driven by [lit](https://pypi.org/project/lit/) and checks
-Bosphorus end-to-end: solutions and written CNFs are verified against a
-brute-forced ground truth computed independently of Bosphorus.
-```shell
-pip install lit
-cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=ON ..
-cmake --build .
-ctest --verbose
-```
-
 ## ANF simplification and solving
 Suppose we have a system of two equations:
 ```
@@ -271,6 +231,46 @@ If you want all solutions:
 
 Then take the solutions from `cnf_solutions` individually, put them in a file,
 and call `map_solution` on it, as before.
+
+## Building from source
+
+The build uses CMake and automatically fetches and compiles CryptoMiniSat (and
+in turn its own dependencies), so the only C++ dependencies you need to provide
+are Boost, zlib, GMP, m4ri and BRiAl. Install the system packages:
+
+```bash
+# Debian/Ubuntu
+sudo apt-get install build-essential cmake pkg-config git zlib1g-dev libgmp-dev \
+                     libboost-program-options-dev libboost-test-dev
+
+# macOS (brew)
+brew install cmake pkg-config automake libtool boost gmp
+```
+
+Neither [m4ri](https://github.com/malb/m4ri) nor
+[BRiAl](https://github.com/BRiAl/BRiAl) is packaged on current Ubuntu or in
+Homebrew, so install them from their release tarballs. Then build Bosphorus:
+```bash
+git clone --recurse-submodules https://github.com/meelgroup/bosphorus
+cd bosphorus
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build .
+```
+
+If the above is complicated, please use the release binaries, or Nix, as
+described above.
+
+### Testing
+The test suite is driven by [lit](https://pypi.org/project/lit/) and checks
+Bosphorus end-to-end: solutions and written CNFs are verified against a
+brute-forced ground truth computed independently of Bosphorus.
+```shell
+pip install lit
+cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=ON ..
+cmake --build .
+ctest --verbose
+```
 
 ## Fuzzing
 The tool comes with a built-in ANF fuzzer. To use, install
