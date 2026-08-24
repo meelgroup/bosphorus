@@ -194,7 +194,7 @@ To convert `myfile.anf` to `myfile.cnf` with all the simplifications:
 Sometimes, there are too many solutions to an ANF to list them all (e.g.
 2**40). You can count the number of solutions of an ANF in `test.anf` by using
 the standard translation and taking advantage of the projection written inside
-the CNF. This projection set is written as `c ind var1 var2 ... varn 0`. Many
+the CNF. This projection set is written as `c p show var1 var2 ... varn 0`. Many
 counters, such as [ApproxMC](https://github.com/meelgroup/approxmc) are able to
 use this format to count the solutions in the CNF. Here is how to do it with
 ApproxMC:
