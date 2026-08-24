@@ -27,7 +27,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -yq build-essential cmake pkg-config \
-          libgmp-dev zlib1g-dev libboost-program-options-dev
+          libgmp-dev zlib1g-dev libboost-program-options-dev libboost-test-dev
 
     - name: Install dependencies for Mac
       if: contains(matrix.os, 'macos')

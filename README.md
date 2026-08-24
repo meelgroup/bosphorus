@@ -41,16 +41,16 @@ are Boost, zlib, GMP, m4ri and BRiAl. Install the system packages:
 
 ```shell
 # Debian/Ubuntu
-sudo apt-get install build-essential cmake pkg-config git \
-                     libboost-program-options-dev zlib1g-dev libgmp-dev
+sudo apt-get install build-essential cmake pkg-config git zlib1g-dev libgmp-dev \
+                     libboost-program-options-dev libboost-test-dev
 
 # macOS (brew)
-brew install cmake pkg-config boost gmp
+brew install cmake pkg-config automake libtool boost gmp
 ```
 
 Neither [m4ri](https://github.com/malb/m4ri) nor
 [BRiAl](https://github.com/BRiAl/BRiAl) is packaged on current Ubuntu or in
-Homebrew, so install them from their release tarballs:
+Homebrew, so install them from their release tarballs. On Debian/Ubuntu:
 ```shell
 curl -sSfL -O https://github.com/malb/m4ri/releases/download/20250128/m4ri-20250128.tar.gz
 tar xf m4ri-20250128.tar.gz && cd m4ri-20250128
@@ -62,6 +62,24 @@ tar xf brial-1.2.12.tar.bz2 && cd brial-1.2.12
 ./configure --enable-static --enable-shared --with-pic CXXFLAGS="-O2 -g -std=gnu++17"
 make -j$(nproc) && sudo make install && cd ..
 ```
+
+On macOS, BRiAl needs Homebrew's Boost pointed at explicitly:
+```shell
+curl -sSfL -O https://github.com/malb/m4ri/releases/download/20250128/m4ri-20250128.tar.gz
+tar xf m4ri-20250128.tar.gz && cd m4ri-20250128
+./configure --enable-static --enable-shared --with-pic --disable-png
+make -j8 && sudo make install && cd ..
+
+curl -sSfL -O https://github.com/BRiAl/BRiAl/releases/download/1.2.12/brial-1.2.12.tar.bz2
+tar xf brial-1.2.12.tar.bz2 && cd brial-1.2.12
+./configure --enable-static --enable-shared --with-pic \
+    --with-boost=$(brew --prefix boost) \
+    CXXFLAGS="-O2 -g -std=gnu++17 -I$(brew --prefix boost)/include" \
+    LDFLAGS="-L$(brew --prefix boost)/lib"
+make -j8 && sudo make install && cd ..
+```
+
+BRiAl 1.2.12 does not compile as C++20, hence the pinned `-std=gnu++17`.
 
 Then build Bosphorus:
 ```shell

@@ -32,15 +32,25 @@ runs:
         set -e
         cd "$RUNNER_TEMP"
         if [ "${{ inputs.static }}" = "ON" ]; then SHARED=--disable-shared; else SHARED=--enable-shared; fi
+        # BRiAl 1.2.12 does not compile as C++20, so pin the standard rather
+        # than inherit whatever the compiler defaults to.
         BOOST=
-        if [ "$RUNNER_OS" = "macOS" ]; then BOOST="--with-boost=$(brew --prefix boost)"; fi
+        CXXFLAGS="-O2 -g -std=gnu++17"
+        LDFLAGS=
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          # --with-boost gets BRiAl's configure checks passing but does not
+          # reach the libbrial compile, so pass the paths directly too.
+          BOOST_PREFIX="$(brew --prefix boost)"
+          BOOST="--with-boost=$BOOST_PREFIX"
+          CXXFLAGS="$CXXFLAGS -I$BOOST_PREFIX/include"
+          LDFLAGS="-L$BOOST_PREFIX/lib"
+        fi
         export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
         curl -sSfL -O https://github.com/BRiAl/BRiAl/releases/download/1.2.12/brial-1.2.12.tar.bz2
         tar xf brial-1.2.12.tar.bz2
         cd brial-1.2.12
-        # BRiAl 1.2.12 does not compile as C++20, so pin the standard rather
-        # than inherit whatever the compiler defaults to.
-        ./configure --enable-static $SHARED --with-pic $BOOST CXXFLAGS="-O2 -g -std=gnu++17"
+        ./configure --enable-static $SHARED --with-pic $BOOST \
+          CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS"
         make -j8
         sudo make install
         if [ "$RUNNER_OS" = "Linux" ]; then sudo ldconfig; fi
