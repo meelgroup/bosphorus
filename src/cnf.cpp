@@ -177,7 +177,7 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
         // variable. With the partner strategies a variable may stand for
         // several terms at once (x*y + x, x*y + x*z, ...); otherwise for one
         // monomial each (the "standard strategy").
-        vector<BoolePolynomial> chunks;
+        vector<vector<VarVec> > chunks;
         vector<BooleMonomial> singles;
         if (config.doPartner && poly.deg() >= 2) {
             partnerCover(poly, chunks, singles);
@@ -188,9 +188,11 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
         }
         bool rhs = poly.hasConstantPart();
         vector<uint32_t> xor_vars;
-        for (const BoolePolynomial& g : chunks) {
-            if (g.hasConstantPart()) rhs ^= true; // the chunk absorbed the +1
-            xor_vars.push_back(addChunk(g));
+        for (const vector<VarVec>& cover : chunks) {
+            for (const VarVec& t : cover) {
+                if (t.empty()) rhs ^= true; // the chunk absorbed the +1
+            }
+            xor_vars.push_back(addChunk(cover));
         }
         for (const BooleMonomial& m : singles) {
             xor_vars.push_back(addBooleMonomial(m));
@@ -221,18 +223,7 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
 
 namespace {
 
-typedef vector<uint32_t> VarVec; // a monomial as its sorted variable indices
-
-struct VarVecHash {
-    size_t operator()(const VarVec& v) const
-    {
-        size_t h = 1469598103934665603ULL;
-        for (const uint32_t x : v) {
-            h ^= x + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
-        }
-        return h;
-    }
-};
+typedef CNF::VarVec VarVec;
 
 // P union S, both sorted
 VarVec merge_vars(const VarVec& a, const VarVec& b)
@@ -252,8 +243,18 @@ unsigned popcount(unsigned x)
 
 }
 
+CNF::VarVec CNF::chunkKey(const vector<VarVec>& cover)
+{
+    VarVec key;
+    for (const VarVec& t : cover) {
+        key.insert(key.end(), t.begin(), t.end());
+        key.push_back(std::numeric_limits<uint32_t>::max());
+    }
+    return key;
+}
+
 void CNF::partnerCover(const BoolePolynomial& poly,
-                       vector<BoolePolynomial>& chunks,
+                       vector<vector<VarVec> >& chunks,
                        vector<BooleMonomial>& singles) const
 {
     const BoolePolyRing& ring = anf.getRing();
@@ -285,10 +286,10 @@ void CNF::partnerCover(const BoolePolynomial& poly,
         vector<VarVec> best_cover;
         long best_score = 0;
         unsigned best_free = 0;
+        vector<VarVec> cover;
         auto consider = [&](const VarVec& P, const VarVec& F) {
             // the terms P*S for S subset of F that are present
-            vector<VarVec> cover;
-            BoolePolynomial g(ring);
+            cover.clear();
             size_t fresh_monoms = 0; // nonlinear terms that have no CNF var yet
             for (unsigned smask = 0; smask < (1u << F.size()); smask++) {
                 VarVec S;
@@ -297,13 +298,10 @@ void CNF::partnerCover(const BoolePolynomial& poly,
                 }
                 VarVec t = merge_vars(P, S);
                 if (rem.find(t) == rem.end()) continue;
-                cover.push_back(t);
-                BooleMonomial mono(ring);
-                for (const uint32_t v : t) mono *= ring.variable(v);
-                g += mono;
-                if (t.size() >= 2 && monomMap.find(mono.hash()) == monomMap.end()) {
+                if (t.size() >= 2 && monomVarsVV.find(t) == monomVarsVV.end()) {
                     fresh_monoms++;
                 }
+                cover.push_back(std::move(t));
             }
             if (cover.size() < 2) return;
             // Estimated CNF variables saved compared to the standard
@@ -315,7 +313,7 @@ void CNF::partnerCover(const BoolePolynomial& poly,
             // a variable (shared with another polynomial) is thus only
             // absorbed when that clearly pays off.
             const long slot = config.cutNum - 1;
-            const bool exists = chunkMap.find(g.stableHash()) != chunkMap.end();
+            const bool exists = chunkMap.find(chunkKey(cover)) != chunkMap.end();
             const long score = (long)(cover.size() - 1)
                 + slot * ((long)fresh_monoms - (exists ? 0 : 1));
             if (score <= 0) return;
@@ -352,8 +350,9 @@ void CNF::partnerCover(const BoolePolynomial& poly,
                     if (std::find(cands.begin(), cands.end(), w) == cands.end()) {
                         cands.push_back(w);
                     }
+                    if (cands.size() >= 16) break;
                 }
-                if (cands.size() > 64) break;
+                if (cands.size() >= 16) break;
             }
             for (const uint32_t w : cands) {
                 VarVec F = merge_vars(F0, VarVec(1, w));
@@ -362,14 +361,8 @@ void CNF::partnerCover(const BoolePolynomial& poly,
         }
 
         if (best_cover.size() < 2) continue; // no partner: standard strategy
-        BoolePolynomial g(ring);
-        for (const VarVec& t : best_cover) {
-            BooleMonomial mono(ring);
-            for (const uint32_t v : t) mono *= ring.variable(v);
-            g += mono;
-            rem.erase(t);
-        }
-        chunks.push_back(g);
+        for (const VarVec& t : best_cover) rem.erase(t);
+        chunks.push_back(best_cover);
     }
 
     for (const VarVec& t : terms) {
@@ -434,22 +427,28 @@ void minimise_clauses(vector<vector<Lit> >& cls)
 
 }
 
-uint32_t CNF::addChunk(const BoolePolynomial& g)
+uint32_t CNF::addChunk(const vector<VarVec>& cover)
 {
-    const auto it = chunkMap.find(g.stableHash());
+    const VarVec key = chunkKey(cover);
+    const auto it = chunkMap.find(key);
     if (it != chunkMap.end()) {
         return it->second;
     }
 
     // g = P * h(F): P is the gcd of all terms, F the remaining variables
-    BooleMonomial P(anf.getRing());
+    const BoolePolyRing& ring = anf.getRing();
+    BoolePolynomial g(ring);
+    BooleMonomial P(ring);
     bool first = true;
-    for (const BooleMonomial& m : g) {
+    for (const VarVec& t : cover) {
+        BooleMonomial mono(ring);
+        for (const uint32_t v : t) mono *= ring.variable(v);
+        g += mono;
         if (first) {
-            P = m;
+            P = mono;
             first = false;
         } else {
-            P = P.GCD(m);
+            P = P.GCD(mono);
         }
     }
     const BoolePolynomial h = g / P;
@@ -458,9 +457,9 @@ uint32_t CNF::addChunk(const BoolePolynomial& g)
     assert(F.size() <= 16);
 
     const uint32_t y = newVar(kind_chunk, g);
-    chunkMap[g.stableHash()] = y;
+    chunkMap[key] = y;
     numChunkVars++;
-    numChunkTerms += g.length();
+    numChunkTerms += cover.size();
 
     std::vector<uint32_t> Pvars;
     for (const uint32_t v : P) Pvars.push_back(monomMap.find(BooleVariable(v, anf.getRing()).hash())->second);
@@ -516,7 +515,9 @@ void CNF::addXorWithCuts(const vector<uint32_t>& vars, bool rhs,
     size_t pos = 0;
     bool have_carry = false;
     uint32_t carry = 0;
-    BoolePolynomial upto(getANFRing()); // what the carry variable stands for
+    // what the carry variable stands for; only needed for the CNF comments
+    // and expensive to build for polynomials with thousands of terms
+    BoolePolynomial upto(getANFRing());
     while (true) {
         vector<uint32_t> cur;
         if (have_carry) cur.push_back(carry);
@@ -524,7 +525,7 @@ void CNF::addXorWithCuts(const vector<uint32_t>& vars, bool rhs,
             // once at the cutting number, only take one more variable if it
             // is the last one: cheaper than a cut plus a 2-variable XOR
             if (cur.size() >= config.cutNum && vars.size() - pos != 1) break;
-            upto += revCombinedMap[vars[pos]];
+            if (config.writecomments) upto += revCombinedMap[vars[pos]];
             cur.push_back(vars[pos++]);
         }
         if (pos == vars.size()) {
@@ -586,6 +587,7 @@ uint32_t CNF::addBooleMonomial(const BooleMonomial& m)
     //create monomial, as well as the corresponding clauses
     const uint32_t newVar = this->newVar(kind_monom, BoolePolynomial(m));
     monomMap[m.hash()] = newVar;
+    monomVarsVV.insert(VarVec(m.begin(), m.end()));
     numMonomVars++;
 
     //Check that all variables exist&create m2 that is the monom in internal representation

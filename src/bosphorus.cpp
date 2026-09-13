@@ -48,6 +48,12 @@ using BLib::ConfigData;
 class PrivateData {
 public:
     ConfigData config;
+    // The CNF built for SAT-based simplification uses the standard
+    // (one variable per monomial) strategy: the facts SimplifyBySat extracts
+    // from the solver are only understood for monomial variables, so the
+    // partner strategies would hide most of them. They are used for the
+    // output CNF only. This is config with doPartner turned off.
+    ConfigData sat_config;
     BoolePolyRing* pring = nullptr;
     vector<Clause> clauses_needed_for_anf_import;
     vector<BoolePolynomial> learnt;
@@ -564,16 +570,16 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                             if (cnf == NULL) {
                                 assert(sbs == NULL);
                                 cnf = new BLib::CNF(orig_cnf_file, *anf,
-                                              dat->clauses_needed_for_anf_import, dat->config);
-                                sbs = new BLib::SimplifyBySat(*cnf, dat->config);
+                                              dat->clauses_needed_for_anf_import, dat->sat_config);
+                                sbs = new BLib::SimplifyBySat(*cnf, dat->sat_config);
                             } else {
                                 no_cls = cnf->update();
                             }
                         } else {
                             delete cnf;
                             delete sbs;
-                            cnf = new BLib::CNF(*anf, dat->config);
-                            sbs = new BLib::SimplifyBySat(*cnf, dat->config);
+                            cnf = new BLib::CNF(*anf, dat->sat_config);
+                            sbs = new BLib::SimplifyBySat(*cnf, dat->sat_config);
                         }
 
                         lbool ret = sbs->simplify(dat->config.numConfl_lim,
@@ -724,6 +730,8 @@ vector<Clause> Bosphorus::get_clauses(CNF* c)
 void Bosphorus::set_config(void* cfg)
 {
     dat->config = *(BLib::ConfigData*)cfg;
+    dat->sat_config = dat->config;
+    dat->sat_config.doPartner = false;
 }
 
 const char* Bosphorus::get_compilation_env()

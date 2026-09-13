@@ -25,6 +25,7 @@ SOFTWARE.
 
 #include <fstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "anf.hpp"
@@ -37,6 +38,20 @@ namespace BLib {
 class CNF
 {
    public:
+    // Monomials as sorted variable-index vectors: the partner cover works on
+    // these instead of ZDDs, which is much cheaper.
+    typedef vector<uint32_t> VarVec;
+    struct VarVecHash {
+        size_t operator()(const VarVec& v) const
+        {
+            size_t h = 1469598103934665603ULL;
+            for (const uint32_t x : v) {
+                h ^= x + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+            }
+            return h;
+        }
+    };
+
     CNF(const ANF& _anf, const ConfigData& _config);
     CNF(const char* fname, const ANF& _anf,
         const vector<Clause>& clauses_needed_for_anf_import,
@@ -91,9 +106,9 @@ class CNF
 
     //Main adders
     uint32_t addBooleMonomial(const BooleMonomial& m);
-    uint32_t addChunk(const BoolePolynomial& g);
+    uint32_t addChunk(const vector<VarVec>& cover);
     void partnerCover(const BoolePolynomial& poly,
-                      vector<BoolePolynomial>& chunks,
+                      vector<vector<VarVec> >& chunks,
                       vector<BooleMonomial>& singles) const;
     uint32_t newVar(VarKind kind, const BoolePolynomial& meaning);
 
@@ -118,8 +133,10 @@ class CNF
     vector<BoolePolynomial>
         revCombinedMap; // map: inside var -> the polynomial it stands for (a variable, a monomial, a partner chunk, or the partial sum of a cut XOR)
     vector<VarKind> varKind;
-    std::unordered_map<BoolePolynomial::hash_type, uint32_t>
-        chunkMap; // stableHash of a partner chunk -> inside var
+    std::unordered_set<VarVec, VarVecHash> monomVarsVV; // monomials that have a CNF var
+    std::unordered_map<VarVec, uint32_t, VarVecHash>
+        chunkMap; // a partner chunk (its terms, separated by UINT32_MAX) -> inside var
+    static VarVec chunkKey(const vector<VarVec>& cover);
     uint32_t next_cnf_var = 0; ///<CNF variable counter
 
     //stats
