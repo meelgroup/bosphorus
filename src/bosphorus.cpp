@@ -70,11 +70,25 @@ void output_anf_to_cnf_map(const BLib::ANF* anf, const BLib::CNF* cnf,
         }
     }
     for (size_t i = 0; i < cnf->getNumVars(); ++i) {
-        const BooleMonomial mono = cnf->getMonomForVar(i);
-        if (mono.deg() > 0)
-            assert(i == cnf->getVarForMonom(mono));
-        if (mono.deg() > 1)
-            ofs << "c Internal ANF map " << i + 1 << " = " << mono << endl;
+        switch (cnf->getVarKind(i)) {
+            case BLib::CNF::kind_var:
+                break;
+            case BLib::CNF::kind_monom: {
+                const BooleMonomial mono = cnf->getMonomForVar(i);
+                assert(i == cnf->getVarForMonom(mono));
+                ofs << "c Internal ANF map " << i + 1 << " = " << mono << endl;
+                break;
+            }
+            case BLib::CNF::kind_chunk:
+                // partner strategy: one CNF variable for a sum of monomials
+                ofs << "c Internal ANF map " << i + 1 << " = "
+                    << cnf->getPolyForVar(i) << endl;
+                break;
+            case BLib::CNF::kind_cut:
+                ofs << "c Internal XOR cut " << i + 1 << " = "
+                    << cnf->getPolyForVar(i) << endl;
+                break;
+        }
     }
 }
 
