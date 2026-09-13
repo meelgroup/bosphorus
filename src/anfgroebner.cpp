@@ -103,7 +103,9 @@ size_t ANF::groebner_windows()
         }
         for (const BoolePolynomial& g : strat.minimalizeAndTailReduce()) {
             if (g.isConstant()) { if (g.isOne()) facts.push_back(g); continue; }
-            if (g.deg() <= 1) facts.push_back(g);
+            // only short linear consequences: they propagate (units,
+            // equivalences, short XORs); long ones only bloat the system
+            if (g.deg() <= 1 && g.nUsedVariables() <= config.gbMaxFactVars) facts.push_back(g);
         }
         if (timeout) break;
     }

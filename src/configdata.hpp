@@ -82,6 +82,7 @@ struct ConfigData {
     uint32_t gbWindow = 24;    // equations per window
     size_t gbMaxLen = 32;      // only equations with at most this many terms take part
     uint64_t gbSteps = 100000; // S-polynomials reduced per call (deterministic budget)
+    uint32_t gbMaxFactVars = 4; // only linear results with at most this many variables are added
     int keepFactor = 2;           // never rewrite a product of linear factors into a non-product: 0 off, 1 on, 2 auto (when most nonlinear eqs are such products)
 };
 

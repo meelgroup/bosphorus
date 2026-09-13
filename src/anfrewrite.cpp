@@ -880,7 +880,7 @@ size_t ANF::rewrite_inplace()
         if (!getOK()) break;
         if (config.doFacRes) changes += resolve_factors();
         if (!getOK()) break;
-        if (config.doGB) changes += groebner_windows();
+        if (config.doGB && round == 0) changes += groebner_windows(); // expensive: once per pass
         total += changes;
         if (changes == 0) break;
         if (cpuTime() > config.maxTime) break;
