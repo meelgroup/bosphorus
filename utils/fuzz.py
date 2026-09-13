@@ -163,6 +163,18 @@ def check_anf(binary, rng, seed, tmpdir):
         n = min(len(next(iter(exp2))) if exp2 else 0, len(next(iter(expected))) if expected else 0)
         if not (exp2 and expected) or proj(exp2, n) != proj(expected, n):
             return 'written ANF has different solutions', cmd2, out2
+    # 3) the written CNF must have the same solutions when small enough to brute force
+    outcnf = os.path.join(tmpdir, 'out.cnf')
+    cmd3 = [binary, '--anfread', path, '--cnfwrite', outcnf, '--verb', '0'] + opts
+    rc, out3 = run(cmd3)
+    if rc != 0:
+        return 'cnfwrite exit %d' % rc, cmd3, out3
+    header = re.search(r'^p cnf (\d+)', open(outcnf).read(), re.M)
+    if header and int(header.group(1)) <= 16 and '--xorcls' not in opts:
+        verify = os.path.join(HERE, '..', 'tests', 'utils', 'verify_anf.py')
+        rc, out4 = run([sys.executable, verify, 'cnf', path, outcnf])
+        if rc != 0:
+            return 'written CNF differs: %s' % out4.strip().splitlines()[-1], cmd3, out4
     return None, cmd, out
 
 
