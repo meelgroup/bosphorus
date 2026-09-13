@@ -73,6 +73,9 @@ struct ConfigData {
     int doProbe = true;           // forced literals/equivalences/implications
     uint32_t probeVars = 8;       // only probe eqs with at most this many vars
     uint32_t rewriteRounds = 10;  // max rounds of all rules per call
+    int doFacCanon = true;        // canonicalise linear factors modulo the linear equations
+    int doFacRes = true;          // resolution between products sharing a factor
+    uint32_t facResMaxFactors = 2; // resolvents with more factors than this are not added
     int keepFactor = 2;           // never rewrite a product of linear factors into a non-product: 0 off, 1 on, 2 auto (when most nonlinear eqs are such products)
 };
 

@@ -565,6 +565,23 @@ bool ANF::addTerms(vector<VarVec>& terms)
     return addBoolePolynomial(poly);
 }
 
+bool ANF::addProduct(const vector<Lineral>& f)
+{
+    assert(f.size() >= 2);
+    const VarVec key = product_key(f);
+    if (!prod_keys.insert(key).second) return false;
+    BooleMonomial used(*ring);
+    for (const Lineral& l : f) {
+        for (const uint32_t v : l.vars) used *= ring->variable(v);
+    }
+    addPolyToOccur(used, eqs.size());
+    eqs.push_back(BoolePolynomial(*ring));
+    poly_valid.push_back(0);
+    factors.push_back(f);
+    eq_len.push_back(product_size(f));
+    return true;
+}
+
 BooleMonomial ANF::varsOf(size_t idx) const
 {
     if (poly_valid[idx]) return eqs[idx].usedVariables();

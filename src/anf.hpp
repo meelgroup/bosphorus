@@ -147,6 +147,10 @@ class ANF
     size_t reduce_by_short_polys();  // "binom-red"
     size_t shorten_polys();          // "poly-shorten"
     size_t probe_small_polys();      // "lit-probe" (+ "impl-scc")
+    size_t canon_factors();          // "fac-canon"
+    size_t resolve_factors();        // "fac-res"
+    /// Adds a product of >= 2 linear factors as a new equation; false if present
+    bool addProduct(const vector<Lineral>& f);
 
    private:
     bool propagate_iteratively(unordered_set<uint32_t>& updatedVars,

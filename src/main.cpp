@@ -220,6 +220,12 @@ void parseOptions(int argc, char* argv[])
         "Rewrite rule lit-probe: forced literals, equivalences and implication-graph SCCs from small equations. Default: ON");
     add_arg("--probevars", config.probeVars, fc_integral<uint32_t>,
         "lit-probe only looks at equations with at most this many variables. Default: 8");
+    add_arg("--faccanon", config.doFacCanon, fc_integral<int>,
+        "Rewrite rule fac-canon: reduce every linear factor of a product modulo the linear equations and use the shortest representative of its class, so equal factors become identical and short. Default: ON");
+    add_arg("--facres", config.doFacRes, fc_integral<int>,
+        "Rewrite rule fac-res: resolution between products sharing a linear factor with opposite constants; a resolvent with one factor is a new linear equation. Default: ON");
+    add_arg("--facresmax", config.facResMaxFactors, fc_integral<uint32_t>,
+        "fac-res only adds resolvents with at most this many factors. Default: 2");
     add_arg("--keepfactor", config.keepFactor, fc_integral<int>,
         "Never rewrite an equation that is a product of linear factors into one that is not, so the product form survives for the CNF encoding: 0 = off, 1 = on, 2 = auto (on when most nonlinear equations are such products). Default: 2");
     add_arg("--rewriterounds", config.rewriteRounds, fc_integral<uint32_t>,
