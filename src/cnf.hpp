@@ -61,6 +61,12 @@ class CNF
     void get_solution_map(map<uint32_t, VarMap>& ret) const;
     bool varRepresentsMonomial(const uint32_t var) const;
     BooleMonomial getMonomForVar(const uint32_t& var) const;
+    /// What a CNF variable stands for: an ANF variable, a monomial, a
+    /// partner chunk (a sum of monomials folded into one variable), or a
+    /// partial sum introduced when cutting an XOR.
+    enum VarKind : uint8_t { kind_var, kind_monom, kind_chunk, kind_cut };
+    VarKind getVarKind(const uint32_t var) const { return varKind[var]; }
+    const BoolePolynomial& getPolyForVar(const uint32_t var) const { return revCombinedMap[var]; }
     uint32_t getVarForMonom(const BooleMonomial& mono) const;
     size_t getNumClauses() const;
     size_t getAddedAsCNF() const;
@@ -82,15 +88,18 @@ class CNF
     void addTrivialEquations();
     bool tryAddingPolyWithKarn(const BoolePolynomial& eq,
                                vector<Clause>& setOfClauses) const;
-    void addMonomialsFromPoly(const BoolePolynomial& eq);
-    BoolePolynomial addToPolyVarsUntilCutoff(const BoolePolynomial& poly,
-                                             vector<uint32_t>& vars) const;
 
     //Main adders
     uint32_t addBooleMonomial(const BooleMonomial& m);
+    uint32_t addChunk(const BoolePolynomial& g);
+    void partnerCover(const BoolePolynomial& poly,
+                      vector<BoolePolynomial>& chunks,
+                      vector<BooleMonomial>& singles) const;
+    uint32_t newVar(VarKind kind, const BoolePolynomial& meaning);
 
-    //Adding by enumeration (with cuts)
-    void addPolyWithCuts(BoolePolynomial poly, vector<Clause>& setOfClauses);
+    //XOR of CNF variables == rhs, cut into pieces of at most cutNum
+    void addXorWithCuts(const vector<uint32_t>& vars, bool rhs,
+                        vector<Clause>& setOfClauses);
     uint32_t hammingWeight(uint64_t num) const;
     void addEveryCombination(vector<uint32_t>& vars, bool isTrue,
                              vector<Clause>& thisClauses) const;
@@ -107,7 +116,10 @@ class CNF
     std::unordered_map<BooleMonomial::hash_type, uint32_t>
         monomMap; // map: outside monom -> inside var
     vector<BoolePolynomial>
-        revCombinedMap; // combines monomial map and xor maps; // map: inside var -> outside monom; // When cutting XORs, which var represents which XOR cut. Poly is of degree 1 here of course
+        revCombinedMap; // map: inside var -> the polynomial it stands for (a variable, a monomial, a partner chunk, or the partial sum of a cut XOR)
+    vector<VarKind> varKind;
+    std::unordered_map<BoolePolynomial::hash_type, uint32_t>
+        chunkMap; // stableHash of a partner chunk -> inside var
     uint32_t next_cnf_var = 0; ///<CNF variable counter
 
     //stats
@@ -115,6 +127,10 @@ class CNF
     size_t addedAsSimpleANF = 0;
     size_t addedAsComplexANF = 0;
     size_t addedAsCNF = 0;
+    size_t numMonomVars = 0;
+    size_t numChunkVars = 0;
+    size_t numChunkTerms = 0; // monomials absorbed into chunks
+    size_t numCutVars = 0;
 };
 
 inline void CNF::print_without_header(std::ostream& os) const
@@ -138,7 +154,7 @@ inline std::ostream& operator<<(std::ostream& os, const CNF& cnf)
 
 inline bool CNF::varRepresentsMonomial(const uint32_t var) const
 {
-    return revCombinedMap[var].isSingleton();
+    return varKind[var] == kind_var || varKind[var] == kind_monom;
 }
 
 inline size_t CNF::getNumClauses() const
@@ -187,6 +203,12 @@ inline void CNF::printStats() const
          << "c Added as simple ANF  : " << getAddedAsSimpleANF() << endl
          << "c Added as complex  ANF: " << getAddedAsComplexANF() << endl
          << "c --------------------" << endl;
+    cout << "c [cnf-stats] vars " << getNumVars() << " clauses "
+         << getNumAllClauses() << " lits " << getNumAllLits()
+         << " anf_vars " << anf.getRing().nVariables()
+         << " monom_vars " << numMonomVars << " chunk_vars " << numChunkVars
+         << " chunk_terms " << numChunkTerms << " cut_vars " << numCutVars
+         << endl;
 }
 
 }

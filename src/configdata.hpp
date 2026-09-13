@@ -44,6 +44,7 @@ struct ConfigData {
     // CNF conversion
     uint32_t cutNum = 5;
     uint32_t brickestein_algo_cutoff = 10;
+    int doPartner = true; // Jovanovic-Kreuzer partner strategies (LPS/DPS/QPS/CPS)
 
     // Processes
     double maxTime = 1e20;

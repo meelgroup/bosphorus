@@ -194,6 +194,8 @@ void parseOptions(int argc, char* argv[])
     // CNF conversion
     add_arg("--cutnum", config.cutNum, fc_integral<uint32_t>,
         "Cutting number when not using XOR clauses");
+    add_arg("--partner", config.doPartner, fc_integral<int>,
+        "ANF-to-CNF partner strategies (Jovanovic & Kreuzer): fold x*y+x, x*y+x+y+1, x*y+x*z, x*y*z+x*y*w and their generalisations into one CNF variable each. Default: ON");
     add_arg("--karn", config.brickestein_algo_cutoff, fc_integral<uint32_t>,
         "Uses this cutoff for doing Brickenstein's algorithm for translation of complex ANFs");
     add_arg("--onlynewcnfcls", only_new_cnf_clauses, fc_integral<int>,
@@ -346,6 +348,7 @@ void parseOptions(int argc, char* argv[])
              << config.numConfl_lim << "): " << config.doSAT << endl
              << " using " << config.numThreads << " threads" << endl
              << "c Cut num: " << config.cutNum << endl
+             << "c Partner strategies: " << config.doPartner << endl
              << "c Brickenstein cutoff: " << config.brickestein_algo_cutoff << endl
              << "c --------------------" << endl;
     }
