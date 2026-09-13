@@ -206,6 +206,8 @@ void parseOptions(int argc, char* argv[])
         "Rewrite rule binom-red: reduce all equations modulo monomial and binomial equations (x*y+x=0 turns x*y*z into x*z). Default: ON");
     add_arg("--binomredlen", config.binomRedLen, fc_integral<uint32_t>,
         "Max number of terms of an equation used as a rule by binom-red. Default: 2");
+    add_arg("--shorten", config.doShorten, fc_integral<int>,
+        "Rewrite rule poly-shorten: replace p by p+f whenever that has fewer terms. Default: ON");
     add_arg("--rewriterounds", config.rewriteRounds, fc_integral<uint32_t>,
         "Max rounds of the in-place rewrite rules per iteration. Default: 10");
 
@@ -328,7 +330,8 @@ void parseOptions(int argc, char* argv[])
              << "c maxTime = " << std::scientific << std::setprecision(2)
              << config.maxTime << std::fixed << endl
              << "c Rewrite rules: " << config.doRewrite
-             << " (binom-red " << config.doBinomRed << " len " << config.binomRedLen << ")" << endl
+             << " (binom-red " << config.doBinomRed << " len " << config.binomRedLen
+             << ", poly-shorten " << config.doShorten << ")" << endl
              << "c XL simp (deg = " << config.xlDeg
              << "; s = " << config.XLsample << '+' << config.XLsampleX
              << "): " << config.doXL << endl

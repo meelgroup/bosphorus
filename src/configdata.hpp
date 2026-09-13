@@ -62,6 +62,9 @@ struct ConfigData {
     int doRewrite = true;         // master switch
     int doBinomRed = true;        // reduction modulo monomial/binomial eqs
     uint32_t binomRedLen = 2;     // max terms of an equation used as a rule
+    int doShorten = true;         // p -> p + f when that has fewer terms
+    size_t shortenOccCap = 2000;  // ignore monomials in more eqs than this
+    int64_t shortenBudget = 200000000; // work limit per call
     uint32_t rewriteRounds = 10;  // max rounds of all rules per call
 };
 

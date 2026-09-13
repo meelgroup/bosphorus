@@ -110,6 +110,7 @@ class ANF
     // changes it made; check getOK() afterwards, they may find UNSAT.
     size_t rewrite_inplace();        // all of the below, to a fixpoint
     size_t reduce_by_short_polys();  // "binom-red"
+    size_t shorten_polys();          // "poly-shorten"
 
    private:
     bool propagate_iteratively(unordered_set<uint32_t>& updatedVars,

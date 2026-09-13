@@ -28,6 +28,7 @@ SOFTWARE.
 // variables never changes.
 
 #include <algorithm>
+#include <unordered_map>
 #include <iomanip>
 
 #include "anf.hpp"
@@ -228,6 +229,119 @@ size_t ANF::reduce_by_short_polys()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// poly-shorten: additive shortening by another equation
+//
+// If two equations f and p share more than half of the terms of f, then
+// p + f has fewer terms than p, so p is replaced by p + f. For linear
+// equations this is the classic XOR shortening; for nonlinear ones it also
+// re-uses definitions: with f = y + x1*x2 + x3 present, an equation containing
+// x1*x2 + x3 + ... is rewritten to y + ... . Only f with deg(f) <= deg(p) are
+// used so an XOR is never turned into a nonlinear equation.
+///////////////////////////////////////////////////////////////////////////////
+
+size_t ANF::shorten_polys()
+{
+    SimpStatsScope scope(*this, "poly-shorten");
+    const double myTime = cpuTime();
+    typedef BooleMonomial::hash_type mhash;
+    size_t num_rewrites = 0;
+
+    // monomial -> equations containing it (the constant 1 is a monomial too).
+    // NOTE: BooleMonomial::hash() is the address of the ZDD node, and the
+    // monomials produced while iterating a polynomial are temporaries whose
+    // nodes get recycled, so it cannot key a map. stableHash() is structural.
+    unordered_map<mhash, vector<size_t> > occ_m;
+    for (size_t i = 0; i < eqs.size(); i++) {
+        for (const BooleMonomial& t : eqs[i]) {
+            occ_m[t.stableHash()].push_back(i);
+        }
+    }
+    auto occ_remove = [&](const BooleMonomial& t, size_t idx) {
+        vector<size_t>& v = occ_m[t.stableHash()];
+        auto it = std::find(v.begin(), v.end(), idx);
+        if (it != v.end()) {
+            *it = v.back();
+            v.pop_back();
+        }
+    };
+
+    // shortest equations first: they are the most useful rules
+    vector<size_t> order(eqs.size());
+    for (size_t i = 0; i < order.size(); i++) order[i] = i;
+    std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+        return eqs[a].length() < eqs[b].length();
+    });
+
+    vector<uint32_t> cnt(eqs.size(), 0);
+    vector<size_t> touched;
+    unordered_set<uint32_t> updatedVars;
+    vector<size_t> empty_equations;
+    // a monomial in this many equations is too common to be worth counting
+    const size_t occ_cap = config.shortenOccCap;
+    int64_t budget = config.shortenBudget;
+
+    for (const size_t f_idx : order) {
+        if (budget < 0 || cpuTime() > config.maxTime) break;
+        const BoolePolynomial& f = eqs[f_idx];
+        if (f.isConstant()) continue;
+        const size_t f_len = f.length();
+        const int f_deg = f.deg();
+
+        touched.clear();
+        for (const BooleMonomial& t : f) {
+            auto it = occ_m.find(t.stableHash());
+            if (it == occ_m.end() || it->second.size() > occ_cap) continue;
+            budget -= it->second.size();
+            for (const size_t p : it->second) {
+                if (p == f_idx) continue;
+                if (cnt[p]++ == 0) touched.push_back(p);
+            }
+        }
+
+        for (const size_t p : touched) {
+            const uint32_t c = cnt[p];
+            cnt[p] = 0;
+            if (2 * c <= f_len) continue;
+            if (eqs[p].isConstant()) continue;
+            if (eqs[p].deg() < f_deg) continue;
+            if (eqs[p].length() < f_len) continue; // then p is the rule for f, not vice versa
+
+            const BoolePolynomial newp = eqs[p] + f;
+            if (newp.length() >= eqs[p].length()) {
+                // cannot happen with an exact index; never make things worse
+                continue;
+            }
+            if (config.verbosity >= 5) {
+                cout << "c [poly-shorten] " << eqs[p] << "  -->  " << newp
+                     << "  (by " << f << ")" << endl;
+            }
+            // keep the index exact for the terms that moved
+            const BooleSet pset = eqs[p].set();
+            for (const BooleMonomial& t : f) {
+                if (pset.owns(t)) occ_remove(t, p);
+                else occ_m[t.stableHash()].push_back(p);
+            }
+            num_rewrites++;
+            if (!rewrite_eq(p, newp, updatedVars, empty_equations)) {
+                return num_rewrites; // UNSAT
+            }
+            if (eqs[p].isConstant()) {
+                // became empty (duplicate or 0): drop its index entries
+                for (const BooleMonomial& t : newp) occ_remove(t, p);
+            }
+        }
+    }
+    finish_rewrites(updatedVars, empty_equations);
+
+    if (config.verbosity >= 1) {
+        cout << "c [poly-shorten] shortened " << num_rewrites << " eqs"
+             << " budget-left " << budget << " T: " << std::fixed
+             << std::setprecision(2) << (cpuTime() - myTime) << endl;
+    }
+    return num_rewrites;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Driver: run the in-place rules until nothing changes
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -238,6 +352,8 @@ size_t ANF::rewrite_inplace()
         if (!getOK()) break;
         size_t changes = 0;
         if (config.doBinomRed) changes += reduce_by_short_polys();
+        if (!getOK()) break;
+        if (config.doShorten) changes += shorten_polys();
         if (!getOK()) break;
         total += changes;
         if (changes == 0) break;
