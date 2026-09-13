@@ -73,8 +73,8 @@ struct ConfigData {
     int doProbe = true;           // forced literals/equivalences/implications
     uint32_t probeVars = 8;       // only probe eqs with at most this many vars
     uint32_t rewriteRounds = 10;  // max rounds of all rules per call
-    int doFacCanon = true;        // canonicalise linear factors modulo the linear equations
-    int doFacRes = true;          // resolution between products sharing a factor
+    int doFacCanon = false;       // canonicalise linear factors modulo the linear equations
+    int doFacRes = false;         // resolution between products sharing a factor
     uint32_t facResMaxFactors = 2; // resolvents with more factors than this are not added
     // windowed, degree-bounded Groebner bases (rule gb-window)
     int doGB = false;
