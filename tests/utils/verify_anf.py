@@ -252,9 +252,22 @@ def read_cnf(path):
     return clauses, xors, nvars, header, projection
 
 
+def max_var_in_file(path):
+    """Highest variable index mentioned anywhere in the file (the ring
+    Bosphorus builds covers every mentioned variable, even ones that cancel
+    out of every equation or only appear in a declaration line)."""
+    m = -1
+    with open(path) as f:
+        for line in f:
+            if line.startswith('c'):
+                continue
+            for v in re.findall(r'x\(?(\d+)', line):
+                m = max(m, int(v))
+    return m
+
+
 def check_cnf(anf_path, cnf_path):
     polys = read_anf(anf_path)
-    expected, _ = brute_force(polys)
     clauses, xors, nvars, header, projection = read_cnf(cnf_path)
 
     if header != len(clauses) + len(xors):
@@ -279,7 +292,21 @@ def check_cnf(anf_path, cnf_path):
             continue
         models.add(tuple(val[v] for v in projection))
 
-    if len(models) != len(expected):
+    # the ANF's solutions over the whole ring, projected onto the same
+    # variables (CNF variable j is ANF variable x(j-1))
+    n = max_var_in_file(anf_path) + 1
+    if n > 20:
+        sys.exit("verify_anf: %d variables is too many to brute force" % n)
+    proj_anf = [v - 1 for v in projection]
+    if any(v >= n for v in proj_anf):
+        sys.exit("verify_anf: projection set mentions a variable outside the ANF")
+    expected = set()
+    for bits in itertools.product([0, 1], repeat=n):
+        assign = dict(enumerate(bits))
+        if all(evaluate(p, assign) == 0 for p in polys):
+            expected.add(tuple(bits[v] for v in proj_anf))
+
+    if models != expected:
         sys.exit("verify_anf: CNF has %d solutions over the projection set, "
                  "ANF has %d" % (len(models), len(expected)))
 
