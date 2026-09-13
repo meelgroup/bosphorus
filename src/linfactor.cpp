@@ -177,38 +177,14 @@ bool BLib::subst_lineral_var(vector<Lineral>& factors, uint32_t v, uint32_t w, b
     return normalise(factors);
 }
 
-namespace {
-// expands the product as a set of monomials (mod 2)
-void expand_terms(const vector<Lineral>& factors, std::unordered_set<VarVec, VarVecHash>& out)
-{
-    out.clear();
-    out.insert(VarVec());
-    for (const Lineral& l : factors) {
-        std::unordered_set<VarVec, VarVecHash> next;
-        auto toggle = [&](const VarVec& t) {
-            auto it = next.find(t);
-            if (it == next.end()) next.insert(t);
-            else next.erase(it);
-        };
-        for (const VarVec& t : out) {
-            if (l.c) toggle(t);
-            for (const uint32_t v : l.vars) {
-                VarVec m(t);
-                auto pos = std::lower_bound(m.begin(), m.end(), v);
-                if (pos == m.end() || *pos != v) m.insert(pos, v);
-                toggle(m);
-            }
-        }
-        out.swap(next);
-    }
-}
-}
-
 bool BLib::factor_terms(const vector<VarVec>& terms, vector<Lineral>& factors)
 {
     factors.clear();
     if (terms.empty()) return false;
-    std::unordered_set<VarVec, VarVecHash> tset(terms.begin(), terms.end());
+    // terms are sorted (addTerms sorts them): membership by binary search
+    auto has_term = [&](const VarVec& t) {
+        return std::binary_search(terms.begin(), terms.end(), t);
+    };
     size_t deg = 0;
     for (const VarVec& t : terms) deg = std::max(deg, t.size());
     if (deg == 0) return false;
@@ -224,7 +200,7 @@ bool BLib::factor_terms(const vector<VarVec>& terms, vector<Lineral>& factors)
     if (deg == 1) {
         Lineral l;
         l.vars = vars;
-        l.c = tset.count(VarVec()) > 0;
+        l.c = has_term(VarVec());
         factors.push_back(l);
         return true;
     }
@@ -261,14 +237,34 @@ bool BLib::factor_terms(const vector<VarVec>& terms, vector<Lineral>& factors)
         std::sort(probe.begin(), probe.end());
         Lineral l;
         l.vars = parts[i];
-        l.c = tset.count(probe) > 0;
+        l.c = has_term(probe);
         factors.push_back(l);
     }
-    std::unordered_set<VarVec, VarVecHash> expanded;
-    expand_terms(factors, expanded);
-    if (expanded != tset) {
+    // Verification without expanding: the parts are disjoint, so the
+    // product's monomials are exactly "one variable from each part, or the
+    // constant of that part": every input term must be of that shape, and
+    // there must be as many terms as the product has.
+    size_t expected = 1;
+    for (const Lineral& l : factors) expected *= l.vars.size() + (l.c ? 1 : 0);
+    if (expected != terms.size()) {
         factors.clear();
         return false;
+    }
+    std::unordered_map<uint32_t, uint32_t> part_of;
+    for (size_t i = 0; i < factors.size(); i++) {
+        for (const uint32_t v : factors[i].vars) part_of[v] = i;
+    }
+    vector<char> seen(factors.size());
+    for (const VarVec& t : terms) {
+        std::fill(seen.begin(), seen.end(), 0);
+        for (const uint32_t v : t) {
+            const uint32_t i = part_of[v];
+            if (seen[i]) { factors.clear(); return false; } // two variables of one part
+            seen[i] = 1;
+        }
+        for (size_t i = 0; i < factors.size(); i++) {
+            if (!seen[i] && !factors[i].c) { factors.clear(); return false; } // part contributes nothing but has no constant
+        }
     }
     return true;
 }

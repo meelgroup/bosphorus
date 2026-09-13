@@ -512,30 +512,32 @@ bool ANF::addBoolePolynomial(const BoolePolynomial& poly)
 
 bool ANF::addTerms(vector<VarVec>& terms)
 {
-    // x + x = 0: drop pairs of equal terms
+    // x*x = x, then x + x = 0: drop pairs of equal terms (in place)
+    for (VarVec& t : terms) {
+        std::sort(t.begin(), t.end());
+        t.erase(std::unique(t.begin(), t.end()), t.end());
+    }
     std::sort(terms.begin(), terms.end());
-    vector<VarVec> reduced;
+    size_t w = 0;
     for (size_t i = 0; i < terms.size();) {
         size_t j = i;
         while (j < terms.size() && terms[j] == terms[i]) j++;
-        if ((j - i) % 2) reduced.push_back(terms[i]);
+        if ((j - i) % 2) terms[w++].swap(terms[i]);
         i = j;
     }
-    for (VarVec& t : reduced) {
-        std::sort(t.begin(), t.end());
-        t.erase(std::unique(t.begin(), t.end()), t.end()); // x*x = x
-    }
-    terms.swap(reduced);
+    terms.resize(w);
 
     vector<Lineral> f;
     if (terms.size() >= 4 && factor_terms(terms, f) && f.size() >= 2) {
         const VarVec key = product_key(f);
         if (!prod_keys.insert(key).second) return false; // duplicate
-        BooleMonomial used(*ring);
-        for (const Lineral& l : f) {
-            for (const uint32_t v : l.vars) used *= ring->variable(v);
-        }
-        addPolyToOccur(used, eqs.size());
+        // occurrence lists straight from the factors (a variable shared by
+        // two factors is listed once)
+        VarVec used;
+        for (const Lineral& l : f) used.insert(used.end(), l.vars.begin(), l.vars.end());
+        std::sort(used.begin(), used.end());
+        used.erase(std::unique(used.begin(), used.end()), used.end());
+        for (const uint32_t v : used) occur[v].push_back(eqs.size());
         eqs.push_back(BoolePolynomial(*ring));
         poly_valid.push_back(0);
         factors.push_back(f);
