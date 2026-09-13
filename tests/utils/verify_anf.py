@@ -294,12 +294,11 @@ def check_cnf(anf_path, cnf_path):
 
     # the ANF's solutions over the whole ring, projected onto the same
     # variables (CNF variable j is ANF variable x(j-1))
-    n = max_var_in_file(anf_path) + 1
+    # Bosphorus's ring covers every mentioned variable and always x(0)
+    proj_anf = [v - 1 for v in projection]
+    n = max([max_var_in_file(anf_path) + 1, 1] + [v + 1 for v in proj_anf])
     if n > 20:
         sys.exit("verify_anf: %d variables is too many to brute force" % n)
-    proj_anf = [v - 1 for v in projection]
-    if any(v >= n for v in proj_anf):
-        sys.exit("verify_anf: projection set mentions a variable outside the ANF")
     expected = set()
     for bits in itertools.product([0, 1], repeat=n):
         assign = dict(enumerate(bits))
