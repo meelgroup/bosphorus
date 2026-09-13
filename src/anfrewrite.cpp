@@ -140,8 +140,9 @@ size_t ANF::reduce_by_short_polys()
     size_t num_monom_rewrites = 0;
 
     auto is_rule = [&](size_t i) {
-        const BoolePolynomial& p = eqs[i];
-        return !p.isConstant() && eq_len[i] <= max_len && p.deg() >= 1;
+        if (eq_len[i] > max_len) return false;
+        const BoolePolynomial& p = eq(i);
+        return !p.isConstant() && p.deg() >= 1;
     };
 
     for (unsigned round = 0; round < 20; round++) {
@@ -162,6 +163,7 @@ size_t ANF::reduce_by_short_polys()
             rule_of_eq[eq_idx] = id;
         };
         for (size_t i = 0; i < eqs.size(); i++) {
+            if (keep_factor == 1 && isProduct(i)) continue;
             if (is_rule(i)) add_rule(i);
         }
         if (rules.empty()) break;
@@ -182,11 +184,11 @@ size_t ANF::reduce_by_short_polys()
         vector<size_t> empty_equations;
         size_t round_rewrites = 0;
         for (size_t i = 0; i < eqs.size(); i++) {
-            if (eqs[i].isConstant()) continue;
             // product-preserving mode: products of linear factors are left alone (a
             // reduction would almost never keep the product form, and
             // trying costs a pass over millions of monomials)
-            if (keep_factor == 1 && eqs[i].deg() >= 2) continue;
+            if (keep_factor == 1 && (isProduct(i) || degOf(i) >= 2)) continue;
+            if (eq(i).isConstant()) continue;
             BoolePolynomial poly = eqs[i];
             bool changed = false;
             // Reduce until no monomial is divisible by any rule's lead. Each
@@ -269,8 +271,8 @@ size_t ANF::shorten_polys()
     // In product-preserving mode only the linear equations take part.
     unordered_map<mhash, vector<size_t> > occ_m;
     for (size_t i = 0; i < eqs.size(); i++) {
-        if (keep_factor == 1 && eqs[i].deg() >= 2) continue;
-        for (const BooleMonomial& t : eqs[i]) {
+        if (keep_factor == 1 && (isProduct(i) || degOf(i) >= 2)) continue;
+        for (const BooleMonomial& t : eq(i)) {
             occ_m[t.stableHash()].push_back(i);
         }
     }
@@ -300,9 +302,9 @@ size_t ANF::shorten_polys()
 
     for (const size_t f_idx : order) {
         if (budget < 0 || cpuTime() > config.maxTime) break;
-        const BoolePolynomial& f = eqs[f_idx];
+        if (keep_factor == 1 && (isProduct(f_idx) || degOf(f_idx) >= 2)) continue;
+        const BoolePolynomial& f = eq(f_idx);
         if (f.isConstant()) continue;
-        if (keep_factor == 1 && f.deg() >= 2) continue;
         const size_t f_len = eq_len[f_idx];
         const int f_deg = f.deg();
 
@@ -321,7 +323,8 @@ size_t ANF::shorten_polys()
             const uint32_t c = cnt[p];
             cnt[p] = 0;
             if (2 * c <= f_len) continue;
-            if (eqs[p].isConstant()) continue;
+            if (keep_factor == 1 && isProduct(p)) continue;
+            if (eq(p).isConstant()) continue;
             if (eqs[p].deg() < f_deg) continue;
             if (eq_len[p] < f_len) continue; // then p is the rule for f, not vice versa
 
@@ -458,7 +461,8 @@ size_t ANF::probe_small_polys()
     };
 
     for (size_t i = 0; i < eqs.size(); i++) {
-        const BoolePolynomial& p = eqs[i];
+        if (!poly_valid[i] && nVarsOf(i) > max_vars) continue; // a long product
+        const BoolePolynomial& p = eq(i);
         if (p.isConstant() || p.nUsedVariables() > max_vars) continue;
         if (p.nUsedVariables() <= 2 && p.deg() == 1) continue; // replacer's job
 
@@ -597,10 +601,10 @@ size_t ANF::rewrite_inplace()
             // products of linear factors (e.g. XNF written out as polynomials)
             size_t nonlin = 0, products = 0;
             vector<Lineral> f;
-            for (const BoolePolynomial& p : eqs) {
-                if (p.deg() < 2) continue;
+            for (size_t i = 0; i < eqs.size(); i++) {
+                if (degOf(i) < 2) continue;
                 nonlin++;
-                if (factor_into_linerals(p, f) && f.size() >= 2) products++;
+                if (isProduct(i) || (factor_into_linerals(eq(i), f) && f.size() >= 2)) products++;
             }
             keep_factor = (nonlin > 0 && 2 * products >= nonlin) ? 1 : 0;
             if (config.verbosity >= 1) {

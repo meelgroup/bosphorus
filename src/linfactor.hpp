@@ -32,7 +32,35 @@ namespace BLib {
 struct Lineral {
     std::vector<uint32_t> vars; // sorted
     bool c = false;
+    bool operator<(const Lineral& o) const
+    {
+        return vars != o.vars ? vars < o.vars : c < o.c;
+    }
+    bool operator==(const Lineral& o) const { return vars == o.vars && c == o.c; }
 };
+
+typedef std::vector<uint32_t> VarVec; // a monomial as its sorted variable indices
+struct VarVecHash {
+    size_t operator()(const VarVec& v) const
+    {
+        size_t h = 1469598103934665603ULL;
+        for (const uint32_t x : v) h ^= x + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+        return h;
+    }
+};
+
+/// Same as factor_into_linerals but on a list of monomials (the empty
+/// vector is the constant 1), without building any ZDD. Verified by
+/// expanding the factors as lists.
+bool factor_terms(const std::vector<VarVec>& terms, std::vector<Lineral>& factors);
+
+/// Canonical key of a product: factors sorted, each followed by a
+/// separator carrying its constant.
+VarVec product_key(const std::vector<Lineral>& factors);
+
+/// Product of the factor sizes (|l_i| + c_i): the number of terms of the
+/// expansion when the factors share no variable, an upper bound otherwise.
+size_t product_size(const std::vector<Lineral>& factors);
 
 /// Tries to write `poly` as a product of linear factors with pairwise
 /// disjoint variables: a polynomial

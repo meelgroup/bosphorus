@@ -77,6 +77,10 @@ class ANF
 
     // Returns true if polynomial is new and has been added
     bool addBoolePolynomial(const BoolePolynomial& poly);
+    // Adds the polynomial given as a list of monomials (the empty vector is
+    // the constant 1). If it is a product of linear factors it is stored as
+    // such and never expanded into a ZDD unless a rule needs that.
+    bool addTerms(vector<VarVec>& terms);
     bool addLearntBoolePolynomial(const BoolePolynomial& poly);
     void contextualize(vector<BoolePolynomial>& learnt) const;
 
@@ -94,7 +98,30 @@ class ANF
     //size_t numUniqueMonoms(const vector<BoolePolynomial>& equations) const;
     inline bool hasPolynomial(const BoolePolynomial& p) const;
     const BoolePolyRing& getRing() const;
+    /// All equations as polynomials. Materialises every lazily stored
+    /// product first: prefer eq(i) / isProduct(i) / getFactors(i).
     const vector<BoolePolynomial>& getEqs() const;
+    /// Equation idx as a polynomial (expanded on demand for products).
+    const BoolePolynomial& eq(size_t idx) const;
+    /// Equation idx is stored as a product of linear factors.
+    bool isProduct(size_t idx) const { return !factors[idx].empty(); }
+    /// Variables of equation idx, without expanding a product.
+    BooleMonomial varsOf(size_t idx) const;
+    /// Calls f(var) for every variable of equation idx (no ZDD work for a
+    /// product; a variable shared by two factors is visited twice).
+    template <class F> void forEachVar(size_t idx, F f) const
+    {
+        if (poly_valid[idx]) {
+            for (const uint32_t v : eqs[idx].usedVariables()) f(v);
+        } else {
+            for (const Lineral& l : factors[idx]) for (const uint32_t v : l.vars) f(v);
+        }
+    }
+    /// Number of variables of equation idx (an upper bound for a product).
+    size_t nVarsOf(size_t idx) const;
+    /// Degree of equation idx (the number of factors for a product, an
+    /// upper bound if the factors share variables).
+    int degOf(size_t idx) const;
     /// The lineral factorisation of equation idx if known (a product of
     /// >= 2 linear factors), else empty. Found once with
     /// factor_into_linerals() and then maintained through propagation, so
@@ -134,9 +161,11 @@ class ANF
     bool updateEquations(size_t idx, const BoolePolynomial newpoly,
                          vector<size_t>& empty_equations,
                          const vector<Lineral>* newfactors = nullptr);
-    /// factors of eq idx after the replacer's current substitutions;
-    /// false if the factorisation is unknown
-    bool substituted_factors(size_t idx, vector<Lineral>& out);
+    /// factors of eq idx after the replacer's current substitutions
+    enum SubstResult { subst_unknown, subst_product, subst_zero, subst_unsat, subst_linear };
+    SubstResult substituted_factors(size_t idx, vector<Lineral>& out);
+    bool eraseKey(size_t idx);
+    bool insertKey(size_t idx);
     void checkSimplifiedPolysContainNoSetVars() const;
     bool containsMono(const BooleMonomial& mono1,
                       const BooleMonomial& mono2) const;
@@ -160,11 +189,15 @@ class ANF
     // Independent variables
     set<size_t> proj_set;
 
-    //State
-    vector<BoolePolynomial> eqs;
+    //State. An equation is either a polynomial (poly_valid) or a product
+    //of linear factors (factors non-empty) whose polynomial is only built
+    //when asked for; products of long factors have thousands of terms.
+    mutable vector<BoolePolynomial> eqs;
+    mutable vector<char> poly_valid;
     vector<vector<Lineral> > factors; // parallel to eqs, see getFactors()
-    vector<size_t> eq_len; // parallel to eqs: number of terms (length() walks the ZDD, expensive)
-    eqs_hash_t eqs_hash;
+    vector<size_t> eq_len; // parallel to eqs: number of terms (product_size() for products)
+    eqs_hash_t eqs_hash;   // hashes of the polynomial equations
+    std::unordered_set<VarVec, VarVecHash> prod_keys; // keys of the product equations
     Replacer* replacer;
     vector<vector<size_t> > occur; //occur[var] -> index of polys where the variable occurs
 
@@ -182,9 +215,11 @@ inline ANF::ANF(const ANF& other, const anf_no_replacer_tag)
       config(other.config),
       comments(other.comments),
       eqs(other.eqs),
+      poly_valid(other.poly_valid),
       factors(other.factors),
       eq_len(other.eq_len),
       eqs_hash(other.eqs_hash),
+      prod_keys(other.prod_keys),
       replacer(nullptr),
       occur(other.occur),
       new_equations_begin(other.new_equations_begin)
@@ -217,15 +252,31 @@ inline bool ANF::containsMono(const BooleMonomial& mono1,
 inline size_t ANF::deg() const
 {
     int deg = 0;
-    for (const BoolePolynomial& poly : eqs) {
-        deg = std::max(deg, poly.deg());
+    for (size_t i = 0; i < eqs.size(); i++) {
+        deg = std::max(deg, degOf(i));
     }
     return deg;
 }
 
 inline const vector<BoolePolynomial>& ANF::getEqs() const
 {
+    for (size_t i = 0; i < eqs.size(); i++) eq(i);
     return eqs;
+}
+
+inline const BoolePolynomial& ANF::eq(size_t idx) const
+{
+    if (!poly_valid[idx]) {
+        eqs[idx] = expand_linerals(*ring, factors[idx]);
+        poly_valid[idx] = 1;
+    }
+    return eqs[idx];
+}
+
+inline int ANF::degOf(size_t idx) const
+{
+    if (poly_valid[idx]) return eqs[idx].deg();
+    return factors[idx].size();
 }
 
 inline const ANF::eqs_hash_t& ANF::getEqsHash(void) const
@@ -241,8 +292,8 @@ inline bool ANF::hasPolynomial(const BoolePolynomial& p) const
 inline size_t ANF::getNumSimpleXors() const
 {
     size_t num = 0;
-    for (const BoolePolynomial& poly : eqs) {
-        num += (poly.deg() == 1);
+    for (size_t i = 0; i < eqs.size(); i++) {
+        num += (degOf(i) == 1);
     }
     return num;
 }
@@ -260,8 +311,8 @@ inline std::ostream& operator<<(std::ostream& os, const ANF& anf)
     }
 
     // Print equations
-    for (const BoolePolynomial& poly : anf.eqs) {
-        os << poly;
+    for (size_t i = 0; i < anf.eqs.size(); i++) {
+        os << anf.eq(i);
         os << endl;
     }
 
@@ -332,8 +383,10 @@ ANF& ANF::operator=(const ANF& other)
 {
     //assert(updatedVars.empty() && other.updatedVars.empty());
     eqs = other.eqs;
+    poly_valid = other.poly_valid;
     factors = other.factors;
     eq_len = other.eq_len;
+    prod_keys = other.prod_keys;
     *replacer = *other.replacer;
     occur = other.occur;
     return *this;

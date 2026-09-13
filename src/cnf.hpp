@@ -40,17 +40,8 @@ class CNF
    public:
     // Monomials as sorted variable-index vectors: the partner cover works on
     // these instead of ZDDs, which is much cheaper.
-    typedef vector<uint32_t> VarVec;
-    struct VarVecHash {
-        size_t operator()(const VarVec& v) const
-        {
-            size_t h = 1469598103934665603ULL;
-            for (const uint32_t x : v) {
-                h ^= x + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
-            }
-            return h;
-        }
-    };
+    typedef BLib::VarVec VarVec;
+    typedef BLib::VarVecHash VarVecHash;
 
     CNF(const ANF& _anf, const ConfigData& _config);
     CNF(const char* fname, const ANF& _anf,
@@ -137,6 +128,7 @@ class CNF
     //The cumulated CNF data
     vector<pair<vector<Clause>, BoolePolynomial> > clauses;
     ANF::eqs_hash_t in_clauses;
+    std::unordered_set<VarVec, VarVecHash> in_products;
 
     //uint32_t maps -- internal/external mapping of variables/monomial/polynomials
     std::unordered_map<BooleMonomial::hash_type, uint32_t>

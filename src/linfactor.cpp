@@ -25,6 +25,8 @@ SOFTWARE.
 #include <algorithm>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
+#include <limits>
 
 USING_NAMESPACE_PBORI
 using std::vector;
@@ -173,4 +175,120 @@ bool BLib::subst_lineral_var(vector<Lineral>& factors, uint32_t v, uint32_t w, b
         }
     }
     return normalise(factors);
+}
+
+namespace {
+// expands the product as a set of monomials (mod 2)
+void expand_terms(const vector<Lineral>& factors, std::unordered_set<VarVec, VarVecHash>& out)
+{
+    out.clear();
+    out.insert(VarVec());
+    for (const Lineral& l : factors) {
+        std::unordered_set<VarVec, VarVecHash> next;
+        auto toggle = [&](const VarVec& t) {
+            auto it = next.find(t);
+            if (it == next.end()) next.insert(t);
+            else next.erase(it);
+        };
+        for (const VarVec& t : out) {
+            if (l.c) toggle(t);
+            for (const uint32_t v : l.vars) {
+                VarVec m(t);
+                auto pos = std::lower_bound(m.begin(), m.end(), v);
+                if (pos == m.end() || *pos != v) m.insert(pos, v);
+                toggle(m);
+            }
+        }
+        out.swap(next);
+    }
+}
+}
+
+bool BLib::factor_terms(const vector<VarVec>& terms, vector<Lineral>& factors)
+{
+    factors.clear();
+    if (terms.empty()) return false;
+    std::unordered_set<VarVec, VarVecHash> tset(terms.begin(), terms.end());
+    size_t deg = 0;
+    for (const VarVec& t : terms) deg = std::max(deg, t.size());
+    if (deg == 0) return false;
+
+    vector<uint32_t> vars;
+    for (const VarVec& t : terms) vars.insert(vars.end(), t.begin(), t.end());
+    std::sort(vars.begin(), vars.end());
+    vars.erase(std::unique(vars.begin(), vars.end()), vars.end());
+    const size_t n = vars.size();
+    std::unordered_map<uint32_t, uint32_t> idx;
+    for (size_t i = 0; i < n; i++) idx[vars[i]] = i;
+
+    if (deg == 1) {
+        Lineral l;
+        l.vars = vars;
+        l.c = tset.count(VarVec()) > 0;
+        factors.push_back(l);
+        return true;
+    }
+
+    vector<vector<char> > adj(n, vector<char>(n, 0));
+    for (const VarVec& t : terms) {
+        if (t.size() < 2) continue;
+        for (size_t a = 0; a < t.size(); a++) {
+            for (size_t b = a + 1; b < t.size(); b++) {
+                adj[idx[t[a]]][idx[t[b]]] = 1;
+                adj[idx[t[b]]][idx[t[a]]] = 1;
+            }
+        }
+    }
+    std::map<vector<char>, vector<uint32_t> > classes;
+    for (size_t i = 0; i < n; i++) {
+        bool any = false;
+        for (size_t j = 0; j < n; j++) any |= adj[i][j];
+        if (!any) return false;
+        classes[adj[i]].push_back(vars[i]);
+    }
+    if (classes.size() < 2) return false;
+    vector<vector<uint32_t> > parts;
+    for (auto& kv : classes) parts.push_back(kv.second);
+    std::sort(parts.begin(), parts.end(),
+              [](const vector<uint32_t>& a, const vector<uint32_t>& b) {
+                  return a.front() < b.front();
+              });
+    for (size_t i = 0; i < parts.size(); i++) {
+        VarVec probe;
+        for (size_t j = 0; j < parts.size(); j++) {
+            if (j != i) probe.push_back(parts[j].front());
+        }
+        std::sort(probe.begin(), probe.end());
+        Lineral l;
+        l.vars = parts[i];
+        l.c = tset.count(probe) > 0;
+        factors.push_back(l);
+    }
+    std::unordered_set<VarVec, VarVecHash> expanded;
+    expand_terms(factors, expanded);
+    if (expanded != tset) {
+        factors.clear();
+        return false;
+    }
+    return true;
+}
+
+VarVec BLib::product_key(const vector<Lineral>& factors)
+{
+    vector<Lineral> sorted(factors);
+    std::sort(sorted.begin(), sorted.end());
+    VarVec key;
+    for (const Lineral& l : sorted) {
+        key.insert(key.end(), l.vars.begin(), l.vars.end());
+        key.push_back(l.c ? std::numeric_limits<uint32_t>::max()
+                          : std::numeric_limits<uint32_t>::max() - 1);
+    }
+    return key;
+}
+
+size_t BLib::product_size(const vector<Lineral>& factors)
+{
+    size_t n = 1;
+    for (const Lineral& l : factors) n *= l.vars.size() + (l.c ? 1 : 0);
+    return n;
 }

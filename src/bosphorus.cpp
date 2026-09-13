@@ -509,9 +509,8 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
     // make the Macaulay matrix huge
     auto short_eqs = [&]() {
         vector<BoolePolynomial> out;
-        const auto& all = anf->getEqs();
-        for (size_t i = 0; i < all.size(); i++) {
-            if (anf->getEqLen(i) <= dat->config.xlMaxLen) out.push_back(all[i]);
+        for (size_t i = 0; i < anf->size(); i++) {
+            if (anf->getEqLen(i) <= dat->config.xlMaxLen) out.push_back(anf->eq(i));
         }
         return out;
     };

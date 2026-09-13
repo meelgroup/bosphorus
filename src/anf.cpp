@@ -30,6 +30,7 @@ SOFTWARE.
 
 #include "replacer.hpp"
 #include "time_mem.h"
+#include <algorithm>
 
 using std::cout;
 using std::endl;
@@ -188,10 +189,11 @@ size_t ANF::readFile(const std::string& filename)
 
         BoolePolynomial eq(*ring);
         BoolePolynomial eqDesc(*ring);
-        // Terms of eq are collected and summed pairwise at the end: adding
-        // them one by one to a polynomial with thousands of terms is
-        // quadratic in the ZDD size.
-        vector<BooleMonomial> eq_terms;
+        // Terms of eq are collected as variable lists and handed to
+        // addTerms(), which factors products of linear forms without ever
+        // building their (possibly huge) ZDD.
+        vector<VarVec> eq_terms;
+        VarVec cur_term;
         bool startOfVar = false;
         bool readInVar = false;
         bool readInDesc = false;
@@ -203,8 +205,9 @@ size_t ANF::readFile(const std::string& filename)
             //Handle description separator ','
             if (temp[i] == ',') {
                 if (readInVar) {
-                    m *= BooleVariable(var, *ring);
-                    eq_terms.push_back(m);
+                    cur_term.push_back(var);
+                    eq_terms.push_back(cur_term);
+                    cur_term.clear();
                 }
 
                 startOfVar = false;
@@ -254,7 +257,7 @@ size_t ANF::readFile(const std::string& filename)
             //Handle constant '1'
             if (temp[i] == '1' && !startOfVar) {
                 if (!readInDesc)
-                    eq += BooleConstant(true);
+                    eq_terms.push_back(VarVec());
                 else
                     eqDesc += BooleConstant(true);
                 readInVar = false;
@@ -277,18 +280,20 @@ size_t ANF::readFile(const std::string& filename)
                     exit(-1);
                 }
                 if (readInVar) {
-                    m *= BooleVariable(var, *ring);
-
-                    if (!readInDesc)
-                        eq_terms.push_back(m);
-                    else
+                    if (!readInDesc) {
+                        cur_term.push_back(var);
+                        eq_terms.push_back(cur_term);
+                    } else {
+                        m *= BooleVariable(var, *ring);
                         eqDesc += m;
+                    }
                 }
 
                 startOfVar = false;
                 readInVar = false;
                 var = 0;
                 m = BooleMonomial(*ring);
+                cur_term.clear();
                 continue;
             }
 
@@ -300,7 +305,8 @@ size_t ANF::readFile(const std::string& filename)
                 }
 
                 //Multiplying current var into monomial
-                m *= BooleVariable(var, *ring);
+                if (!readInDesc) cur_term.push_back(var);
+                else m *= BooleVariable(var, *ring);
 
                 startOfVar = false;
                 readInVar = false;
@@ -337,30 +343,15 @@ size_t ANF::readFile(const std::string& filename)
 
         //If variable was being built up when the line ended, add it
         if (readInVar) {
-            m *= BooleVariable(var, *ring);
-
-            if (!readInDesc)
-                eq_terms.push_back(m);
-            else
+            if (!readInDesc) {
+                cur_term.push_back(var);
+                eq_terms.push_back(cur_term);
+            } else {
+                m *= BooleVariable(var, *ring);
                 eqDesc += m;
-        }
-
-        // balanced summation of the collected terms
-        {
-            vector<BoolePolynomial> level;
-            level.reserve(eq_terms.size());
-            for (const BooleMonomial& t : eq_terms) level.push_back(BoolePolynomial(t));
-            while (level.size() > 1) {
-                vector<BoolePolynomial> next;
-                next.reserve(level.size() / 2 + 1);
-                for (size_t k = 0; k + 1 < level.size(); k += 2) {
-                    next.push_back(level[k] + level[k + 1]);
-                }
-                if (level.size() % 2) next.push_back(level.back());
-                level.swap(next);
             }
-            if (!level.empty()) eq += level.front();
         }
+        cur_term.clear();
 
         //Set state to starting position
         startOfVar = false;
@@ -388,7 +379,8 @@ size_t ANF::readFile(const std::string& filename)
             exit(-1);
         }
 
-        addBoolePolynomial(eq);
+        (void)eq;
+        addTerms(eq_terms);
         if (start_bracket) {
             cout << "ERROR: end of line but bracket not closed" << endl;
             exit(-1);
@@ -418,9 +410,8 @@ ANFStats ANF::get_stats() const
     ANFStats s;
     s.eqs = eqs.size();
     for (size_t i = 0; i < eqs.size(); i++) {
-        const BoolePolynomial& poly = eqs[i];
         s.monoms += eq_len[i];
-        const int deg = poly.deg();
+        const int deg = degOf(i);
         if (deg <= 1) s.lin_eqs++;
         else s.nonlin_eqs++;
         if (deg > 0 && (uint64_t)deg > s.max_deg) s.max_deg = deg;
@@ -512,10 +503,96 @@ bool ANF::addBoolePolynomial(const BoolePolynomial& poly)
     addPolyToOccur(poly, eqs.size());
 
     eqs.push_back(poly);
+    poly_valid.push_back(1);
     factors.push_back(vector<Lineral>());
     eq_len.push_back(poly.length());
 
     return true;
+}
+
+bool ANF::addTerms(vector<VarVec>& terms)
+{
+    // x + x = 0: drop pairs of equal terms
+    std::sort(terms.begin(), terms.end());
+    vector<VarVec> reduced;
+    for (size_t i = 0; i < terms.size();) {
+        size_t j = i;
+        while (j < terms.size() && terms[j] == terms[i]) j++;
+        if ((j - i) % 2) reduced.push_back(terms[i]);
+        i = j;
+    }
+    for (VarVec& t : reduced) {
+        std::sort(t.begin(), t.end());
+        t.erase(std::unique(t.begin(), t.end()), t.end()); // x*x = x
+    }
+    terms.swap(reduced);
+
+    vector<Lineral> f;
+    if (terms.size() >= 4 && factor_terms(terms, f) && f.size() >= 2) {
+        const VarVec key = product_key(f);
+        if (!prod_keys.insert(key).second) return false; // duplicate
+        BooleMonomial used(*ring);
+        for (const Lineral& l : f) {
+            for (const uint32_t v : l.vars) used *= ring->variable(v);
+        }
+        addPolyToOccur(used, eqs.size());
+        eqs.push_back(BoolePolynomial(*ring));
+        poly_valid.push_back(0);
+        factors.push_back(f);
+        eq_len.push_back(product_size(f));
+        return true;
+    }
+
+    // a plain polynomial: balanced summation of the terms
+    vector<BoolePolynomial> level;
+    level.reserve(terms.size());
+    for (const VarVec& t : terms) {
+        BooleMonomial m(*ring);
+        for (const uint32_t v : t) m *= ring->variable(v);
+        level.push_back(BoolePolynomial(m));
+    }
+    while (level.size() > 1) {
+        vector<BoolePolynomial> next;
+        next.reserve(level.size() / 2 + 1);
+        for (size_t k = 0; k + 1 < level.size(); k += 2) {
+            next.push_back(level[k] + level[k + 1]);
+        }
+        if (level.size() % 2) next.push_back(level.back());
+        level.swap(next);
+    }
+    BoolePolynomial poly(*ring);
+    if (!level.empty()) poly = level.front();
+    return addBoolePolynomial(poly);
+}
+
+BooleMonomial ANF::varsOf(size_t idx) const
+{
+    if (poly_valid[idx]) return eqs[idx].usedVariables();
+    BooleMonomial used(*ring);
+    for (const Lineral& l : factors[idx]) {
+        for (const uint32_t v : l.vars) used *= ring->variable(v);
+    }
+    return used;
+}
+
+size_t ANF::nVarsOf(size_t idx) const
+{
+    if (poly_valid[idx]) return eqs[idx].nUsedVariables();
+    size_t n = 0;
+    for (const Lineral& l : factors[idx]) n += l.vars.size();
+    return n;
+}
+
+bool ANF::eraseKey(size_t idx)
+{
+    if (!factors[idx].empty()) return prod_keys.erase(product_key(factors[idx])) == 1;
+    return eqs_hash.erase(eqs[idx].hash()) == 1;
+}
+
+bool ANF::insertKey(size_t idx)
+{
+    if (!factors[idx].empty()) return prod_keys.insert(product_key(factors[idx])).second;
+    return eqs_hash.insert(eqs[idx].hash()).second;
 }
 
 bool ANF::addLearntBoolePolynomial(const BoolePolynomial& poly)
@@ -570,15 +647,16 @@ inline void ANF::removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx)
     removePolyFromOccur(poly.usedVariables(), eq_idx);
 }
 
-bool ANF::substituted_factors(size_t idx, vector<Lineral>& out)
+ANF::SubstResult ANF::substituted_factors(size_t idx, vector<Lineral>& out)
 {
     out.clear();
     vector<Lineral>& f = factors[idx];
     if (f.empty()) {
-        // still a clean product? then factor it now, before it is changed
+        // a polynomial that still is a clean product? factor it now,
+        // before it is changed
         if (!factor_into_linerals(eqs[idx], f) || f.size() < 2) {
             f.clear();
-            return false;
+            return subst_unknown;
         }
     }
     out = f;
@@ -590,60 +668,64 @@ bool ANF::substituted_factors(size_t idx, vector<Lineral>& out)
     for (const uint32_t v : used) {
         const lbool val = replacer->getValue(v);
         if (val != l_Undef) {
-            if (!subst_lineral_const(out, v, val == l_True)) return false;
+            if (!subst_lineral_const(out, v, val == l_True)) return subst_zero;
             continue;
         }
         const Lit lit = replacer->getReplaced(v);
         if (lit.var() != v) {
-            if (!subst_lineral_var(out, v, lit.var(), lit.sign())) return false;
+            if (!subst_lineral_var(out, v, lit.var(), lit.sign())) return subst_zero;
         }
     }
-    if (out.size() < 2) {
-        out.clear();
-        return false;
-    }
-    return true;
+    if (out.empty()) return subst_unsat;   // every factor became 1: 1 = 0
+    if (out.size() == 1) return subst_linear;
+    return subst_product;
 }
 
 bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
                           vector<size_t>& empty_equations,
                           const vector<Lineral>* newfactors)
 {
-    BoolePolynomial& poly = eqs[eq_idx];
-    BooleMonomial prev_used = poly.usedVariables();
+    BooleMonomial prev_used = varsOf(eq_idx);
+    const bool erased = eraseKey(eq_idx);
+    assert(erased);
+    (void)erased;
 
-    const size_t check = eqs_hash.erase(poly.hash());
-    assert(check == 1);
-    poly = newpoly;
-    eq_len[eq_idx] = poly.length();
-    if (newfactors != nullptr) factors[eq_idx] = *newfactors;
-    else factors[eq_idx].clear();
-
-    if (poly.isConstant()) {
-        //Check UNSAT
-        if (poly.isOne()) {
-            replacer->setNOTOK();
-            cout << "Replacer NOT OK" << endl;
-            return false;
+    bool removed = false;
+    if (newfactors != nullptr && newfactors->size() >= 2) {
+        // stays a product: no polynomial is built
+        factors[eq_idx] = *newfactors;
+        eqs[eq_idx] = BoolePolynomial(*ring);
+        poly_valid[eq_idx] = 0;
+        eq_len[eq_idx] = product_size(*newfactors);
+        if (!insertKey(eq_idx)) removed = true; // duplicate product
+    } else {
+        factors[eq_idx].clear();
+        eqs[eq_idx] = newpoly;
+        poly_valid[eq_idx] = 1;
+        eq_len[eq_idx] = newpoly.length();
+        if (newpoly.isConstant()) {
+            if (newpoly.isOne()) {
+                replacer->setNOTOK();
+                cout << "Replacer NOT OK" << endl;
+                return false;
+            }
+            removed = true;
+        } else if (!insertKey(eq_idx)) {
+            removed = true; // duplicate polynomial
         }
+    }
+    if (removed) {
+        factors[eq_idx].clear();
+        eqs[eq_idx] = BoolePolynomial(*ring);
+        poly_valid[eq_idx] = 1;
+        eq_len[eq_idx] = 0;
         empty_equations.push_back(eq_idx);
         if (config.verbosity >= 4) {
             cout << "c    update remove equation " << eq_idx << endl;
         }
-    } else {
-        auto ins = eqs_hash.insert(poly.hash());
-        if (!ins.second) { // already exist
-            poly = 0;      // remove it using empty
-            eq_len[eq_idx] = 0;
-            empty_equations.push_back(eq_idx);
-            if (config.verbosity >= 4) {
-                cout << "c [ANF propagation remove equation] " << eq_idx
-                     << endl;
-            }
-        }
-    } // if ... else
+    }
 
-    BooleMonomial curr_used(poly.usedVariables());
+    BooleMonomial curr_used(varsOf(eq_idx));
     BooleMonomial gcd = prev_used.GCD(curr_used);
     prev_used /= gcd; // update remove list
     curr_used /= gcd; // update insert list
@@ -666,8 +748,8 @@ bool ANF::propagate()
 
     // Always run through the new equations
     for (size_t eq_idx = new_equations_begin; eq_idx < eqs.size(); ++eq_idx) {
-        // changes: replacer
-        updates += check_if_need_update(eqs[eq_idx], updatedVars);
+        // changes: replacer (products never match the patterns)
+        if (poly_valid[eq_idx]) updates += check_if_need_update(eqs[eq_idx], updatedVars);
     }
 
     if (config.verbosity >= 3) {
@@ -715,48 +797,54 @@ bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars,
             }
             for (const size_t& eq_idx : occur_snapshot) {
                 assert(eqs.size() > eq_idx);
-                BoolePolynomial& poly = eqs[eq_idx];
                 if (config.verbosity >= 5) {
-                    cout << "c equation stats: " << poly.length() << ' '
-                         << poly.nUsedVariables() << ' ' << eq_idx << '/'
-                         << occur_snapshot.size() << ' ' << var_idx << '/'
-                         << updatedVars_snapshot.size() << ' ' << cpuTime()
-                         << endl;
+                    cout << "c equation stats: " << eq_len[eq_idx] << ' '
+                         << eq_idx << '/' << occur_snapshot.size() << ' '
+                         << var_idx << '/' << updatedVars_snapshot.size()
+                         << ' ' << cpuTime() << endl;
                 }
 
-                if (config.verbosity >= 6) {
-                    cout << "c equation: " << poly << endl;
+                // does the replacer know anything about this equation's variables?
+                {
+                    bool touched = false;
+                    forEachVar(eq_idx, [&](uint32_t v) {
+                        if (replacer->getValue(v) != l_Undef ||
+                            replacer->getReplaced(v) != Lit(v, false)) {
+                            touched = true;
+                        }
+                    });
+                    if (!touched) continue;
                 }
 
-                if (!(replacer->willUpdate(poly))) {
-                    continue;
-                }
-
-                // For an equation with a known factorisation the new
-                // polynomial is the product of the substituted factors:
-                // one ZDD product instead of a substitution pass over a
-                // polynomial with thousands of terms (plus a verification
-                // expansion). The factor substitution is checked against
-                // the polynomial substitution for small equations.
+                // An equation with a known factorisation is updated on its
+                // factors: no ZDD work at all while it stays a product.
                 vector<Lineral> newfactors;
-                const bool have_factors = substituted_factors(eq_idx, newfactors);
+                const SubstResult sr = substituted_factors(eq_idx, newfactors);
                 BoolePolynomial newpoly(*ring);
-                if (have_factors) {
-                    newpoly = expand_linerals(*ring, newfactors);
-                    if (eq_len[eq_idx] <= 256 && newpoly != replacer->update(poly)) {
-                        cout << "ERROR: factor substitution disagrees with polynomial substitution" << endl;
-                        exit(-1);
-                    }
-                } else {
-                    newpoly = replacer->update(poly);
+                const vector<Lineral>* nf = nullptr;
+                switch (sr) {
+                    case subst_product:
+                        nf = &newfactors;
+                        break;
+                    case subst_zero:
+                        break; // a factor became 0: the equation is 0 = 0
+                    case subst_unsat:
+                        replacer->setNOTOK();
+                        cout << "Replacer NOT OK: product became 1" << endl;
+                        return false;
+                    case subst_linear:
+                        newpoly = expand_linerals(*ring, newfactors);
+                        break;
+                    case subst_unknown:
+                        newpoly = replacer->update(eqs[eq_idx]);
+                        break;
                 }
-                if (!updateEquations(eq_idx, newpoly, empty_equations,
-                                     have_factors ? &newfactors : nullptr)) {
+                if (!updateEquations(eq_idx, newpoly, empty_equations, nf)) {
                     return false;
                 }
 
-                if (!poly.isConstant()) {
-                    check_if_need_update(poly,         // changes: replacer
+                if (poly_valid[eq_idx] && !eqs[eq_idx].isConstant()) {
+                    check_if_need_update(eqs[eq_idx], // changes: replacer
                                          updatedVars); // Add back to occur
                 }
             } // for eq_idx
@@ -781,15 +869,15 @@ bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars,
 
 void ANF::checkSimplifiedPolysContainNoSetVars() const
 {
-    for (const BoolePolynomial& poly : eqs) {
-        for (const uint32_t var_idx : poly.usedVariables()) {
+    for (size_t i = 0; i < eqs.size(); i++) {
+        forEachVar(i, [&](uint32_t var_idx) {
             if (value(var_idx) != l_Undef) {
                 cout << "ERROR: Variable " << var_idx << " is inside equation "
-                     << poly << " even though its value is " << value(var_idx)
+                     << eq(i) << " even though its value is " << value(var_idx)
                      << " !!\n";
                 exit(-1);
             }
-        }
+        });
     }
 }
 
@@ -807,6 +895,7 @@ void ANF::removeEquations(std::vector<size_t>& eq2r)
             eqs.pop_back();
             factors.pop_back();
             eq_len.pop_back();
+            poly_valid.pop_back();
         } else {
             eqs[ii] = eqs.back();
             eqs.pop_back();
@@ -814,6 +903,8 @@ void ANF::removeEquations(std::vector<size_t>& eq2r)
             factors.pop_back();
             eq_len[ii] = eq_len.back();
             eq_len.pop_back();
+            poly_valid[ii] = poly_valid.back();
+            poly_valid.pop_back();
             size_t f = remap[eqs.size()].first;
             remap[f].second = ii;
             remap[ii].first = f;
@@ -841,7 +932,8 @@ void ANF::removeEquations(std::vector<size_t>& eq2r)
 bool ANF::evaluate(const vector<lbool>& vals) const
 {
     bool ret = true;
-    for (const BoolePolynomial& poly : eqs) {
+    for (size_t i = 0; i < eqs.size(); i++) {
+        const BoolePolynomial& poly = eq(i);
         lbool lret = evaluatePoly(poly, vals);
         assert(lret != l_Undef);
 

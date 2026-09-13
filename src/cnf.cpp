@@ -41,9 +41,12 @@ CNF::CNF(const ANF& _anf, const ConfigData& _config)
     addTrivialEquations();
 
     // Add regular equations
-    const vector<BoolePolynomial>& eqs = anf.getEqs();
-    for (size_t i = 0; i < eqs.size(); i++) {
-        addBoolePolynomial(eqs[i], &anf.getFactors(i));
+    for (size_t i = 0; i < anf.size(); i++) {
+        if (anf.isProduct(i)) {
+            addBoolePolynomial(BoolePolynomial(anf.getRing()), &anf.getFactors(i));
+        } else {
+            addBoolePolynomial(anf.eq(i), nullptr);
+        }
     }
 }
 
@@ -144,6 +147,25 @@ void CNF::addTrivialEquations()
 void CNF::addBoolePolynomial(const BoolePolynomial& poly,
                              const vector<Lineral>* factors)
 {
+    // a product of linear factors: no polynomial is needed
+    if (factors != nullptr && factors->size() >= 2 && config.doFactor) {
+        if (!in_products.insert(product_key(*factors)).second) return;
+        vector<Clause> setOfClauses;
+        const bool ok = tryAddingAsProduct(poly, factors, setOfClauses);
+        assert(ok);
+        (void)ok;
+        addedAsProduct++;
+        clauses.push_back(make_pair(setOfClauses,
+            config.writecomments ? expand_linerals(anf.getRing(), *factors)
+                                 : BoolePolynomial(anf.getRing())));
+        return;
+    }
+    if (factors != nullptr && factors->size() >= 2 && poly.isZero()) {
+        // product encoding is off: work on the expanded polynomial
+        addBoolePolynomial(expand_linerals(anf.getRing(), *factors), nullptr);
+        return;
+    }
+
     if (!in_clauses.insert(poly.hash()).second)
         return; // is already added
 
