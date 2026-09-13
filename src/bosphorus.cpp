@@ -444,34 +444,52 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
     }
     timeout = (cpuTime() > dat->config.maxTime);
 
-    bool changes[] = {true, true, true}; // any changes for the strategies
-    size_t waits[] = {0, 0, 0};
-    size_t countdowns[] = {0, 0, 0};
+    // Strategies, in the order they run within one iteration. The in-place
+    // rewrite rules are cheap so they go first; XL/ElimLin/SAT learn facts
+    // on a copy of the system.
+    enum { S_REWRITE = 0, S_XL, S_EL, S_SAT, S_NUM };
+    static const char* strategy_str[] = {"Rewrite", "XL", "ElimLin", "SAT"};
+    static const char* rule_str[] = {"rewrite", "xl", "elimlin", "sat-simp"};
+    const int* const enabled[] = {&dat->config.doRewrite, &dat->config.doXL,
+                                  &dat->config.doEL, &dat->config.doSAT};
+
+    bool changes[S_NUM]; // any changes for the strategies
+    size_t waits[S_NUM];
+    size_t countdowns[S_NUM];
+    for (unsigned i = 0; i < S_NUM; i++) {
+        changes[i] = true;
+        waits[i] = 0;
+        countdowns[i] = 0;
+    }
     uint32_t iters = 0;
     unsigned subiter = 0;
     BLib::CNF* cnf = NULL;
     BLib::SimplifyBySat* sbs = NULL;
 
+    auto any_changes = [&]() {
+        for (unsigned i = 0; i < S_NUM; i++) if (changes[i]) return true;
+        return false;
+    };
+
     while (
         !timeout
         && anf->getOK()
         && iters < max_iters
-        && (changes[0] || changes[1] || changes[2] || iters < 3)
+        && (any_changes() || iters < 3)
     ) {
         cout << "c [iter-simp] ------ Iteration " << std::fixed << std::dec
              << (int)iters << endl;
 
-        static const char* strategy_str[] = {"XL", "ElimLin", "SAT"};
-        static const char* rule_str[] = {"xl", "elimlin", "sat-simp"};
         const double startTime = cpuTime();
         int num_learnt = 0;
+        bool needs_propagate = true;
 
         // Prints the ANF stats before the strategy runs and, when it goes
         // out of scope at the end of this iteration, after it (and after
-        // the propagation of what it learnt).
+        // the propagation of what it learnt). The rewrite rules print their
+        // own per-rule stats so they get no outer scope.
         std::unique_ptr<BLib::SimpStatsScope> stats_scope;
-        static const int* const enabled[] = {&dat->config.doXL, &dat->config.doEL, &dat->config.doSAT};
-        if (countdowns[subiter] == 0 && *enabled[subiter]) {
+        if (countdowns[subiter] == 0 && *enabled[subiter] && subiter != S_REWRITE) {
             stats_scope.reset(new BLib::SimpStatsScope(*anf, rule_str[subiter]));
         }
 
@@ -482,7 +500,14 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
             const size_t prevsz = dat->learnt.size();
             bool sub_iter_performed = false;
             switch (subiter) {
-                case 0:
+                case S_REWRITE:
+                    if (dat->config.doRewrite) {
+                        sub_iter_performed = true;
+                        needs_propagate = false; // the rules propagate themselves
+                        num_learnt = anf->rewrite_inplace();
+                    }
+                    break;
+                case S_XL:
                     if (dat->config.doXL) {
                         sub_iter_performed = true;
                         if (!extendedLinearization(dat->config, anf->getEqs(),
@@ -500,7 +525,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                         }
                     }
                     break;
-                case 1:
+                case S_EL:
                     if (dat->config.doEL) {
                         sub_iter_performed = true;
                         if (!elimLin(dat->config, anf->getEqs(), dat->learnt)) {
@@ -517,7 +542,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                         }
                     }
                     break;
-                case 2:
+                case S_SAT:
                     if (dat->config.doSAT) {
                         sub_iter_performed = true;
                         size_t no_cls = 0;
@@ -566,7 +591,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
             changes[subiter] = false;
         } else {
             changes[subiter] = true;
-            bool ok = anf->propagate();
+            bool ok = needs_propagate ? anf->propagate() : anf->getOK();
             if (!ok) {
                 if (dat->config.verbosity >= 1) {
                     cout << "c [ANF Propagation] is false\n";
@@ -591,7 +616,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
         }
 
         //Schedule next iteration
-        if (subiter < 2) {
+        if (subiter < S_NUM - 1) {
             ++subiter;
         } else {
             ++iters;

@@ -106,6 +106,11 @@ class ANF
     static size_t readFileForMaxVar(const std::string& filename);
     set<size_t> get_proj_set() const;
 
+    // In-place rewrite rules (anfrewrite.cpp). Each returns the number of
+    // changes it made; check getOK() afterwards, they may find UNSAT.
+    size_t rewrite_inplace();        // all of the below, to a fixpoint
+    size_t reduce_by_short_polys();  // "binom-red"
+
    private:
     bool propagate_iteratively(unordered_set<uint32_t>& updatedVars,
                                std::vector<size_t>& empty_equations);
@@ -121,6 +126,11 @@ class ANF
     void checkSimplifiedPolysContainNoSetVars() const;
     bool containsMono(const BooleMonomial& mono1,
                       const BooleMonomial& mono2) const;
+    bool rewrite_eq(size_t idx, const BoolePolynomial& newpoly,
+                    unordered_set<uint32_t>& updatedVars,
+                    vector<size_t>& empty_equations);
+    bool finish_rewrites(unordered_set<uint32_t>& updatedVars,
+                         vector<size_t>& empty_equations);
 
     //Config
     const polybori::BoolePolyRing* ring;

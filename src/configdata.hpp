@@ -57,6 +57,12 @@ struct ConfigData {
     uint64_t numConfl_inc = 10000;
     uint64_t numConfl_lim = 100000;
     unsigned int numThreads = 1;
+
+    // In-place ANF rewrite rules
+    int doRewrite = true;         // master switch
+    int doBinomRed = true;        // reduction modulo monomial/binomial eqs
+    uint32_t binomRedLen = 2;     // max terms of an equation used as a rule
+    uint32_t rewriteRounds = 10;  // max rounds of all rules per call
 };
 
 }
