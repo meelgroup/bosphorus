@@ -59,6 +59,10 @@ out the solution:
 $ ./bosphorus --anfread test.anf --anfwrite out.anf --cnfwrite out.cnf --solvewrite solution
 ```
 
+The input file can also be given as a plain positional argument: a file ending
+in `.anf` is read as ANF and one ending in `.cnf` is read as CNF, so the above
+is the same as `./bosphorus test.anf --anfwrite out.anf ...`.
+
 The simplified ANF is in `out.anf`:
 ```
 $ cat out.anf

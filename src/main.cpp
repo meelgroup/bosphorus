@@ -162,6 +162,10 @@ void parseOptions(int argc, char* argv[])
         .flag()
         .help("print version number and exit");
     // Input/Output
+    program.add_argument("input")
+        .nargs(argparse::nargs_pattern::optional)
+        .default_value(string())
+        .help("Input file. Treated as --anfread if it ends in .anf, --cnfread if it ends in .cnf");
     add_str_arg("--anfread", anfInput, "Read ANF from this file");
     add_str_arg("--cnfread", cnfInput, "Read CNF from this file");
     add_str_arg("--anfwrite", anfOutput, "Write ANF output to file");
@@ -242,6 +246,36 @@ void parseOptions(int argc, char* argv[])
     // I/O checks
     readANF = program.is_used("--anfread");
     readCNF = program.is_used("--cnfread");
+
+    // Positional input file: infer ANF/CNF from the extension
+    const string posInput = program.get<string>("input");
+    if (!posInput.empty()) {
+        auto ends_with = [&](const string& suffix) {
+            return posInput.size() >= suffix.size() &&
+                   posInput.compare(posInput.size() - suffix.size(),
+                                    suffix.size(), suffix) == 0;
+        };
+        if (ends_with(".anf")) {
+            if (readANF) {
+                cerr << "ERROR: input file given both as positional argument and via --anfread\n";
+                exit(-1);
+            }
+            anfInput = posInput;
+            readANF = true;
+        } else if (ends_with(".cnf")) {
+            if (readCNF) {
+                cerr << "ERROR: input file given both as positional argument and via --cnfread\n";
+                exit(-1);
+            }
+            cnfInput = posInput;
+            readCNF = true;
+        } else {
+            cerr << "ERROR: cannot tell whether '" << posInput
+                 << "' is ANF or CNF: it must end in .anf or .cnf, "
+                    "or be given via --anfread/--cnfread\n";
+            exit(-1);
+        }
+    }
     writeANF = program.is_used("--anfwrite");
     writeCNF = program.is_used("--cnfwrite");
 
