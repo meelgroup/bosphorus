@@ -157,6 +157,35 @@ size_t ANF::readFile(const std::string& filename)
             continue;
         }
 
+        // A line that is just a comma-separated list of variables, e.g.
+        // "x1, x2, x3, ..." as some generators write at the top of the file
+        // to declare them, is not an equation.
+        if (temp.find(',') != std::string::npos) {
+            bool decl = true;
+            std::istringstream iss(temp);
+            std::string tok;
+            while (std::getline(iss, tok, ',')) {
+                size_t a = tok.find_first_not_of(" \t\r");
+                size_t b = tok.find_last_not_of(" \t\r");
+                if (a == std::string::npos) { decl = false; break; }
+                tok = tok.substr(a, b - a + 1);
+                int i;
+                char extra;
+                if (sscanf(tok.c_str(), "x%d%c", &i, &extra) != 1 &&
+                    sscanf(tok.c_str(), "x(%d)%c", &i, &extra) != 1) {
+                    decl = false;
+                    break;
+                }
+                maxVar = std::max(maxVar, (size_t)i);
+            }
+            if (decl) {
+                if (config.verbosity >= 2) {
+                    cout << "c [ANF Input] skipping variable declaration line" << endl;
+                }
+                continue;
+            }
+        }
+
         BoolePolynomial eq(*ring);
         BoolePolynomial eqDesc(*ring);
         // Terms of eq are collected and summed pairwise at the end: adding

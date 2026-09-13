@@ -107,6 +107,9 @@ def read_anf(path):
             line = line.strip()
             if not line or line.startswith('c'):
                 continue
+            if ',' in line and all(re.fullmatch(r'x\(?\d+\)?', t.strip())
+                                   for t in line.split(',')):
+                continue  # a variable declaration line, not an equation
             polys.append(Parser(line).parse())
     return polys
 
