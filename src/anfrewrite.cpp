@@ -182,6 +182,10 @@ size_t ANF::reduce_by_short_polys()
         size_t round_rewrites = 0;
         for (size_t i = 0; i < eqs.size(); i++) {
             if (eqs[i].isConstant()) continue;
+            // XNF-preserving mode: products of linerals are left alone (a
+            // reduction would almost never keep the product form, and
+            // trying costs a pass over millions of monomials)
+            if (keep_xnf == 1 && eqs[i].deg() >= 2) continue;
             BoolePolynomial poly = eqs[i];
             bool changed = false;
             // Reduce until no monomial is divisible by any rule's lead. Each
@@ -261,8 +265,10 @@ size_t ANF::shorten_polys()
     // NOTE: BooleMonomial::hash() is the address of the ZDD node, and the
     // monomials produced while iterating a polynomial are temporaries whose
     // nodes get recycled, so it cannot key a map. stableHash() is structural.
+    // In XNF-preserving mode only the linear equations take part.
     unordered_map<mhash, vector<size_t> > occ_m;
     for (size_t i = 0; i < eqs.size(); i++) {
+        if (keep_xnf == 1 && eqs[i].deg() >= 2) continue;
         for (const BooleMonomial& t : eqs[i]) {
             occ_m[t.stableHash()].push_back(i);
         }
@@ -295,6 +301,7 @@ size_t ANF::shorten_polys()
         if (budget < 0 || cpuTime() > config.maxTime) break;
         const BoolePolynomial& f = eqs[f_idx];
         if (f.isConstant()) continue;
+        if (keep_xnf == 1 && f.deg() >= 2) continue;
         const size_t f_len = f.length();
         const int f_deg = f.deg();
 
