@@ -32,6 +32,8 @@ SOFTWARE.
 #include "replacer.hpp"
 #include "time_mem.h"
 #include "bosphincludes.hpp"
+#include "anfstats.hpp"
+#include <memory>
 #include "elimlin.hpp"
 #include "extendedlinearization.hpp"
 #include "simplifybysat.hpp"
@@ -460,8 +462,18 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
              << (int)iters << endl;
 
         static const char* strategy_str[] = {"XL", "ElimLin", "SAT"};
+        static const char* rule_str[] = {"xl", "elimlin", "sat-simp"};
         const double startTime = cpuTime();
         int num_learnt = 0;
+
+        // Prints the ANF stats before the strategy runs and, when it goes
+        // out of scope at the end of this iteration, after it (and after
+        // the propagation of what it learnt).
+        std::unique_ptr<BLib::SimpStatsScope> stats_scope;
+        static const int* const enabled[] = {&dat->config.doXL, &dat->config.doEL, &dat->config.doSAT};
+        if (countdowns[subiter] == 0 && *enabled[subiter]) {
+            stats_scope.reset(new BLib::SimpStatsScope(*anf, rule_str[subiter]));
+        }
 
         if (countdowns[subiter] > 0) {
             cout << "c [" << strategy_str[subiter] << "] waiting for "

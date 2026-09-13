@@ -38,6 +38,7 @@ struct ConfigData {
     bool writecomments = false;
     bool printProcessedANF = false;
     uint32_t verbosity = 2;
+    int color = 2; // 0 = never, 1 = always, 2 = auto (tty && !NO_COLOR)
     int simplify = 1;
 
     // CNF conversion

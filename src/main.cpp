@@ -173,6 +173,8 @@ void parseOptions(int argc, char* argv[])
     add_arg2("-v", "--verb", config.verbosity, fc_integral<uint32_t>,
         "Verbosity setting: 0(slient) - 3(noisy)");
     add_arg("--simplify", config.simplify, fc_integral<int>, "Simplify ANF");
+    add_arg("--color", config.color, fc_integral<int>,
+        "Colour the [simp-stats] lines: 0 = never, 1 = always, 2 = auto (terminal and NO_COLOR unset)");
     add_flag("--solve", solve_with_cms, "Solve the resulting ANF");
     add_flag("--solve-xnf", solve_xnf,
         "Solve the resulting ANF, tuning the SAT solver for XOR-heavy (XNF) problems");

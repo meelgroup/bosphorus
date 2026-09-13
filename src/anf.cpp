@@ -363,7 +363,24 @@ size_t ANF::readFile(const std::string& filename)
     return maxVar;
 }
 
-void print_solution_map(std::ofstream* ) { }
+ANFStats ANF::get_stats() const
+{
+    ANFStats s;
+    s.eqs = eqs.size();
+    for (const BoolePolynomial& poly : eqs) {
+        s.monoms += poly.length();
+        const int deg = poly.deg();
+        if (deg <= 1) s.lin_eqs++;
+        else s.nonlin_eqs++;
+        if (deg > 0 && (uint64_t)deg > s.max_deg) s.max_deg = deg;
+    }
+    s.free_vars = replacer->getNumUnknownVars();
+    s.set_vars = replacer->getNumSetVars();
+    s.repl_vars = replacer->getNumReplacedVars();
+    s.mem_mb = memUsed() / (1024ULL * 1024ULL);
+    s.time = cpuTime();
+    return s;
+}
 
 // KMA Chai: Check if this polynomial can cause further ANF propagation
 bool ANF::check_if_need_update(const BoolePolynomial& poly,
@@ -544,6 +561,7 @@ bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
 
 bool ANF::propagate()
 {
+    SimpStatsScope scope(*this, "anf-prop");
     double myTime = cpuTime();
     if (config.verbosity) {
         cout << "c [ANF prop] Running ANF propagation..." << endl;

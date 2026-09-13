@@ -32,6 +32,7 @@ SOFTWARE.
 #include <unordered_set>
 #include <vector>
 
+#include "anfstats.hpp"
 #include "configdata.hpp"
 #include "evaluator.hpp"
 #include "replacer.hpp"
@@ -68,6 +69,8 @@ class ANF
     bool propagate();
     inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
     void printStats() const;
+    ANFStats get_stats() const;
+    const ConfigData& get_config() const { return config; }
     void print_solution_map(std::ofstream* ofs);
     void get_solution_map(map<uint32_t, VarMap>& ret) const;
 
@@ -136,6 +139,10 @@ class ANF
     vector<vector<size_t> > occur; //occur[var] -> index of polys where the variable occurs
 
     size_t new_equations_begin = 0;
+
+    // nesting depth of the SimpStatsScope objects currently alive
+    unsigned stats_depth = 0;
+    friend class SimpStatsScope;
 
     friend std::ostream& operator<<(std::ostream& os, const ANF& anf);
 };

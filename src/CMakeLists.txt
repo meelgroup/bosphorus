@@ -23,6 +23,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/GitSHA1.cpp.in" "${CMAKE_CURRENT_BIN
 
 set(bosph_lib_files
     anf.cpp
+    anfstats.cpp
     cnf.cpp
     anfcnfutils.cpp
     replacer.cpp
