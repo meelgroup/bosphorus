@@ -98,6 +98,8 @@ public:
     static void print_anf(ANF* a);
 
     vector<Clause> get_clauses(CNF* cnf);
+    /// native XOR clauses of the CNF (XOR(vars) = rhs), only with --xorcls
+    vector<std::pair<vector<uint32_t>, bool> > get_xor_clauses(CNF* cnf);
     vector<Clause> get_learnt(ANF* anf);
 
 private:

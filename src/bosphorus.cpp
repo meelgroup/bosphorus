@@ -57,6 +57,7 @@ public:
     PrivateData()
     {
         sat_config.doPartner = false;
+        sat_config.xorClauses = true; // the solver is CryptoMiniSat: XORs are native
     }
     BoolePolyRing* pring = nullptr;
     vector<Clause> clauses_needed_for_anf_import;
@@ -96,6 +97,10 @@ void output_anf_to_cnf_map(const BLib::ANF* anf, const BLib::CNF* cnf,
                 break;
             case BLib::CNF::kind_cut:
                 ofs << "c Internal XOR cut " << i + 1 << " = "
+                    << cnf->getPolyForVar(i) << endl;
+                break;
+            case BLib::CNF::kind_lineral:
+                ofs << "c Internal ANF map " << i + 1 << " = "
                     << cnf->getPolyForVar(i) << endl;
                 break;
         }
@@ -719,6 +724,12 @@ vector<Clause> Bosphorus::get_learnt(ANF* a)
     return cnf->get_clauses_simple();
 }
 
+vector<std::pair<vector<uint32_t>, bool> > Bosphorus::get_xor_clauses(CNF* c)
+{
+    auto cnf = (BLib::CNF*)c;
+    return cnf->getXorClauses();
+}
+
 vector<Clause> Bosphorus::get_clauses(CNF* c)
 {
     auto cnf = (BLib::CNF*)c;
@@ -736,6 +747,7 @@ void Bosphorus::set_config(void* cfg)
     dat->config = *(BLib::ConfigData*)cfg;
     dat->sat_config = dat->config;
     dat->sat_config.doPartner = false;
+    dat->sat_config.xorClauses = true;
 }
 
 const char* Bosphorus::get_compilation_env()

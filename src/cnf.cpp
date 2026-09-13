@@ -30,6 +30,7 @@ SOFTWARE.
 
 #include "dimacscache.hpp"
 #include "anfcnfutils.hpp"
+#include "linfactor.hpp"
 
 using namespace BLib;
 
@@ -159,7 +160,9 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
     }
 
     vector<Clause> setOfClauses;
-    if (poly.deg() > 1 && poly.nUsedVariables() <= config.brickestein_algo_cutoff &&
+    if (config.doXnf && poly.deg() > 1 && tryAddingAsXnf(poly, setOfClauses)) {
+        addedAsXnf++;
+    } else if (poly.deg() > 1 && poly.nUsedVariables() <= config.brickestein_algo_cutoff &&
         BrickesteinAlgo32(poly, setOfClauses)) {
         addedAsCNF++;
     } else {
@@ -197,10 +200,72 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
         for (const BooleMonomial& m : singles) {
             xor_vars.push_back(addBooleMonomial(m));
         }
-        addXorWithCuts(xor_vars, rhs, setOfClauses);
+        addXor(xor_vars, rhs, setOfClauses);
     }
 
     clauses.push_back(make_pair(setOfClauses, poly));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// XNF: a polynomial that is a product of linerals (l_1 + c_1)...(l_k + c_k)
+// is the clause "l_1 = c_1 or ... or l_k = c_k". Every lineral with more
+// than one variable gets one CNF variable y equal to its XOR, shared between
+// all clauses that use the lineral, and the clause is written over those.
+// This keeps the linerals whole: CryptoMiniSat then sees one XOR per lineral
+// instead of the chain of cut pieces the standard linearisation produces,
+// and its Gauss-Jordan matrices stay small.
+///////////////////////////////////////////////////////////////////////////////
+
+bool CNF::tryAddingAsXnf(const BoolePolynomial& poly, vector<Clause>& setOfClauses)
+{
+    vector<Lineral> factors;
+    if (!factor_into_linerals(poly, factors) || factors.size() < 2) return false;
+
+    vector<Lit> lits;
+    for (const Lineral& f : factors) {
+        // literal "l = c": for a single variable v that is v (c = 1) or -v
+        if (f.vars.size() == 1) {
+            const uint32_t v = monomMap.find(BooleVariable(f.vars[0], anf.getRing()).hash())->second;
+            lits.push_back(Lit(v, !f.c));
+        } else {
+            lits.push_back(Lit(lineralVar(f.vars), !f.c));
+        }
+    }
+    setOfClauses.push_back(Clause(lits));
+    return true;
+}
+
+uint32_t CNF::lineralVar(const vector<uint32_t>& anf_vars)
+{
+    const auto it = lineralMap.find(anf_vars);
+    if (it != lineralMap.end()) return it->second;
+
+    BoolePolynomial l(anf.getRing());
+    vector<uint32_t> cnf_vars;
+    for (const uint32_t v : anf_vars) {
+        l += BooleVariable(v, anf.getRing());
+        cnf_vars.push_back(monomMap.find(BooleVariable(v, anf.getRing()).hash())->second);
+    }
+    const uint32_t y = newVar(kind_lineral, l);
+    lineralMap[anf_vars] = y;
+    numLineralVars++;
+
+    // y + l = 0
+    vector<Clause> setOfClauses;
+    cnf_vars.push_back(y);
+    addXor(cnf_vars, false, setOfClauses);
+    clauses.push_back(std::make_pair(setOfClauses, l)); // l is what y stands for
+    return y;
+}
+
+void CNF::addXor(const vector<uint32_t>& vars, bool rhs,
+                 vector<Clause>& setOfClauses)
+{
+    if (!config.xorClauses || vars.size() <= 1) {
+        addXorWithCuts(vars, rhs, setOfClauses);
+        return;
+    }
+    xor_clauses.push_back(std::make_pair(vars, rhs));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -720,6 +785,7 @@ uint32_t CNF::getVarForMonom(const BooleMonomial& mono) const
 uint64_t CNF::getNumAllLits() const
 {
     uint64_t numLits = 0;
+    for (const XorClause& x : xor_clauses) numLits += x.first.size();
     for (vector<pair<vector<Clause>, BoolePolynomial> >::const_iterator
              it = clauses.begin(),
              end = clauses.end();
@@ -737,7 +803,7 @@ uint64_t CNF::getNumAllLits() const
 
 uint64_t CNF::getNumAllClauses() const
 {
-    uint64_t numClauses = 0;
+    uint64_t numClauses = xor_clauses.size();
     for (vector<pair<vector<Clause>, BoolePolynomial> >::const_iterator
              it = clauses.begin(),
              end = clauses.end();

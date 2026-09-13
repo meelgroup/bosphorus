@@ -79,7 +79,7 @@ class CNF
     /// What a CNF variable stands for: an ANF variable, a monomial, a
     /// partner chunk (a sum of monomials folded into one variable), or a
     /// partial sum introduced when cutting an XOR.
-    enum VarKind : uint8_t { kind_var, kind_monom, kind_chunk, kind_cut };
+    enum VarKind : uint8_t { kind_var, kind_monom, kind_chunk, kind_cut, kind_lineral };
     VarKind getVarKind(const uint32_t var) const { return varKind[var]; }
     const BoolePolynomial& getPolyForVar(const uint32_t var) const { return revCombinedMap[var]; }
     uint32_t getVarForMonom(const BooleMonomial& mono) const;
@@ -90,6 +90,9 @@ class CNF
     size_t getAddedAsComplexANF() const;
     const vector<pair<vector<Clause>, BoolePolynomial> >& getClauses() const;
     vector<Clause> get_clauses_simple() const;
+    /// native XOR clauses (only when config.xorClauses): XOR(vars) = rhs
+    typedef pair<vector<uint32_t>, bool> XorClause;
+    const vector<XorClause>& getXorClauses() const { return xor_clauses; }
     uint32_t getNumVars() const;
     uint64_t getNumAllLits() const;
     uint64_t getNumAllClauses() const;
@@ -112,9 +115,15 @@ class CNF
                       vector<BooleMonomial>& singles) const;
     uint32_t newVar(VarKind kind, const BoolePolynomial& meaning);
 
-    //XOR of CNF variables == rhs, cut into pieces of at most cutNum
+    //XOR of CNF variables == rhs: a native xor clause, or cut into pieces
+    //of at most cutNum
+    void addXor(const vector<uint32_t>& vars, bool rhs,
+                vector<Clause>& setOfClauses);
     void addXorWithCuts(const vector<uint32_t>& vars, bool rhs,
                         vector<Clause>& setOfClauses);
+    //XNF: a polynomial that is a product of linerals
+    bool tryAddingAsXnf(const BoolePolynomial& poly, vector<Clause>& setOfClauses);
+    uint32_t lineralVar(const vector<uint32_t>& vars);
     uint32_t hammingWeight(uint64_t num) const;
     void addEveryCombination(vector<uint32_t>& vars, bool isTrue,
                              vector<Clause>& thisClauses) const;
@@ -136,6 +145,9 @@ class CNF
     std::unordered_set<VarVec, VarVecHash> monomVarsVV; // monomials that have a CNF var
     std::unordered_map<VarVec, uint32_t, VarVecHash>
         chunkMap; // a partner chunk (its terms, separated by UINT32_MAX) -> inside var
+    std::unordered_map<VarVec, uint32_t, VarVecHash>
+        lineralMap; // a lineral (its variables) -> the inside var equal to its XOR
+    vector<XorClause> xor_clauses;
     static VarVec chunkKey(const vector<VarVec>& cover);
     uint32_t next_cnf_var = 0; ///<CNF variable counter
 
@@ -148,6 +160,8 @@ class CNF
     size_t numChunkVars = 0;
     size_t numChunkTerms = 0; // monomials absorbed into chunks
     size_t numCutVars = 0;
+    size_t numLineralVars = 0;
+    size_t addedAsXnf = 0;
 };
 
 inline void CNF::print_without_header(std::ostream& os) const
@@ -158,6 +172,15 @@ inline void CNF::print_without_header(std::ostream& os) const
             os << "c " << set_of_cls.second << std::endl;
             os << "c ------------\n";
         }
+    }
+    // CryptoMiniSat's xor clause syntax: "x a b c 0" means a ^ b ^ c = 1,
+    // and negating a literal negates the sum
+    for (const XorClause& x : xor_clauses) {
+        os << "x";
+        for (size_t i = 0; i < x.first.size(); i++) {
+            os << ' ' << ((i == 0 && !x.second) ? "-" : "") << (x.first[i] + 1);
+        }
+        os << " 0" << std::endl;
     }
 }
 
@@ -225,7 +248,8 @@ inline void CNF::printStats() const
          << " anf_vars " << anf.getRing().nVariables()
          << " monom_vars " << numMonomVars << " chunk_vars " << numChunkVars
          << " chunk_terms " << numChunkTerms << " cut_vars " << numCutVars
-         << endl;
+         << " lineral_vars " << numLineralVars << " xnf_cls " << addedAsXnf
+         << " xor_cls " << xor_clauses.size() << endl;
 }
 
 }

@@ -47,6 +47,7 @@ class SimplifyBySat
     const ConfigData& config;
     const CNF& cnf;
     CMSat::SATSolver* solver;
+    size_t xors_added = 0; // how many of cnf.getXorClauses() are in the solver
 
     void addClausesToSolver(size_t beg);
     int extractUnitaries(vector<BoolePolynomial>& loop_learnt);

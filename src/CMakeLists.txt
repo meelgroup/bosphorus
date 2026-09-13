@@ -25,6 +25,7 @@ set(bosph_lib_files
     anf.cpp
     anfstats.cpp
     anfrewrite.cpp
+    linfactor.cpp
     cnf.cpp
     anfcnfutils.cpp
     replacer.cpp

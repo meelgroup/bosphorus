@@ -64,6 +64,10 @@ void SimplifyBySat::addClausesToSolver(size_t beg)
             solver->add_clause(*lits2);
         }
     }
+    const auto& xors = cnf.getXorClauses();
+    for (; xors_added < xors.size(); xors_added++) {
+        solver->add_xor_clause(xors[xors_added].first, xors[xors_added].second);
+    }
 }
 
 int SimplifyBySat::extractUnitaries(vector<BoolePolynomial>& loop_learnt)

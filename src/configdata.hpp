@@ -45,6 +45,8 @@ struct ConfigData {
     uint32_t cutNum = 5;
     uint32_t brickestein_algo_cutoff = 10;
     int doPartner = true; // Jovanovic-Kreuzer partner strategies (LPS/DPS/QPS/CPS)
+    int doXnf = true;      // encode products of linear factors as XNF clauses
+    int xorClauses = false; // emit XORs as native CryptoMiniSat xor clauses instead of cutting them
 
     // Processes
     double maxTime = 1e20;
