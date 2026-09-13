@@ -34,6 +34,7 @@ SOFTWARE.
 
 #include "anfstats.hpp"
 #include "configdata.hpp"
+#include "linfactor.hpp"
 #include "evaluator.hpp"
 #include "replacer.hpp"
 #include <polybori/polybori.h>
@@ -94,6 +95,12 @@ class ANF
     inline bool hasPolynomial(const BoolePolynomial& p) const;
     const BoolePolyRing& getRing() const;
     const vector<BoolePolynomial>& getEqs() const;
+    /// The lineral factorisation of equation idx if known (a product of
+    /// >= 2 linerals, i.e. an XNF clause), else empty. Found once with
+    /// factor_into_linerals() and then maintained through propagation, so
+    /// it stays known even when substitutions make the factors share
+    /// variables and the expanded polynomial can no longer be factored.
+    const vector<Lineral>& getFactors(size_t idx) const { return factors[idx]; }
     inline const vector<lbool>& getFixedValues() const;
     inline const eqs_hash_t& getEqsHash(void) const;
     const vector<vector<size_t> >& getOccur() const;
@@ -124,7 +131,12 @@ class ANF
     void removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx);
     void removeEquations(std::vector<size_t>& eq2r);
     bool updateEquations(size_t idx, const BoolePolynomial newpoly,
-                         vector<size_t>& empty_equations);
+                         vector<size_t>& empty_equations,
+                         const vector<Lineral>* newfactors = nullptr);
+    /// factors of eq idx after the replacer's current substitutions,
+    /// verified against newpoly; false if unknown
+    bool substituted_factors(size_t idx, const BoolePolynomial& newpoly,
+                             vector<Lineral>& out);
     void checkSimplifiedPolysContainNoSetVars() const;
     bool containsMono(const BooleMonomial& mono1,
                       const BooleMonomial& mono2) const;
@@ -150,6 +162,7 @@ class ANF
 
     //State
     vector<BoolePolynomial> eqs;
+    vector<vector<Lineral> > factors; // parallel to eqs, see getFactors()
     eqs_hash_t eqs_hash;
     Replacer* replacer;
     vector<vector<size_t> > occur; //occur[var] -> index of polys where the variable occurs
@@ -168,6 +181,7 @@ inline ANF::ANF(const ANF& other, const anf_no_replacer_tag)
       config(other.config),
       comments(other.comments),
       eqs(other.eqs),
+      factors(other.factors),
       eqs_hash(other.eqs_hash),
       replacer(nullptr),
       occur(other.occur),
@@ -318,6 +332,7 @@ ANF& ANF::operator=(const ANF& other)
 {
     //assert(updatedVars.empty() && other.updatedVars.empty());
     eqs = other.eqs;
+    factors = other.factors;
     *replacer = *other.replacer;
     occur = other.occur;
     return *this;

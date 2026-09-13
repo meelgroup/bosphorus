@@ -111,3 +111,66 @@ bool BLib::factor_into_linerals(const BoolePolynomial& poly,
     }
     return true;
 }
+
+BoolePolynomial BLib::expand_linerals(const BoolePolyRing& ring,
+                                      const vector<Lineral>& factors)
+{
+    BoolePolynomial product(true, ring);
+    for (const Lineral& l : factors) {
+        BoolePolynomial f(l.c, ring);
+        for (const uint32_t v : l.vars) f += ring.variable(v);
+        product *= f;
+    }
+    return product;
+}
+
+namespace {
+// removes v from l if present; returns whether it was present
+bool erase_var(Lineral& l, uint32_t v)
+{
+    auto it = std::lower_bound(l.vars.begin(), l.vars.end(), v);
+    if (it == l.vars.end() || *it != v) return false;
+    l.vars.erase(it);
+    return true;
+}
+// toggles w in l (x + w + w = x)
+void toggle_var(Lineral& l, uint32_t w)
+{
+    auto it = std::lower_bound(l.vars.begin(), l.vars.end(), w);
+    if (it != l.vars.end() && *it == w) l.vars.erase(it);
+    else l.vars.insert(it, w);
+}
+// after a substitution: drop factors equal to 1, report a factor equal to 0
+bool normalise(vector<Lineral>& factors)
+{
+    vector<Lineral> out;
+    for (const Lineral& l : factors) {
+        if (l.vars.empty()) {
+            if (!l.c) { factors.clear(); return false; }
+            continue; // factor 1
+        }
+        out.push_back(l);
+    }
+    factors.swap(out);
+    return true;
+}
+}
+
+bool BLib::subst_lineral_const(vector<Lineral>& factors, uint32_t v, bool c)
+{
+    for (Lineral& l : factors) {
+        if (erase_var(l, v)) l.c ^= c;
+    }
+    return normalise(factors);
+}
+
+bool BLib::subst_lineral_var(vector<Lineral>& factors, uint32_t v, uint32_t w, bool c)
+{
+    for (Lineral& l : factors) {
+        if (erase_var(l, v)) {
+            toggle_var(l, w);
+            l.c ^= c;
+        }
+    }
+    return normalise(factors);
+}

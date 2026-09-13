@@ -102,7 +102,8 @@ class CNF
 
    private:
     void init();
-    void addBoolePolynomial(const BoolePolynomial& eq);
+    void addBoolePolynomial(const BoolePolynomial& eq,
+                            const vector<Lineral>* factors = nullptr);
     void addTrivialEquations();
     bool tryAddingPolyWithKarn(const BoolePolynomial& eq,
                                vector<Clause>& setOfClauses) const;
@@ -122,7 +123,8 @@ class CNF
     void addXorWithCuts(const vector<uint32_t>& vars, bool rhs,
                         vector<Clause>& setOfClauses);
     //XNF: a polynomial that is a product of linerals
-    bool tryAddingAsXnf(const BoolePolynomial& poly, vector<Clause>& setOfClauses);
+    bool tryAddingAsXnf(const BoolePolynomial& poly, const vector<Lineral>* factors,
+                        vector<Clause>& setOfClauses);
     uint32_t lineralVar(const vector<uint32_t>& vars);
     uint32_t hammingWeight(uint64_t num) const;
     void addEveryCombination(vector<uint32_t>& vars, bool isTrue,

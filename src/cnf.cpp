@@ -42,8 +42,8 @@ CNF::CNF(const ANF& _anf, const ConfigData& _config)
 
     // Add regular equations
     const vector<BoolePolynomial>& eqs = anf.getEqs();
-    for (const BoolePolynomial& poly : eqs) {
-        addBoolePolynomial(poly);
+    for (size_t i = 0; i < eqs.size(); i++) {
+        addBoolePolynomial(eqs[i], &anf.getFactors(i));
     }
 }
 
@@ -141,7 +141,8 @@ void CNF::addTrivialEquations()
     }
 }
 
-void CNF::addBoolePolynomial(const BoolePolynomial& poly)
+void CNF::addBoolePolynomial(const BoolePolynomial& poly,
+                             const vector<Lineral>* factors)
 {
     if (!in_clauses.insert(poly.hash()).second)
         return; // is already added
@@ -160,7 +161,7 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
     }
 
     vector<Clause> setOfClauses;
-    if (config.doXnf && poly.deg() > 1 && tryAddingAsXnf(poly, setOfClauses)) {
+    if (config.doXnf && poly.deg() > 1 && tryAddingAsXnf(poly, factors, setOfClauses)) {
         addedAsXnf++;
     } else if (poly.deg() > 1 && poly.nUsedVariables() <= config.brickestein_algo_cutoff &&
         BrickesteinAlgo32(poly, setOfClauses)) {
@@ -216,10 +217,15 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly)
 // and its Gauss-Jordan matrices stay small.
 ///////////////////////////////////////////////////////////////////////////////
 
-bool CNF::tryAddingAsXnf(const BoolePolynomial& poly, vector<Clause>& setOfClauses)
+bool CNF::tryAddingAsXnf(const BoolePolynomial& poly, const vector<Lineral>* known,
+                         vector<Clause>& setOfClauses)
 {
     vector<Lineral> factors;
-    if (!factor_into_linerals(poly, factors) || factors.size() < 2) return false;
+    if (known != nullptr && known->size() >= 2) {
+        factors = *known; // maintained by the ANF, may share variables
+    } else if (!factor_into_linerals(poly, factors) || factors.size() < 2) {
+        return false;
+    }
 
     vector<Lit> lits;
     for (const Lineral& f : factors) {
@@ -230,6 +236,12 @@ bool CNF::tryAddingAsXnf(const BoolePolynomial& poly, vector<Clause>& setOfClaus
         } else {
             lits.push_back(Lit(lineralVar(f.vars), !f.c));
         }
+    }
+    // with shared variables two factors can be the same lineral
+    std::sort(lits.begin(), lits.end());
+    lits.erase(std::unique(lits.begin(), lits.end()), lits.end());
+    for (size_t i = 0; i + 1 < lits.size(); i++) {
+        if (lits[i].var() == lits[i + 1].var()) return true; // tautology: no clause
     }
     setOfClauses.push_back(Clause(lits));
     return true;

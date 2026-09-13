@@ -42,4 +42,16 @@ struct Lineral {
 bool factor_into_linerals(const polybori::BoolePolynomial& poly,
                           std::vector<Lineral>& factors);
 
+/// The polynomial (l_1 + c_1) * ... * (l_k + c_k).
+polybori::BoolePolynomial expand_linerals(const polybori::BoolePolyRing& ring,
+                                          const std::vector<Lineral>& factors);
+
+/// Substitutes variable `v` by `w + c` (or by the constant `c` when
+/// `w == v`... see `subst_const`) in every factor. Variables may thereby
+/// become shared between factors, which is fine for an XNF clause.
+/// A factor that becomes the constant 1 is dropped; if one becomes the
+/// constant 0 the product is 0 and `factors` is cleared and false returned.
+bool subst_lineral_var(std::vector<Lineral>& factors, uint32_t v, uint32_t w, bool c);
+bool subst_lineral_const(std::vector<Lineral>& factors, uint32_t v, bool c);
+
 }

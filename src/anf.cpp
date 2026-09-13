@@ -511,6 +511,7 @@ bool ANF::addBoolePolynomial(const BoolePolynomial& poly)
     addPolyToOccur(poly, eqs.size());
 
     eqs.push_back(poly);
+    factors.push_back(vector<Lineral>());
 
     return true;
 }
@@ -567,8 +568,46 @@ inline void ANF::removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx)
     removePolyFromOccur(poly.usedVariables(), eq_idx);
 }
 
+bool ANF::substituted_factors(size_t idx, const BoolePolynomial& newpoly,
+                              vector<Lineral>& out)
+{
+    out.clear();
+    if (newpoly.isConstant() || newpoly.deg() < 2) return false;
+    vector<Lineral>& f = factors[idx];
+    if (f.empty()) {
+        // still a clean product? then factor it now, before it is changed
+        if (!factor_into_linerals(eqs[idx], f) || f.size() < 2) {
+            f.clear();
+            return false;
+        }
+    }
+    out = f;
+    // apply what the replacer knows to every factor
+    BooleMonomial used(*ring);
+    for (const Lineral& l : out) {
+        for (const uint32_t v : l.vars) used *= ring->variable(v);
+    }
+    for (const uint32_t v : used) {
+        const lbool val = replacer->getValue(v);
+        if (val != l_Undef) {
+            if (!subst_lineral_const(out, v, val == l_True)) return false;
+            continue;
+        }
+        const Lit lit = replacer->getReplaced(v);
+        if (lit.var() != v) {
+            if (!subst_lineral_var(out, v, lit.var(), lit.sign())) return false;
+        }
+    }
+    if (out.size() < 2 || expand_linerals(*ring, out) != newpoly) {
+        out.clear();
+        return false;
+    }
+    return true;
+}
+
 bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
-                          vector<size_t>& empty_equations)
+                          vector<size_t>& empty_equations,
+                          const vector<Lineral>* newfactors)
 {
     BoolePolynomial& poly = eqs[eq_idx];
     BooleMonomial prev_used = poly.usedVariables();
@@ -576,6 +615,8 @@ bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
     const size_t check = eqs_hash.erase(poly.hash());
     assert(check == 1);
     poly = newpoly;
+    if (newfactors != nullptr) factors[eq_idx] = *newfactors;
+    else factors[eq_idx].clear();
 
     if (poly.isConstant()) {
         //Check UNSAT
@@ -689,8 +730,12 @@ bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars,
                     continue;
                 }
 
-                if (!updateEquations(eq_idx, replacer->update(poly),
-                                     empty_equations)) {
+                const BoolePolynomial newpoly = replacer->update(poly);
+                vector<Lineral> newfactors;
+                const bool have_factors =
+                    substituted_factors(eq_idx, newpoly, newfactors);
+                if (!updateEquations(eq_idx, newpoly, empty_equations,
+                                     have_factors ? &newfactors : nullptr)) {
                     return false;
                 }
 
@@ -742,11 +787,14 @@ void ANF::removeEquations(std::vector<size_t>& eq2r)
         const size_t ii = remap[i].second;
         const BoolePolynomial& eq = eqs[ii];
         assert(eq.isConstant() && eq.isZero());
-        if (ii == eqs.size() - 1)
+        if (ii == eqs.size() - 1) {
             eqs.pop_back();
-        else {
+            factors.pop_back();
+        } else {
             eqs[ii] = eqs.back();
             eqs.pop_back();
+            factors[ii].swap(factors.back());
+            factors.pop_back();
             size_t f = remap[eqs.size()].first;
             remap[f].second = ii;
             remap[ii].first = f;
