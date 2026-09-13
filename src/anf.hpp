@@ -29,6 +29,7 @@ SOFTWARE.
 #include <iostream>
 #include <map>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -66,7 +67,17 @@ class ANF
     ANF(const ANF&) = delete;
     ~ANF();
 
-    size_t readFile(const string& filename);
+    /// Variable names of an ANF file. Variables written x<N> or x(N) have
+    /// index N; any other name (e.g. K[1], sbox_in[1,65], n_3) gets the next
+    /// free index in order of first appearance.
+    struct Names {
+        std::vector<std::string> names; // index -> name ("" for x<N> variables)
+        std::unordered_map<std::string, uint32_t> index; // name -> index
+        size_t ring_size = 1;
+    };
+    /// First pass over the file: the variables and the ring size.
+    static Names scanFile(const std::string& filename);
+    size_t readFile(const string& filename, const Names* names = nullptr);
     bool propagate();
     inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
     void printStats() const;
@@ -140,7 +151,10 @@ class ANF
     inline lbool value(const uint32_t var) const;
     inline Lit getReplaced(const uint32_t var) const;
     inline ANF& operator=(const ANF& other);
-    static size_t readFileForMaxVar(const std::string& filename);
+    static size_t readFileForMaxVar(const std::string& filename)
+    {
+        return scanFile(filename).ring_size - 1;
+    }
     set<size_t> get_proj_set() const;
     /// the projection ("c p show") set: variables 0..n-1
     void set_proj_set_all(size_t n)

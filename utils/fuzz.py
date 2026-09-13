@@ -15,7 +15,7 @@ import argparse, itertools, os, random, re, subprocess, sys, shutil
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'tests', 'utils'))
-from verify_anf import Parser, brute_force, parse_solution_lines  # noqa: E402
+from verify_anf import Parser, brute_force, parse_solution_lines, NAMES, is_declaration  # noqa: E402
 
 
 def rand_anf(rng):
@@ -58,11 +58,14 @@ def rand_anf(rng):
             for _ in range(nmon):
                 d = rng.choice([0, 1, 1, 2, 2, 3])
                 mons.append(frozenset(rng.sample(range(1, nvars + 1), min(d, nvars))))
-        txt = ' + '.join('1' if not m else '*'.join(('x(%d)' % v if style < 0.5 else 'x%d' % v)
-                                                 for v in sorted(m)) for m in mons)
+        def vname(v):
+            if style < 0.4: return 'x(%d)' % v
+            if style < 0.8: return 'x%d' % v
+            return ['K[%d]', 'S_in[1,%d]', 'n_%d', 'v%da'][v % 4] % v  # named variables
+        txt = ' + '.join('1' if not m else '*'.join(vname(v) for v in sorted(m)) for m in mons)
         lines.append(txt)
     if rng.random() < 0.3:
-        lines.insert(0, ', '.join('x%d' % v for v in range(1, nvars + 1)))
+        lines.insert(0, ', '.join(vname(v) for v in range(1, nvars + 1)))
     return '\n'.join(lines) + '\n', nvars
 
 
@@ -119,8 +122,9 @@ def check_anf(binary, rng, seed, tmpdir):
     # 1) all solutions vs brute force
     cmd = [binary, '--anfread', path, '--solve', '--allsol', '--verb', '0'] + opts
     rc, out = run(cmd)
-    polys = [Parser(l).parse() for l in txt.splitlines() if l and not l.startswith('c') and ',' not in l]
+    from verify_anf import read_anf
     try:
+        polys = read_anf(path)
         expected, nv = brute_force(polys)
     except SystemExit as e:
         return 'brute force: %s' % e, cmd, out
@@ -154,8 +158,14 @@ def check_anf(binary, rng, seed, tmpdir):
     rc, out2 = run(cmd2)
     if rc != 0:
         return 'anfwrite exit %d' % rc, cmd2, out2
-    lines = [l for l in open(outanf).read().splitlines() if l and not l.startswith('c') and ',' not in l]
-    polys2 = [Parser(l).parse() for l in lines]
+    # the written ANF uses the same names (x(N) for numbered variables);
+    # keep the name table of the input while parsing it
+    saved = dict(NAMES)
+    polys2 = []
+    for l in open(outanf).read().splitlines():
+        if not l or l.startswith('c') or (',' in l and is_declaration(l)): continue
+        polys2.append(Parser(l).parse())
+    NAMES.clear(); NAMES.update(saved)
     exp2, _ = brute_force(polys2)
     # brute_force() derives the variable count from the polys: compare on the common variables
     if exp2 != expected:

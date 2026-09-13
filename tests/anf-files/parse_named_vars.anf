@@ -1,0 +1,13 @@
+c RUN: %solver --anfread %s --solve --allsol --verb 0 | %verify allsol %s
+c RUN: %solver --anfread %s --anfwrite %t.anf --simplify 0 --verb 0
+c RUN: grep -q 'K\[1\]\*K\[2\] + S_after\[1,2\]' %t.anf
+c RUN: grep -q 'K\[2\] + n_3 + 1' %t.anf
+c RUN: %solver --anfread %s --solve --verb 0 | grep -q 'S_after\[1,2\]'
+c
+c Named variables (as e.g. the ascon instances use): every name gets an
+c index in order of first appearance, and the names are used when the
+c ANF and solutions are printed.
+K[1],  K[2],  S_after[1,2],  n_3
+K[1]*K[2] + S_after[1,2]
+K[2] + n_3 + 1
+x2 + x5

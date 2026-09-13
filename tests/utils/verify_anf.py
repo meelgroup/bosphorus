@@ -29,6 +29,54 @@ def poly_mul(a, b):
     return out
 
 
+NAME_RE = re.compile(r'[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?')
+NAMES = {}  # named variable -> index, as Bosphorus assigns them (see scan_names)
+
+
+def var_index(name):
+    """x<N> and x(N) have index N; other names are looked up in NAMES."""
+    m = re.fullmatch(r'[xX]\(?(\d+)\)?', name)
+    if m:
+        return int(m.group(1))
+    if name not in NAMES:
+        raise ValueError("unknown variable %r" % name)
+    return NAMES[name]
+
+
+def scan_names(path):
+    """Assign indices to named variables like Bosphorus: after the highest
+    x<N> index, in order of first appearance (declaration lines included)."""
+    NAMES.clear()
+    max_num, order = -1, []
+    with open(path) as f:
+        for line in f:
+            if line.startswith('c'):
+                continue
+            for m in re.finditer(r'[xX]\((\d+)\)', line):
+                max_num = max(max_num, int(m.group(1)))
+            for tok in NAME_RE.findall(line):
+                m = re.fullmatch(r'[xX](\d+)', tok)
+                if m:
+                    max_num = max(max_num, int(m.group(1)))
+                    continue
+                if tok in ('x', 'X'):
+                    continue
+                if tok not in order:
+                    order.append(tok)
+    for i, name in enumerate(order):
+        NAMES[name] = max_num + 1 + i
+
+
+VAR_RE = r'(?:[xX]\(\d+\)|' + NAME_RE.pattern + r')'
+DECL_RE = re.compile(r'\s*' + VAR_RE + r'(?:\s*,\s*' + VAR_RE + r')+\s*')
+
+
+def is_declaration(line):
+    """'v1, v2, v3': a comma separated list of variables (names may contain
+    commas inside brackets, so this is matched as a whole)."""
+    return DECL_RE.fullmatch(line.strip()) is not None
+
+
 class Parser:
     """poly := term ('+' term)* ; term := factor ('*' factor)* ;
        factor := '(' poly ')' | 'x' int | 'x(' int ')' | '0' | '1'"""
@@ -88,6 +136,10 @@ class Parser:
             return {frozenset([n])}
         if c.isdigit():
             return {ONE} if self.number() % 2 else set()
+        m = NAME_RE.match(self.s, self.i)
+        if m:
+            self.i = m.end()
+            return {frozenset([var_index(m.group(0))])}
         raise ValueError("unexpected %r at offset %d in %r" % (c, self.i, self.s))
 
     def number(self):
@@ -101,14 +153,14 @@ class Parser:
 
 
 def read_anf(path):
+    scan_names(path)
     polys = []
     with open(path) as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith('c'):
                 continue
-            if ',' in line and all(re.fullmatch(r'x\(?\d+\)?', t.strip())
-                                   for t in line.split(',')):
+            if ',' in line and is_declaration(line):
                 continue  # a variable declaration line, not an equation
             polys.append(Parser(line).parse())
     return polys
@@ -155,10 +207,10 @@ def parse_solution_lines(text, nvars):
             continue
         assign = {}
         for tok in line[2:].split():
-            m = re.fullmatch(r'(1\+)?x\((\d+)\)(\+1)?', tok)
+            m = re.fullmatch(r'(1\+)?(x\(\d+\)|' + NAME_RE.pattern + r')(\+1)?', tok)
             if not m:
                 sys.exit("verify_anf: cannot parse solution token %r" % tok)
-            assign[int(m.group(2))] = 1 if (m.group(1) or m.group(3)) else 0
+            assign[var_index(m.group(2))] = 1 if (m.group(1) or m.group(3)) else 0
         if sorted(assign) != list(range(nvars)):
             sys.exit("verify_anf: solution covers vars %s, expected 0..%d"
                      % (sorted(assign), nvars - 1))

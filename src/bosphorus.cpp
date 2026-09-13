@@ -181,14 +181,16 @@ Bosph::ANF* Bosphorus::read_anf(const char* fname)
     assert(fname != NULL);
     check_library_in_use();
 
-    // Find out maxVar in input ANF file
-    size_t maxVar = BLib::ANF::readFileForMaxVar(fname);
-
-    // Construct ANF
-    // ring size = maxVar + 1, because ANF variables start from x0
-    dat->pring = new BoolePolyRing(maxVar + 1);
+    // First pass: the variables (x<N> or named) and the ring size
+    const BLib::ANF::Names names = BLib::ANF::scanFile(fname);
+    dat->pring = new BoolePolyRing(names.ring_size);
+    for (size_t i = 0; i < names.names.size(); i++) {
+        if (!names.names[i].empty()) {
+            dat->pring->setVariableName(i, names.names[i].c_str());
+        }
+    }
     auto anf = new BLib::ANF(dat->pring, dat->config);
-    anf->readFile(fname);
+    anf->readFile(fname, &names);
     return (Bosph::ANF*)anf;
 }
 
@@ -458,6 +460,12 @@ uint32_t Bosphorus::get_max_var(const Bosph::CNF* c) const
 {
     auto cnf = (const BLib::CNF*)c;
     return cnf->getNumVars();
+}
+
+const char* Bosphorus::get_var_name(const ANF* a, uint32_t var) const
+{
+    auto anf = (const BLib::ANF*)a;
+    return anf->getRing().getVariableName(var);
 }
 
 uint32_t Bosphorus::get_max_var(const ANF* a) const

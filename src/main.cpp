@@ -530,7 +530,7 @@ int main(int argc, char* argv[])
 
 void print_solution_cnf_style(const Solution& solution);
 void check_solution(const ANF* anf, const Solution& solution);
-void print_solution_anf_style(const Solution& solution);
+void print_solution_anf_style(const Solution& solution, Bosph::Bosphorus* mylib, const ANF* anf);
 void clear_solution_file();
 void write_solution_to_file_cnf_style(const Solution& solution);
 void ban_solution(CMSat::SATSolver& solver, const Solution& solution, const std::set<size_t>& proj);
@@ -583,7 +583,7 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
         } else {
             solution.ret = l_False;
         }
-        print_solution_anf_style(solution);
+        print_solution_anf_style(solution, mylib, anf);
         write_solution_to_file_cnf_style(solution);
         if (ret == CMSat::l_True) {
             check_solution(anf, solution);
@@ -662,7 +662,7 @@ void ban_solution(CMSat::SATSolver& solver, const Solution& solution, const std:
     solver.add_clause(clause);
 }
 
-void print_solution_anf_style(const Solution& s)
+void print_solution_anf_style(const Solution& s, Bosph::Bosphorus* mylib, const ANF* anf)
 {
     if (s.ret == l_False) {
         cout << "s ANF-UNSATISFIABLE" << endl;
@@ -677,7 +677,7 @@ void print_solution_anf_style(const Solution& s)
             if (s.sol[i] == l_True) {
                 cout << "1+";
             }
-            cout << "x(" << i << ") ";
+            cout << mylib->get_var_name(anf, i) << ' ';
         }
     }
     cout << endl;
