@@ -131,6 +131,10 @@ class ANF
     bool rewrite_eq(size_t idx, const BoolePolynomial& newpoly,
                     unordered_set<uint32_t>& updatedVars,
                     vector<size_t>& empty_equations);
+    // XNF-preserving mode (config.keepXnf): true if `from` is a product of
+    // >= 2 linerals and `to` is nonlinear but not such a product
+    bool breaks_xnf(const BoolePolynomial& from, const BoolePolynomial& to) const;
+    int keep_xnf = -1; // -1: not decided yet (config.keepXnf == 2)
     bool finish_rewrites(unordered_set<uint32_t>& updatedVars,
                          vector<size_t>& empty_equations);
 

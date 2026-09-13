@@ -72,6 +72,7 @@ struct ConfigData {
     int doProbe = true;           // forced literals/equivalences/implications
     uint32_t probeVars = 8;       // only probe eqs with at most this many vars
     uint32_t rewriteRounds = 10;  // max rounds of all rules per call
+    int keepXnf = 2;              // never rewrite a product of linerals into a non-product: 0 off, 1 on, 2 auto (when most nonlinear eqs are such products)
 };
 
 }

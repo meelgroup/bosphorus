@@ -32,6 +32,7 @@ SOFTWARE.
 #include <iomanip>
 
 #include "anf.hpp"
+#include "linfactor.hpp"
 #include "time_mem.h"
 
 using std::cout;
@@ -87,6 +88,15 @@ bool ANF::rewrite_eq(size_t idx, const BoolePolynomial& newpoly,
         check_if_need_update(eqs[idx], updatedVars);
     }
     return true;
+}
+
+bool ANF::breaks_xnf(const BoolePolynomial& from, const BoolePolynomial& to) const
+{
+    if (keep_xnf != 1) return false;
+    if (to.isConstant() || to.deg() <= 1) return false;
+    vector<Lineral> f;
+    if (!factor_into_linerals(from, f) || f.size() < 2) return false;
+    return !(factor_into_linerals(to, f) && f.size() >= 2);
 }
 
 bool ANF::finish_rewrites(unordered_set<uint32_t>& updatedVars,
@@ -196,6 +206,7 @@ size_t ANF::reduce_by_short_polys()
                 if (poly.isConstant()) break;
             }
             if (!changed) continue;
+            if (breaks_xnf(eqs[i], poly)) continue;
 
             round_rewrites++;
             if (config.verbosity >= 5) {
@@ -311,6 +322,7 @@ size_t ANF::shorten_polys()
                 // cannot happen with an exact index; never make things worse
                 continue;
             }
+            if (breaks_xnf(eqs[p], newp)) continue;
             if (config.verbosity >= 5) {
                 cout << "c [poly-shorten] " << eqs[p] << "  -->  " << newp
                      << "  (by " << f << ")" << endl;
@@ -569,6 +581,27 @@ size_t ANF::probe_small_polys()
 size_t ANF::rewrite_inplace()
 {
     size_t total = 0;
+    if (keep_xnf == -1) {
+        if (config.keepXnf != 2) {
+            keep_xnf = config.keepXnf;
+        } else {
+            // auto: XNF-preserving when most nonlinear equations are
+            // products of linerals (XNF clauses written out as polynomials)
+            size_t nonlin = 0, products = 0;
+            vector<Lineral> f;
+            for (const BoolePolynomial& p : eqs) {
+                if (p.deg() < 2) continue;
+                nonlin++;
+                if (factor_into_linerals(p, f) && f.size() >= 2) products++;
+            }
+            keep_xnf = (nonlin > 0 && 2 * products >= nonlin) ? 1 : 0;
+            if (config.verbosity >= 1) {
+                cout << "c [rewrite] " << products << "/" << nonlin
+                     << " nonlinear eqs are products of linerals, XNF-preserving mode: "
+                     << keep_xnf << endl;
+            }
+        }
+    }
     for (unsigned round = 0; round < config.rewriteRounds; round++) {
         if (!getOK()) break;
         size_t changes = 0;

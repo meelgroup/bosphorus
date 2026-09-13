@@ -220,6 +220,8 @@ void parseOptions(int argc, char* argv[])
         "Rewrite rule lit-probe: forced literals, equivalences and implication-graph SCCs from small equations. Default: ON");
     add_arg("--probevars", config.probeVars, fc_integral<uint32_t>,
         "lit-probe only looks at equations with at most this many variables. Default: 8");
+    add_arg("--keepxnf", config.keepXnf, fc_integral<int>,
+        "Never rewrite an equation that is a product of linear factors (an XNF clause) into one that is not, so the XNF structure survives for the CNF encoding: 0 = off, 1 = on, 2 = auto (on when most nonlinear equations are such products). Default: 2");
     add_arg("--rewriterounds", config.rewriteRounds, fc_integral<uint32_t>,
         "Max rounds of the in-place rewrite rules per iteration. Default: 10");
 
