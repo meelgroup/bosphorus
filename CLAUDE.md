@@ -2,6 +2,9 @@
 
 ## Building
 - Build in `build/` with `make -j4` (never `-j$(nproc)`).
+- CryptoMiniSat is fetched with FetchContent; when a CMake file changes and
+  there is no network, reconfigure with
+  `cmake -DFETCHCONTENT_UPDATES_DISCONNECTED=ON ..` so the existing checkout is used.
 - The build already uses `-fno-omit-frame-pointer`, so frame-pointer call graphs work.
 
 ## Profiling
