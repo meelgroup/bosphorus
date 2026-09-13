@@ -185,20 +185,22 @@ def check_cnf(binary, rng, seed, tmpdir):
     path = os.path.join(tmpdir, 'in.cnf')
     open(path, 'w').write(txt)
     opts = rand_opts(rng)
-    cmd = [binary, '--cnfread', path, '--solve', '--verb', '0'] + opts
+    cmd = [binary, '--cnfread', path, '--solve', '--allsol', '--verb', '0'] + opts
     rc, out = run(cmd)
     if rc != 0:
         return 'exit %d' % rc, cmd, out
     sols = cnf_solutions(nvars, cls)
     sat = 's ANF-SATISFIABLE' in out
     unsat = 's ANF-UNSATISFIABLE' in out
-    if sat == unsat:
-        return 'no clear answer', cmd, out
+    if not sat and not unsat:
+        return 'no answer', cmd, out
     if sat != bool(sols):
         return 'wrong answer: brute force says %s' % ('SAT' if sols else 'UNSAT'), cmd, out
-    if sat:
-        # the model: "v x(0) 1+x(1) ..." over ANF variables x(i) = CNF variable i+1
-        m = re.search(r'^v (.*)$', out, re.M)
+    # every model "v x(0) 1+x(1) ..." (ANF variable x(i) = CNF variable i+1)
+    # must satisfy the CNF, and projected onto the CNF's variables the
+    # models must be exactly the brute-forced solutions
+    got = set()
+    for m in re.finditer(r'^v (.*)$', out, re.M):
         assign = {}
         for tok in m.group(1).split():
             true = tok.startswith('1+')  # "1+x(i)" is true, a bare "x(i)" is false
@@ -207,6 +209,9 @@ def check_cnf(binary, rng, seed, tmpdir):
         for c in cls:
             if not any(assign.get(abs(l), False) == (l > 0) for l in c):
                 return 'model does not satisfy the CNF', cmd, out
+        got.add(tuple(1 if assign.get(v, False) else 0 for v in range(1, nvars + 1)))
+    if got != sols:
+        return 'solution set differs: expected %d got %d' % (len(sols), len(got)), cmd, out
     return None, cmd, out
 
 

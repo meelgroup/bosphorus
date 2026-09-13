@@ -325,6 +325,10 @@ Bosph::ANF* Bosphorus::chunk_dimacs(Bosph::DIMACS* dim)
     // ring size = maxVar, because CNF variables start from 1
     dat->pring = new BoolePolyRing(maxVar);
     auto anf = new BLib::ANF(dat->pring, dat->config);
+    // the CNF's own variables are the projection set: --allsol enumerates
+    // the solutions over them, the auxiliary variables of chopped-up
+    // clauses are not part of a solution
+    anf->set_proj_set_all(orig_var);
     for (auto clause : chunked_clauses) {
         BoolePolynomial poly(1, *dat->pring);
         for (const Lit& l : clause.getLits()) {

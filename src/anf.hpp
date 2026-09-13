@@ -142,6 +142,12 @@ class ANF
     inline ANF& operator=(const ANF& other);
     static size_t readFileForMaxVar(const std::string& filename);
     set<size_t> get_proj_set() const;
+    /// the projection ("c p show") set: variables 0..n-1
+    void set_proj_set_all(size_t n)
+    {
+        proj_set.clear();
+        for (size_t i = 0; i < n; i++) proj_set.insert(i);
+    }
 
     // In-place rewrite rules (anfrewrite.cpp). Each returns the number of
     // changes it made; check getOK() afterwards, they may find UNSAT.
