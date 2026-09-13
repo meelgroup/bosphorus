@@ -545,13 +545,17 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
     vector<Clause> cls = mylib->get_clauses(cnf);
     CMSat::SATSolver solver;
     solver.set_num_threads(config.numThreads);
+    // The settings that work best on XOR-heavy systems (the same as
+    // "cryptominisat5 --sls 0 --autodisablegauss 0 --presimp 1"): Gauss-Jordan
+    // elimination is never disabled automatically. --solve-xnf additionally
+    // recovers XORs from the clauses and keeps every matrix, however small.
+    solver.set_sls(0);
+    solver.set_allow_otf_gauss();
+    solver.set_simplify_at_startup(1);
     if (solve_xnf) {
-        solver.set_sls(0);
         solver.set_find_xors(true);
-        solver.set_allow_otf_gauss();
         solver.set_max_num_matrices(1000000);
         solver.set_min_matrix_rows(1);
-        solver.set_simplify_at_startup(1);
     }
     solver.new_vars(mylib->get_max_var(cnf));
     for(const Bosph::Clause& c: cls) {
