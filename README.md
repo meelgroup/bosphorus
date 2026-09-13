@@ -201,9 +201,9 @@ once written as ANF. With Bosphorus's output (`bosphorus X.anf --el 0
 --maxmatrixrows 100000 --maxmatrixcols 100000 --maxnummatrices 1000000
 --minmatrixrows 1`, 200 s, one seed, models checked against the original
 ANF) solves 18 of the 21 instances against 13 for the benchmark's own CNF,
-and is 2-3x faster on the ones both solve; simplifying a 531-step instance
-takes about 8 seconds. Solver times vary 2-3x between seeds, so compare
-several.
+and is 2-3x faster on the ones both solve; with three solver seeds every
+instance is solved. Simplifying a 531-step instance takes about 8 seconds.
+Solver times vary 2-3x between seeds, so compare several.
 
 | instance | steps | known bits | benchmark CNF | Bosphorus output |
 |---|---|---|---|---|
@@ -211,10 +211,10 @@ several.
 | tmp0pckmywp | 354 | 34 | 54 s | 16 s |
 | tmpafl2snvs | 354 | 35 | 36 s | 10 s |
 | tmpc2byc16q | 354 | 37 | 11 s | 4 s |
-| tmpbi2n8e6d | 531 | 26 | timeout | timeout |
+| tmpbi2n8e6d | 531 | 26 | timeout | timeout (81 s with `--random 3`) |
 | tmp0c_s736b | 531 | 27 | timeout | 31 s |
-| tmpec79lh8f | 531 | 28 | timeout | timeout |
-| tmp65a5rlro | 531 | 29 | timeout | timeout |
+| tmpec79lh8f | 531 | 28 | timeout | timeout (141 s with `--random 2`) |
+| tmp65a5rlro | 531 | 29 | timeout | timeout (6 s with `--random 3`) |
 | tmpcatw2met | 531 | 30 | timeout | 27 s |
 | tmp4grsp1np | 531 | 31 | timeout | 103 s |
 | tmp3ce4vlbu | 531 | 33 | 53 s | 27 s |
