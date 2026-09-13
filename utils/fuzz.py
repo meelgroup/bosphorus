@@ -19,7 +19,9 @@ from verify_anf import Parser, brute_force, parse_solution_lines  # noqa: E402
 
 
 def rand_anf(rng):
-    nvars = rng.randint(2, 8)
+    # mostly small, sometimes up to 12 variables so that the linearisation
+    # paths for polynomials with more than 10 variables are exercised
+    nvars = rng.randint(2, 8) if rng.random() < 0.7 else rng.randint(9, 12)
     neqs = rng.randint(1, 9)
     lines = []
     style = rng.random()
@@ -51,7 +53,7 @@ def rand_anf(rng):
                 continue
             mons = sorted(terms, key=lambda t: sorted(t))
         else:
-            nmon = rng.randint(1, 6)
+            nmon = rng.randint(1, 6) if nvars <= 8 else rng.randint(4, 14)
             mons = []
             for _ in range(nmon):
                 d = rng.choice([0, 1, 1, 2, 2, 3])
