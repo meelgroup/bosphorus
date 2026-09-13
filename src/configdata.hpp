@@ -65,6 +65,8 @@ struct ConfigData {
     int doShorten = true;         // p -> p + f when that has fewer terms
     size_t shortenOccCap = 2000;  // ignore monomials in more eqs than this
     int64_t shortenBudget = 200000000; // work limit per call
+    int doProbe = true;           // forced literals/equivalences/implications
+    uint32_t probeVars = 8;       // only probe eqs with at most this many vars
     uint32_t rewriteRounds = 10;  // max rounds of all rules per call
 };
 

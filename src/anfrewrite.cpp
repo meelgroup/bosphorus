@@ -342,6 +342,227 @@ size_t ANF::shorten_polys()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// lit-probe: forced literals, equivalences and implications from small
+// equations, found by partial evaluation
+//
+// For an equation p = 0 in at most `config.probeVars` variables and a
+// variable v, p|v=0 == 1 means v = 0 is impossible, so v = 1 (and the same
+// for v = 1). For a pair (v, w) the four partial evaluations p|v=a,w=b == 1
+// give the binary clauses implied by p; two of them together are an
+// (anti-)equivalence v = w (+1), a single one is an implication. All
+// implications are collected into a graph and its strongly connected
+// components give further equivalences (impl-scc), exactly like SCC-based
+// variable replacement in CNF preprocessors.
+///////////////////////////////////////////////////////////////////////////////
+
+namespace {
+
+// Iterative Tarjan SCC on a graph over literals (2*nVars nodes).
+void tarjan_scc(const vector<vector<uint32_t> >& adj, vector<uint32_t>& comp)
+{
+    const uint32_t n = adj.size();
+    const uint32_t UNSEEN = std::numeric_limits<uint32_t>::max();
+    vector<uint32_t> index(n, UNSEEN), low(n, 0);
+    vector<char> on_stack(n, 0);
+    vector<uint32_t> stack;
+    comp.assign(n, UNSEEN);
+    uint32_t next_index = 0, next_comp = 0;
+
+    struct Frame {
+        uint32_t node;
+        size_t edge;
+    };
+    vector<Frame> call;
+    for (uint32_t root = 0; root < n; root++) {
+        if (index[root] != UNSEEN || adj[root].empty()) continue;
+        call.push_back({root, 0});
+        index[root] = low[root] = next_index++;
+        stack.push_back(root);
+        on_stack[root] = 1;
+        while (!call.empty()) {
+            Frame& fr = call.back();
+            const uint32_t v = fr.node;
+            if (fr.edge < adj[v].size()) {
+                const uint32_t w = adj[v][fr.edge++];
+                if (index[w] == UNSEEN) {
+                    index[w] = low[w] = next_index++;
+                    stack.push_back(w);
+                    on_stack[w] = 1;
+                    call.push_back({w, 0});
+                } else if (on_stack[w]) {
+                    low[v] = std::min(low[v], index[w]);
+                }
+                continue;
+            }
+            if (low[v] == index[v]) {
+                while (true) {
+                    const uint32_t w = stack.back();
+                    stack.pop_back();
+                    on_stack[w] = 0;
+                    comp[w] = next_comp;
+                    if (w == v) break;
+                }
+                next_comp++;
+            }
+            call.pop_back();
+            if (!call.empty()) {
+                const uint32_t u = call.back().node;
+                low[u] = std::min(low[u], low[v]);
+            }
+        }
+    }
+}
+
+inline uint32_t lit_node(uint32_t var, bool neg)
+{
+    return 2 * var + (neg ? 1 : 0);
+}
+
+}
+
+size_t ANF::probe_small_polys()
+{
+    SimpStatsScope scope(*this, "lit-probe");
+    const double myTime = cpuTime();
+    const size_t max_vars = config.probeVars;
+    size_t num_forced = 0, num_equiv = 0, num_impl = 0;
+
+    vector<BoolePolynomial> facts;
+    // implication graph over literals: node 2v = v is true, 2v+1 = v is false
+    vector<vector<uint32_t> > adj(2 * ring->nVariables());
+    auto add_clause2 = [&](uint32_t v, bool v_neg, uint32_t w, bool w_neg) {
+        // clause (lv | lw): ~lv -> lw and ~lw -> lv
+        adj[lit_node(v, !v_neg)].push_back(lit_node(w, w_neg));
+        adj[lit_node(w, !w_neg)].push_back(lit_node(v, v_neg));
+        num_impl++;
+    };
+
+    for (size_t i = 0; i < eqs.size(); i++) {
+        const BoolePolynomial& p = eqs[i];
+        if (p.isConstant() || p.nUsedVariables() > max_vars) continue;
+        if (p.nUsedVariables() <= 2 && p.deg() == 1) continue; // replacer's job
+
+        vector<uint32_t> vars;
+        for (const uint32_t v : p.usedVariables()) vars.push_back(v);
+        const BooleSet pset = p.set();
+        // p = p0 + v*p1, so p|v=0 = p0 and p|v=1 = p0 + p1
+        auto eval_one = [&](const BooleSet& s, uint32_t v, bool val) -> BooleSet {
+            const BooleSet s0 = s.subset0(v);
+            if (!val) return s0;
+            return s0.Xor(s.subset1(v));
+        };
+        auto is_one = [](const BooleSet& s) {
+            return s.isSingleton() && s.ownsOne();
+        };
+
+        vector<char> forced(vars.size(), 0); // 1: forced to 0, 2: forced to 1
+        for (size_t a = 0; a < vars.size(); a++) {
+            const uint32_t v = vars[a];
+            const BooleSet at0 = eval_one(pset, v, false);
+            const BooleSet at1 = eval_one(pset, v, true);
+            if (is_one(at0) && is_one(at1)) {
+                // p can never be 0 -- UNSAT
+                facts.push_back(BoolePolynomial(true, *ring));
+                break;
+            }
+            if (is_one(at0)) {
+                facts.push_back(BoolePolynomial(BooleVariable(v, *ring)) + BooleConstant(true));
+                forced[a] = 2;
+                num_forced++;
+            } else if (is_one(at1)) {
+                facts.push_back(BoolePolynomial(BooleVariable(v, *ring)));
+                forced[a] = 1;
+                num_forced++;
+            }
+        }
+
+        for (size_t a = 0; a < vars.size(); a++) {
+            if (forced[a]) continue;
+            const uint32_t v = vars[a];
+            const BooleSet v0 = eval_one(pset, v, false);
+            const BooleSet v1 = eval_one(pset, v, true);
+            for (size_t b = a + 1; b < vars.size(); b++) {
+                if (forced[b]) continue;
+                const uint32_t w = vars[b];
+                // bit (2*va + vb) set: assignment v=va, w=vb is impossible
+                unsigned bad = 0;
+                if (is_one(eval_one(v0, w, false))) bad |= 1 << 0;
+                if (is_one(eval_one(v0, w, true)))  bad |= 1 << 1;
+                if (is_one(eval_one(v1, w, false))) bad |= 1 << 2;
+                if (is_one(eval_one(v1, w, true)))  bad |= 1 << 3;
+                if (bad == 0) continue;
+                if ((bad & 0x9) == 0x9) { // (0,0) and (1,1) impossible: v = w + 1
+                    facts.push_back(BoolePolynomial(BooleVariable(v, *ring))
+                                    + BooleVariable(w, *ring) + BooleConstant(true));
+                    num_equiv++;
+                    continue;
+                }
+                if ((bad & 0x6) == 0x6) { // (0,1) and (1,0) impossible: v = w
+                    facts.push_back(BoolePolynomial(BooleVariable(v, *ring))
+                                    + BooleVariable(w, *ring));
+                    num_equiv++;
+                    continue;
+                }
+                // each impossible assignment (va, vb) is the clause (v != va | w != vb)
+                for (unsigned k = 0; k < 4; k++) {
+                    if (!(bad & (1u << k))) continue;
+                    const bool va = k & 2, vb = k & 1;
+                    add_clause2(v, va, w, vb);
+                }
+            }
+        }
+    }
+
+    // SCCs of the implication graph: all literals in one component are equal.
+    // Components come in mirrored pairs (negate every literal); the
+    // representative of a component is its smallest node, so exactly one of
+    // the two mirrors has a positive-literal (even) representative, and only
+    // that one is used to avoid reporting every equivalence twice.
+    size_t num_scc_equiv = 0;
+    {
+        vector<uint32_t> comp;
+        tarjan_scc(adj, comp);
+        vector<uint32_t> rep(comp.size(), std::numeric_limits<uint32_t>::max());
+        for (uint32_t node = 0; node < comp.size(); node++) {
+            const uint32_t c = comp[node];
+            if (c == std::numeric_limits<uint32_t>::max()) continue;
+            if (rep[c] == std::numeric_limits<uint32_t>::max()) {
+                rep[c] = node;
+                continue;
+            }
+            const uint32_t r = rep[c];
+            if (r & 1) continue; // handled through the mirror component
+            const uint32_t v = r / 2, w = node / 2;
+            if (v == w) {
+                // v and ~v in the same component: UNSAT
+                facts.push_back(BoolePolynomial(true, *ring));
+                continue;
+            }
+            const bool inv = ((r ^ node) & 1);
+            facts.push_back(BoolePolynomial(BooleVariable(v, *ring))
+                            + BooleVariable(w, *ring) + BooleConstant(inv));
+            num_scc_equiv++;
+        }
+    }
+
+    size_t num_added = 0;
+    for (const BoolePolynomial& f : facts) {
+        num_added += addBoolePolynomial(f);
+    }
+    if (num_added > 0) {
+        if (!propagate()) setNOTOK();
+    }
+
+    if (config.verbosity >= 1) {
+        cout << "c [lit-probe] forced " << num_forced << " equiv " << num_equiv
+             << " impl " << num_impl << " scc-equiv " << num_scc_equiv
+             << " new-facts " << num_added << " T: " << std::fixed
+             << std::setprecision(2) << (cpuTime() - myTime) << endl;
+    }
+    return num_added;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Driver: run the in-place rules until nothing changes
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -355,6 +576,7 @@ size_t ANF::rewrite_inplace()
         if (!getOK()) break;
         if (config.doShorten) changes += shorten_polys();
         if (!getOK()) break;
+        if (config.doProbe) changes += probe_small_polys();
         total += changes;
         if (changes == 0) break;
         if (cpuTime() > config.maxTime) break;

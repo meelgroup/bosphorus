@@ -208,6 +208,10 @@ void parseOptions(int argc, char* argv[])
         "Max number of terms of an equation used as a rule by binom-red. Default: 2");
     add_arg("--shorten", config.doShorten, fc_integral<int>,
         "Rewrite rule poly-shorten: replace p by p+f whenever that has fewer terms. Default: ON");
+    add_arg("--probe", config.doProbe, fc_integral<int>,
+        "Rewrite rule lit-probe: forced literals, equivalences and implication-graph SCCs from small equations. Default: ON");
+    add_arg("--probevars", config.probeVars, fc_integral<uint32_t>,
+        "lit-probe only looks at equations with at most this many variables. Default: 8");
     add_arg("--rewriterounds", config.rewriteRounds, fc_integral<uint32_t>,
         "Max rounds of the in-place rewrite rules per iteration. Default: 10");
 
@@ -331,7 +335,8 @@ void parseOptions(int argc, char* argv[])
              << config.maxTime << std::fixed << endl
              << "c Rewrite rules: " << config.doRewrite
              << " (binom-red " << config.doBinomRed << " len " << config.binomRedLen
-             << ", poly-shorten " << config.doShorten << ")" << endl
+             << ", poly-shorten " << config.doShorten
+             << ", lit-probe " << config.doProbe << " vars " << config.probeVars << ")" << endl
              << "c XL simp (deg = " << config.xlDeg
              << "; s = " << config.XLsample << '+' << config.XLsampleX
              << "): " << config.doXL << endl
