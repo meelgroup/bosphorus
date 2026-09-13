@@ -111,11 +111,15 @@ strategies that work on a copy of the system and feed back what they learnt:
 | `binom-red` | reduces every equation modulo the monomial and binomial equations: `x*y = 0` deletes every monomial divisible by `x*y`, `x*y + x = 0` (x implies y) turns `x*y*z` into `x*z`, and a definition `x*y + z = 0` lowers the degree of every monomial containing `x*y`. The degree-lexicographic leading term is rewritten, so degrees never grow | `--binomred 0/1`, `--binomredlen N` uses equations of up to N terms as rules (default 2) |
 | `poly-shorten` | replaces an equation `p` by `p + f` whenever the two share more than half of the terms of `f`, so the result is shorter. Shortens XORs and re-uses definitions (`y + x1*x2 + x3` in the system rewrites `x1*x2 + x3 + ...` to `y + ...`) | `--shorten 0/1` |
 | `lit-probe` | partial evaluation of small equations: `p|x=0 == 1` forces `x = 1`, the four evaluations on a pair of variables give equivalences (`x*y + x + 1` gives `x = 1, y = 0`; `x*y*(z+1) + 1` gives `x = y = 1, z = 0`) and binary implications; the strongly connected components of the implication graph give further equivalences (`x*y + x` with `x*y + y` gives `x = y`) | `--probe 0/1`, `--probevars N` only looks at equations with at most N variables (default 8) |
-| `xl` | eXtended Linearization: multiplies equations by variables and Gauss-Jordan eliminates, learning linear equations | `--xl 0/1`, `--xldeg`, `--xlsample` |
+| `fac-canon` | for equations that are products of linear factors: reduces every factor modulo the span of the linear equations and uses the shortest representative of its class, so equal constraints become identical and short | `--faccanon 0/1` |
+| `fac-res` | resolution between two products sharing a linear factor with opposite constants: `(A+a)*R1 = 0` and `(A+a+1)*R2 = 0` give `R1*R2 = 0`; a one-factor resolvent is a new linear equation | `--facres 0/1`, `--facresmax N` |
+| `gb-window` | degree-bounded Gröbner bases (BRiAl) of windows of small equations sharing variables; the linear members of the bases are added. Off by default; the work is bounded by a number of S-polynomials, not by time | `--gb 0/1`, `--gbdeg`, `--gbwindow`, `--gbmaxlen`, `--gbsteps` |
+| `xl` | eXtended Linearization: multiplies equations by variables and Gauss-Jordan eliminates, learning linear equations; only sees equations with at most `--xlmaxlen` terms | `--xl 0/1`, `--xldeg`, `--xlsample`, `--xlmaxlen` |
 | `elimlin` | ElimLin: Gauss-Jordan elimination and substitution of the linear equations found, iterated | `--el 0/1`, `--elsample` |
 | `sat-simp` | converts to CNF, runs CryptoMiniSat for a bounded number of conflicts and imports the units, binary XORs and recovered XORs it found | `--sat 0/1`, `--satinc`, `--satlim` |
 
-`--rewrite 0` turns off all in-place rules at once. Every rule is sound: the
+`--rewrite 0` turns off all in-place rules at once. A strategy that learns
+nothing twice in a row is not run again. Every rule is sound: the
 in-place rules only ever add a multiple of another equation still in the
 system to an equation, or add a fact implied by a single equation, so the
 solution set over all variables is unchanged.
@@ -367,20 +371,18 @@ ctest --verbose
 ```
 
 ## Fuzzing
-The tool comes with a built-in ANF fuzzer. To use, install
-[cryptominisat](https://github.com/msoos/cryptominisat), then run:
+`utils/fuzz.py` generates random small ANF and CNF inputs with random option
+settings and checks every answer against brute force (all solutions for ANF
+input, the SAT/UNSAT answer and the model for CNF input, and the solutions of
+the ANF written by `--anfwrite`):
 
 ```
-git clone --depth 1 https://github.com/meelgroup/bosphorus
-cd bosphorus
-mkdir build
-cd build
-ln -s ../utils/* .
-./build_normal.sh
-./fuzz.sh /usr/bin/cryptominisat5
+python3 utils/fuzz.py --iters 60          # about 15 seconds
+python3 utils/fuzz.py --iters 1 --seed N  # replay one case
 ```
 
-Where the argument to `fuzz.sh` must be the location of the cryptominisat5 binary.
+A failing input is kept as `fuzz-fail-<seed>.anf` or `.cnf` together with the
+command line that failed. Run it before committing.
 
 ## Known issues
 - PolyBoRi cannot handle ring of sizes over approx 1 million (1048574). Do not
