@@ -54,6 +54,10 @@ public:
     // partner strategies would hide most of them. They are used for the
     // output CNF only. This is config with doPartner turned off.
     ConfigData sat_config;
+    PrivateData()
+    {
+        sat_config.doPartner = false;
+    }
     BoolePolyRing* pring = nullptr;
     vector<Clause> clauses_needed_for_anf_import;
     vector<BoolePolynomial> learnt;
