@@ -102,11 +102,31 @@ BoolePolynomial Replacer::update(const BooleMonomial& m) const
     return ret;
 }
 
+// Substitutes the set and replaced variables of eq with a few ZDD
+// operations per variable: eq = p0 + v*p1 with p0 the terms without v and
+// p1 the terms with v (v removed), so v := c gives p0 + c*p1 and v := w + c
+// gives p0 + (w + c)*p1. Much faster than rebuilding the polynomial term by
+// term when it has thousands of terms.
 BoolePolynomial Replacer::update(const BoolePolynomial& eq) const
 {
-    BoolePolynomial ret = BoolePolynomial(eq.ring());
-    for (const BooleMonomial& mono : eq) {
-        ret += update(mono);
+    BoolePolynomial ret = eq;
+    for (const uint32_t v : eq.usedVariables()) {
+        const bool is_set = (value[v] != l_Undef);
+        const Lit lit = replaceTable[v];
+        if (!is_set && lit == Lit(v, false)) continue;
+
+        const BooleSet s = ret.set();
+        const BoolePolynomial p0(s.subset0(v));
+        const BoolePolynomial p1(s.subset1(v));
+        if (is_set) {
+            ret = (value[v] == l_True) ? (p0 + p1) : p0;
+        } else {
+            // the representative of a replaced variable is never itself
+            // replaced, and if it were set then v would be set too
+            BoolePolynomial w(BooleVariable(lit.var(), eq.ring()));
+            if (lit.sign()) w += BooleConstant(true);
+            ret = p0 + w * p1;
+        }
     }
     return ret;
 }

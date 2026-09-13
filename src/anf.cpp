@@ -159,6 +159,10 @@ size_t ANF::readFile(const std::string& filename)
 
         BoolePolynomial eq(*ring);
         BoolePolynomial eqDesc(*ring);
+        // Terms of eq are collected and summed pairwise at the end: adding
+        // them one by one to a polynomial with thousands of terms is
+        // quadratic in the ZDD size.
+        vector<BooleMonomial> eq_terms;
         bool startOfVar = false;
         bool readInVar = false;
         bool readInDesc = false;
@@ -171,7 +175,7 @@ size_t ANF::readFile(const std::string& filename)
             if (temp[i] == ',') {
                 if (readInVar) {
                     m *= BooleVariable(var, *ring);
-                    eq += m;
+                    eq_terms.push_back(m);
                 }
 
                 startOfVar = false;
@@ -247,7 +251,7 @@ size_t ANF::readFile(const std::string& filename)
                     m *= BooleVariable(var, *ring);
 
                     if (!readInDesc)
-                        eq += m;
+                        eq_terms.push_back(m);
                     else
                         eqDesc += m;
                 }
@@ -307,9 +311,26 @@ size_t ANF::readFile(const std::string& filename)
             m *= BooleVariable(var, *ring);
 
             if (!readInDesc)
-                eq += m;
+                eq_terms.push_back(m);
             else
                 eqDesc += m;
+        }
+
+        // balanced summation of the collected terms
+        {
+            vector<BoolePolynomial> level;
+            level.reserve(eq_terms.size());
+            for (const BooleMonomial& t : eq_terms) level.push_back(BoolePolynomial(t));
+            while (level.size() > 1) {
+                vector<BoolePolynomial> next;
+                next.reserve(level.size() / 2 + 1);
+                for (size_t k = 0; k + 1 < level.size(); k += 2) {
+                    next.push_back(level[k] + level[k + 1]);
+                }
+                if (level.size() % 2) next.push_back(level.back());
+                level.swap(next);
+            }
+            if (!level.empty()) eq += level.front();
         }
 
         //Set state to starting position
