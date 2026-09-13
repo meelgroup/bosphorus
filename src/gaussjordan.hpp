@@ -188,32 +188,28 @@ class GaussJordan
             }
         }
 
-        // Sort in descending degree-lex order
-        std::sort(revMonomMap.begin(), revMonomMap.end(),
-                  [](const BooleMonomial& rhs, const BooleMonomial& lhs) {
-                      if (lhs.deg() == rhs.deg()) {
-                          vector<uint32_t> lhs_v, rhs_v;
-                          for (uint32_t v : lhs) {
-                              lhs_v.push_back(v);
-                          }
-                          for (uint32_t v : rhs) {
-                              rhs_v.push_back(v);
-                          }
-                          assert(lhs_v.size() == rhs_v.size());
-                          std::sort(lhs_v.begin(), lhs_v.end());
-                          std::sort(rhs_v.begin(), rhs_v.end());
-                          for (size_t i = 0; i < lhs_v.size(); i++) {
-                              if (lhs_v[i] == rhs_v[i]) {
-                                  continue;
-                              } else {
-                                  return lhs_v[i] < rhs_v[i];
-                              }
-                          }
-                          return false;
-                      } else {
-                          return lhs.deg() < rhs.deg();
-                      }
-                  });
+        // Sort in descending degree-lex order. The keys (sorted variable
+        // lists) are computed once per monomial: doing it inside the
+        // comparator made this the hottest part of XL.
+        vector<vector<uint32_t> > keys(revMonomMap.size());
+        for (size_t i = 0; i < revMonomMap.size(); i++) {
+            for (uint32_t v : revMonomMap[i]) keys[i].push_back(v);
+        }
+        vector<size_t> order(revMonomMap.size());
+        for (size_t i = 0; i < order.size(); i++) order[i] = i;
+        std::sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+            const vector<uint32_t>& ka = keys[a];
+            const vector<uint32_t>& kb = keys[b];
+            if (ka.size() != kb.size()) return ka.size() > kb.size();
+            for (size_t i = 0; i < ka.size(); i++) {
+                if (ka[i] != kb[i]) return ka[i] > kb[i];
+            }
+            return false;
+        });
+        vector<BooleMonomial> sorted;
+        sorted.reserve(revMonomMap.size());
+        for (const size_t i : order) sorted.push_back(revMonomMap[i]);
+        revMonomMap.swap(sorted);
 
         // assign numbering
         for (size_t i = 0; i < revMonomMap.size(); ++i)

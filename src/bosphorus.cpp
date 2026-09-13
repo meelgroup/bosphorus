@@ -495,11 +495,26 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
     bool changes[S_NUM]; // any changes for the strategies
     size_t waits[S_NUM];
     size_t countdowns[S_NUM];
+    unsigned zero_streak[S_NUM]; // consecutive runs that learnt nothing
+    bool retired[S_NUM];         // learnt nothing twice in a row: not run again
     for (unsigned i = 0; i < S_NUM; i++) {
         changes[i] = true;
         waits[i] = 0;
         countdowns[i] = 0;
+        zero_streak[i] = 0;
+        retired[i] = false;
     }
+    // XL and ElimLin work on a copy of the system: leave out the equations
+    // with thousands of terms (products of long linear factors), they only
+    // make the Macaulay matrix huge
+    auto short_eqs = [&]() {
+        vector<BoolePolynomial> out;
+        const auto& all = anf->getEqs();
+        for (size_t i = 0; i < all.size(); i++) {
+            if (anf->getEqLen(i) <= dat->config.xlMaxLen) out.push_back(all[i]);
+        }
+        return out;
+    };
     uint32_t iters = 0;
     unsigned subiter = 0;
     BLib::CNF* cnf = NULL;
@@ -528,11 +543,13 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
         // the propagation of what it learnt). The rewrite rules print their
         // own per-rule stats so they get no outer scope.
         std::unique_ptr<BLib::SimpStatsScope> stats_scope;
-        if (countdowns[subiter] == 0 && *enabled[subiter] && subiter != S_REWRITE) {
+        if (countdowns[subiter] == 0 && *enabled[subiter] && subiter != S_REWRITE && !retired[subiter]) {
             stats_scope.reset(new BLib::SimpStatsScope(*anf, rule_str[subiter]));
         }
 
-        if (countdowns[subiter] > 0) {
+        if (retired[subiter]) {
+            // nothing to do
+        } else if (countdowns[subiter] > 0) {
             cout << "c [" << strategy_str[subiter] << "] waiting for "
                  << countdowns[subiter] << " iteration(s)." << endl;
         } else {
@@ -556,7 +573,8 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                 case S_XL:
                     if (dat->config.doXL) {
                         sub_iter_performed = true;
-                        if (!extendedLinearization(dat->config, anf->getEqs(),
+                        const vector<BoolePolynomial> eqs_for_xl = short_eqs();
+                        if (!extendedLinearization(dat->config, eqs_for_xl,
                                                    dat->learnt)) {
                             anf->setNOTOK();
                         } else {
@@ -575,7 +593,8 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                 case S_EL:
                     if (dat->config.doEL) {
                         sub_iter_performed = true;
-                        if (!elimLin(dat->config, anf->getEqs(), dat->learnt)) {
+                        const vector<BoolePolynomial> eqs_for_el = short_eqs();
+                        if (!elimLin(dat->config, eqs_for_el, dat->learnt)) {
                             anf->setNOTOK();
                         } else {
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
@@ -632,6 +651,16 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                 cout << "c [" << strategy_str[subiter] << "] learnt "
                      << num_learnt << " new facts in "
                      << (cpuTime() - startTime) << " seconds." << endl;
+            }
+            if (sub_iter_performed && subiter != S_REWRITE) {
+                zero_streak[subiter] = (num_learnt > 0) ? 0 : zero_streak[subiter] + 1;
+                if (zero_streak[subiter] >= 2) {
+                    retired[subiter] = true;
+                    if (dat->config.verbosity >= 1) {
+                        cout << "c [" << strategy_str[subiter]
+                             << "] learnt nothing twice in a row, not running it again" << endl;
+                    }
+                }
             }
         }
 

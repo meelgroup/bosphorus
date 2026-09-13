@@ -139,8 +139,9 @@ size_t ANF::reduce_by_short_polys()
     size_t num_rewrites = 0;
     size_t num_monom_rewrites = 0;
 
-    auto is_rule = [&](const BoolePolynomial& p) {
-        return !p.isConstant() && p.length() <= max_len && p.deg() >= 1;
+    auto is_rule = [&](size_t i) {
+        const BoolePolynomial& p = eqs[i];
+        return !p.isConstant() && eq_len[i] <= max_len && p.deg() >= 1;
     };
 
     for (unsigned round = 0; round < 20; round++) {
@@ -161,7 +162,7 @@ size_t ANF::reduce_by_short_polys()
             rule_of_eq[eq_idx] = id;
         };
         for (size_t i = 0; i < eqs.size(); i++) {
-            if (is_rule(eqs[i])) add_rule(i);
+            if (is_rule(i)) add_rule(i);
         }
         if (rules.empty()) break;
 
@@ -227,7 +228,7 @@ size_t ANF::reduce_by_short_polys()
             if (!rewrite_eq(i, poly, updatedVars, empty_equations)) {
                 return num_rewrites + round_rewrites; // UNSAT, replacer set
             }
-            if (is_rule(eqs[i])) add_rule(i);
+            if (is_rule(i)) add_rule(i);
         }
         num_rewrites += round_rewrites;
         if (!finish_rewrites(updatedVars, empty_equations)) break;
@@ -286,7 +287,7 @@ size_t ANF::shorten_polys()
     vector<size_t> order(eqs.size());
     for (size_t i = 0; i < order.size(); i++) order[i] = i;
     std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) {
-        return eqs[a].length() < eqs[b].length();
+        return eq_len[a] < eq_len[b];
     });
 
     vector<uint32_t> cnt(eqs.size(), 0);
@@ -302,7 +303,7 @@ size_t ANF::shorten_polys()
         const BoolePolynomial& f = eqs[f_idx];
         if (f.isConstant()) continue;
         if (keep_factor == 1 && f.deg() >= 2) continue;
-        const size_t f_len = f.length();
+        const size_t f_len = eq_len[f_idx];
         const int f_deg = f.deg();
 
         touched.clear();
@@ -322,10 +323,10 @@ size_t ANF::shorten_polys()
             if (2 * c <= f_len) continue;
             if (eqs[p].isConstant()) continue;
             if (eqs[p].deg() < f_deg) continue;
-            if (eqs[p].length() < f_len) continue; // then p is the rule for f, not vice versa
+            if (eq_len[p] < f_len) continue; // then p is the rule for f, not vice versa
 
             const BoolePolynomial newp = eqs[p] + f;
-            if (newp.length() >= eqs[p].length()) {
+            if (newp.length() >= eq_len[p]) {
                 // cannot happen with an exact index; never make things worse
                 continue;
             }

@@ -55,6 +55,7 @@ struct ConfigData {
     int doEL = true;
     int doSAT = true;
     double XLsample = 30.0;
+    size_t xlMaxLen = 64; // XL and ElimLin only see equations with at most this many terms
     double XLsampleX = 4.0;
     double ELsample = 30.0;
     uint32_t xlDeg = 1;

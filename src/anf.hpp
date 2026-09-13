@@ -101,6 +101,7 @@ class ANF
     /// it stays known even when substitutions make the factors share
     /// variables and the expanded polynomial can no longer be factored.
     const vector<Lineral>& getFactors(size_t idx) const { return factors[idx]; }
+    size_t getEqLen(size_t idx) const { return eq_len[idx]; }
     inline const vector<lbool>& getFixedValues() const;
     inline const eqs_hash_t& getEqsHash(void) const;
     const vector<vector<size_t> >& getOccur() const;
@@ -133,10 +134,9 @@ class ANF
     bool updateEquations(size_t idx, const BoolePolynomial newpoly,
                          vector<size_t>& empty_equations,
                          const vector<Lineral>* newfactors = nullptr);
-    /// factors of eq idx after the replacer's current substitutions,
-    /// verified against newpoly; false if unknown
-    bool substituted_factors(size_t idx, const BoolePolynomial& newpoly,
-                             vector<Lineral>& out);
+    /// factors of eq idx after the replacer's current substitutions;
+    /// false if the factorisation is unknown
+    bool substituted_factors(size_t idx, vector<Lineral>& out);
     void checkSimplifiedPolysContainNoSetVars() const;
     bool containsMono(const BooleMonomial& mono1,
                       const BooleMonomial& mono2) const;
@@ -163,6 +163,7 @@ class ANF
     //State
     vector<BoolePolynomial> eqs;
     vector<vector<Lineral> > factors; // parallel to eqs, see getFactors()
+    vector<size_t> eq_len; // parallel to eqs: number of terms (length() walks the ZDD, expensive)
     eqs_hash_t eqs_hash;
     Replacer* replacer;
     vector<vector<size_t> > occur; //occur[var] -> index of polys where the variable occurs
@@ -182,6 +183,7 @@ inline ANF::ANF(const ANF& other, const anf_no_replacer_tag)
       comments(other.comments),
       eqs(other.eqs),
       factors(other.factors),
+      eq_len(other.eq_len),
       eqs_hash(other.eqs_hash),
       replacer(nullptr),
       occur(other.occur),
@@ -202,9 +204,7 @@ inline const BoolePolyRing& ANF::getRing() const
 inline size_t ANF::numMonoms() const
 {
     size_t num = 0;
-    for (const BoolePolynomial& poly : eqs) {
-        num += poly.length();
-    }
+    for (const size_t l : eq_len) num += l;
     return num;
 }
 
@@ -333,6 +333,7 @@ ANF& ANF::operator=(const ANF& other)
     //assert(updatedVars.empty() && other.updatedVars.empty());
     eqs = other.eqs;
     factors = other.factors;
+    eq_len = other.eq_len;
     *replacer = *other.replacer;
     occur = other.occur;
     return *this;

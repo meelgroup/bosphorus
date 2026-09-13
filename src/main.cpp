@@ -230,6 +230,8 @@ void parseOptions(int argc, char* argv[])
         "Turn on/off XL-based simplification. Default: ON");
     add_arg("--xldeg", config.xlDeg, fc_integral<uint32_t>,
         "Expansion degree for XL algorithm. Default = 1 (0 = Just GJE. For now we only support 0 <= xldeg = 3)");
+    add_arg("--xlmaxlen", config.xlMaxLen, fc_integral<size_t>,
+        "XL and ElimLin only see equations with at most this many terms (products of long linear factors have thousands and only cost time). Default: 64");
     add_arg("--xlsample", config.XLsample, fc_double,
         "Size of matrix to sample for XL, in log2");
     add_arg("--xlsamplex", config.XLsampleX, fc_double,

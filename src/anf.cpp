@@ -417,8 +417,9 @@ ANFStats ANF::get_stats() const
 {
     ANFStats s;
     s.eqs = eqs.size();
-    for (const BoolePolynomial& poly : eqs) {
-        s.monoms += poly.length();
+    for (size_t i = 0; i < eqs.size(); i++) {
+        const BoolePolynomial& poly = eqs[i];
+        s.monoms += eq_len[i];
         const int deg = poly.deg();
         if (deg <= 1) s.lin_eqs++;
         else s.nonlin_eqs++;
@@ -512,6 +513,7 @@ bool ANF::addBoolePolynomial(const BoolePolynomial& poly)
 
     eqs.push_back(poly);
     factors.push_back(vector<Lineral>());
+    eq_len.push_back(poly.length());
 
     return true;
 }
@@ -568,11 +570,9 @@ inline void ANF::removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx)
     removePolyFromOccur(poly.usedVariables(), eq_idx);
 }
 
-bool ANF::substituted_factors(size_t idx, const BoolePolynomial& newpoly,
-                              vector<Lineral>& out)
+bool ANF::substituted_factors(size_t idx, vector<Lineral>& out)
 {
     out.clear();
-    if (newpoly.isConstant() || newpoly.deg() < 2) return false;
     vector<Lineral>& f = factors[idx];
     if (f.empty()) {
         // still a clean product? then factor it now, before it is changed
@@ -598,7 +598,7 @@ bool ANF::substituted_factors(size_t idx, const BoolePolynomial& newpoly,
             if (!subst_lineral_var(out, v, lit.var(), lit.sign())) return false;
         }
     }
-    if (out.size() < 2 || expand_linerals(*ring, out) != newpoly) {
+    if (out.size() < 2) {
         out.clear();
         return false;
     }
@@ -615,6 +615,7 @@ bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
     const size_t check = eqs_hash.erase(poly.hash());
     assert(check == 1);
     poly = newpoly;
+    eq_len[eq_idx] = poly.length();
     if (newfactors != nullptr) factors[eq_idx] = *newfactors;
     else factors[eq_idx].clear();
 
@@ -633,6 +634,7 @@ bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
         auto ins = eqs_hash.insert(poly.hash());
         if (!ins.second) { // already exist
             poly = 0;      // remove it using empty
+            eq_len[eq_idx] = 0;
             empty_equations.push_back(eq_idx);
             if (config.verbosity >= 4) {
                 cout << "c [ANF propagation remove equation] " << eq_idx
@@ -730,10 +732,24 @@ bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars,
                     continue;
                 }
 
-                const BoolePolynomial newpoly = replacer->update(poly);
+                // For an equation with a known factorisation the new
+                // polynomial is the product of the substituted factors:
+                // one ZDD product instead of a substitution pass over a
+                // polynomial with thousands of terms (plus a verification
+                // expansion). The factor substitution is checked against
+                // the polynomial substitution for small equations.
                 vector<Lineral> newfactors;
-                const bool have_factors =
-                    substituted_factors(eq_idx, newpoly, newfactors);
+                const bool have_factors = substituted_factors(eq_idx, newfactors);
+                BoolePolynomial newpoly(*ring);
+                if (have_factors) {
+                    newpoly = expand_linerals(*ring, newfactors);
+                    if (eq_len[eq_idx] <= 256 && newpoly != replacer->update(poly)) {
+                        cout << "ERROR: factor substitution disagrees with polynomial substitution" << endl;
+                        exit(-1);
+                    }
+                } else {
+                    newpoly = replacer->update(poly);
+                }
                 if (!updateEquations(eq_idx, newpoly, empty_equations,
                                      have_factors ? &newfactors : nullptr)) {
                     return false;
@@ -790,11 +806,14 @@ void ANF::removeEquations(std::vector<size_t>& eq2r)
         if (ii == eqs.size() - 1) {
             eqs.pop_back();
             factors.pop_back();
+            eq_len.pop_back();
         } else {
             eqs[ii] = eqs.back();
             eqs.pop_back();
             factors[ii].swap(factors.back());
             factors.pop_back();
+            eq_len[ii] = eq_len.back();
+            eq_len.pop_back();
             size_t f = remap[eqs.size()].first;
             remap[f].second = ii;
             remap[ii].first = f;
