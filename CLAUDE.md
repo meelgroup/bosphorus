@@ -1,0 +1,32 @@
+# Bosphorus development notes
+
+## Building
+- Build in `build/` with `make -j4` (never `-j$(nproc)`).
+- The build already uses `-fno-omit-frame-pointer`, so frame-pointer call graphs work.
+
+## Profiling
+Always profile before optimising. Use perf with frame-pointer call graphs:
+
+```
+perf record --call-graph=fp -o /tmp/perf.data ./build/bosphorus input.anf --el 0 --cnfwrite /dev/null
+perf report -i /tmp/perf.data --no-children --percent-limit 1 --stdio | head -80   # self time, hottest symbols
+perf report -i /tmp/perf.data --children --percent-limit 2 --stdio | head -120     # inclusive, by call chain
+```
+
+`--no-children` shows where time is actually spent (leaf symbols); `--children`
+shows which of our functions (rules) sit above the hot leaves. Big ANFs (the
+bivium family) have polynomials with thousands of terms, so ZDD operations of
+PolyBoRi/CUDD tend to dominate; check which rule calls them.
+
+## Testing
+- `cd build && ctest` runs the lit suite (`tests/anf-files`); `lit -v build/tests/anf-files --filter NAME` for one test.
+- End-to-end tests verify against brute force (`tests/utils/verify_anf.py`).
+
+## Benchmarks
+- The bivium family lives in `/home/soos/development/sat_solvers/xnf/xorricane-bench/bivium/`.
+  Run Bosphorus with `--el 0` there; every `.anf` starts with a variable-list line.
+- Compare with CryptoMiniSat using the harness flags:
+  `cryptominisat5 --sls 0 --autodisablegauss 0 --presimp 1 --maxmatrixrows 100000 --maxmatrixcols 100000 --maxnummatrices 1000000 --minmatrixrows 1`
+  and always verify the model against the original ANF (the CNF's `c p show`
+  line makes CMS print only the projected variables; complete the rest by unit
+  propagation over the CNF).
