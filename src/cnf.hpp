@@ -122,8 +122,8 @@ class CNF
                 vector<Clause>& setOfClauses);
     void addXorWithCuts(const vector<uint32_t>& vars, bool rhs,
                         vector<Clause>& setOfClauses);
-    //XNF: a polynomial that is a product of linerals
-    bool tryAddingAsXnf(const BoolePolynomial& poly, const vector<Lineral>* factors,
+    //a polynomial that is a product of linear factors
+    bool tryAddingAsProduct(const BoolePolynomial& poly, const vector<Lineral>* factors,
                         vector<Clause>& setOfClauses);
     uint32_t lineralVar(const vector<uint32_t>& vars);
     uint32_t hammingWeight(uint64_t num) const;
@@ -163,7 +163,7 @@ class CNF
     size_t numChunkTerms = 0; // monomials absorbed into chunks
     size_t numCutVars = 0;
     size_t numLineralVars = 0;
-    size_t addedAsXnf = 0;
+    size_t addedAsProduct = 0;
 };
 
 inline void CNF::print_without_header(std::ostream& os) const
@@ -250,7 +250,7 @@ inline void CNF::printStats() const
          << " anf_vars " << anf.getRing().nVariables()
          << " monom_vars " << numMonomVars << " chunk_vars " << numChunkVars
          << " chunk_terms " << numChunkTerms << " cut_vars " << numCutVars
-         << " lineral_vars " << numLineralVars << " xnf_cls " << addedAsXnf
+         << " linfactor_vars " << numLineralVars << " product_cls " << addedAsProduct
          << " xor_cls " << xor_clauses.size() << endl;
 }
 

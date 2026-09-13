@@ -194,8 +194,8 @@ void parseOptions(int argc, char* argv[])
     // CNF conversion
     add_arg("--cutnum", config.cutNum, fc_integral<uint32_t>,
         "Cutting number when not using XOR clauses");
-    add_arg("--xnf", config.doXnf, fc_integral<int>,
-        "Encode polynomials that are products of linear factors (XNF clauses) with one shared CNF variable per lineral, keeping the XORs whole. Default: ON");
+    add_arg("--factor", config.doFactor, fc_integral<int>,
+        "Encode a polynomial that is a product of linear factors, (l1+c1)*(l2+c2)*..., as one clause over one shared CNF variable per linear factor instead of one variable per monomial. Default: ON");
     add_arg("--xorcls", config.xorClauses, fc_integral<int>,
         "Write XORs as native CryptoMiniSat xor clauses ('x 1 2 3 0' lines) instead of cutting them into CNF. The output is then CNF-XOR, which only CryptoMiniSat reads; --solve always uses them. Default: OFF");
     add_arg("--xormaxlen", config.xorMaxLen, fc_integral<uint32_t>,
@@ -220,8 +220,8 @@ void parseOptions(int argc, char* argv[])
         "Rewrite rule lit-probe: forced literals, equivalences and implication-graph SCCs from small equations. Default: ON");
     add_arg("--probevars", config.probeVars, fc_integral<uint32_t>,
         "lit-probe only looks at equations with at most this many variables. Default: 8");
-    add_arg("--keepxnf", config.keepXnf, fc_integral<int>,
-        "Never rewrite an equation that is a product of linear factors (an XNF clause) into one that is not, so the XNF structure survives for the CNF encoding: 0 = off, 1 = on, 2 = auto (on when most nonlinear equations are such products). Default: 2");
+    add_arg("--keepfactor", config.keepFactor, fc_integral<int>,
+        "Never rewrite an equation that is a product of linear factors into one that is not, so the product form survives for the CNF encoding: 0 = off, 1 = on, 2 = auto (on when most nonlinear equations are such products). Default: 2");
     add_arg("--rewriterounds", config.rewriteRounds, fc_integral<uint32_t>,
         "Max rounds of the in-place rewrite rules per iteration. Default: 10");
 
@@ -357,7 +357,7 @@ void parseOptions(int argc, char* argv[])
              << " using " << config.numThreads << " threads" << endl
              << "c Cut num: " << config.cutNum << endl
              << "c Partner strategies: " << config.doPartner << endl
-             << "c XNF encoding: " << config.doXnf << " xor clauses: " << config.xorClauses << endl
+             << "c Linear-factor encoding: " << config.doFactor << " xor clauses: " << config.xorClauses << endl
              << "c Brickenstein cutoff: " << config.brickestein_algo_cutoff << endl
              << "c --------------------" << endl;
     }

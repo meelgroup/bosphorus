@@ -45,7 +45,7 @@ struct ConfigData {
     uint32_t cutNum = 5;
     uint32_t brickestein_algo_cutoff = 10;
     int doPartner = true; // Jovanovic-Kreuzer partner strategies (LPS/DPS/QPS/CPS)
-    int doXnf = true;      // encode products of linear factors as XNF clauses
+    int doFactor = true;   // encode polynomials that are products of linear factors as one clause over the factors
     int xorClauses = false; // emit XORs as native CryptoMiniSat xor clauses instead of cutting them
     uint32_t xorMaxLen = 0;  // with xorClauses: cut native XORs longer than this into native pieces (0 = never)
 
@@ -72,7 +72,7 @@ struct ConfigData {
     int doProbe = true;           // forced literals/equivalences/implications
     uint32_t probeVars = 8;       // only probe eqs with at most this many vars
     uint32_t rewriteRounds = 10;  // max rounds of all rules per call
-    int keepXnf = 2;              // never rewrite a product of linerals into a non-product: 0 off, 1 on, 2 auto (when most nonlinear eqs are such products)
+    int keepFactor = 2;           // never rewrite a product of linear factors into a non-product: 0 off, 1 on, 2 auto (when most nonlinear eqs are such products)
 };
 
 }

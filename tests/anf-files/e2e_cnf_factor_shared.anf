@@ -5,9 +5,9 @@ c (x1+x2+x3)*(x4+x5+x6+1)*(x7+x8) written out, plus x1 = x4 and x7 = x6 + 1.
 c After propagation the factors share variables, (x4+x2+x3)*(x4+x5+x6+1)*(x6+x8+1),
 c and the expanded polynomial no longer factors into disjoint linerals; the
 c factorisation is tracked through the substitution instead and the clause
-c is still encoded as XNF.
+c is still encoded as one clause over the factors.
 x1*x4*x7 + x1*x4*x8 + x1*x5*x7 + x1*x5*x8 + x1*x6*x7 + x1*x6*x8 + x1*x7 + x1*x8 + x2*x4*x7 + x2*x4*x8 + x2*x5*x7 + x2*x5*x8 + x2*x6*x7 + x2*x6*x8 + x2*x7 + x2*x8 + x3*x4*x7 + x3*x4*x8 + x3*x5*x7 + x3*x5*x8 + x3*x6*x7 + x3*x6*x8 + x3*x7 + x3*x8
 x1 + x4
 x7 + x6 + 1
 x9*x10*x11 + x9*x10*x12 + x9*x11 + x9*x12
-c CHECK: \[cnf-stats\] .* lineral_vars 4 xnf_cls 2 
+c CHECK: \[cnf-stats\] .* linfactor_vars 4 product_cls 2 

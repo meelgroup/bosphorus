@@ -35,7 +35,7 @@ struct Lineral {
 };
 
 /// Tries to write `poly` as a product of linear factors with pairwise
-/// disjoint variables, i.e. as an XNF clause: a polynomial
+/// disjoint variables: a polynomial
 /// (l_1 + c_1) * ... * (l_k + c_k) = 0 says that some lineral l_i equals c_i.
 /// Returns false if `poly` is not of that form. A polynomial of degree 1 is
 /// its own single factor.
@@ -48,7 +48,7 @@ polybori::BoolePolynomial expand_linerals(const polybori::BoolePolyRing& ring,
 
 /// Substitutes variable `v` by `w + c` (or by the constant `c` when
 /// `w == v`... see `subst_const`) in every factor. Variables may thereby
-/// become shared between factors, which is fine for an XNF clause.
+/// become shared between factors, which is fine for the clause encoding.
 /// A factor that becomes the constant 1 is dropped; if one becomes the
 /// constant 0 the product is 0 and `factors` is cleared and false returned.
 bool subst_lineral_var(std::vector<Lineral>& factors, uint32_t v, uint32_t w, bool c);

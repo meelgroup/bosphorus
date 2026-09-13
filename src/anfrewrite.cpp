@@ -90,9 +90,9 @@ bool ANF::rewrite_eq(size_t idx, const BoolePolynomial& newpoly,
     return true;
 }
 
-bool ANF::breaks_xnf(const BoolePolynomial& from, const BoolePolynomial& to) const
+bool ANF::breaks_product(const BoolePolynomial& from, const BoolePolynomial& to) const
 {
-    if (keep_xnf != 1) return false;
+    if (keep_factor != 1) return false;
     if (to.isConstant() || to.deg() <= 1) return false;
     vector<Lineral> f;
     if (!factor_into_linerals(from, f) || f.size() < 2) return false;
@@ -182,10 +182,10 @@ size_t ANF::reduce_by_short_polys()
         size_t round_rewrites = 0;
         for (size_t i = 0; i < eqs.size(); i++) {
             if (eqs[i].isConstant()) continue;
-            // XNF-preserving mode: products of linerals are left alone (a
+            // product-preserving mode: products of linear factors are left alone (a
             // reduction would almost never keep the product form, and
             // trying costs a pass over millions of monomials)
-            if (keep_xnf == 1 && eqs[i].deg() >= 2) continue;
+            if (keep_factor == 1 && eqs[i].deg() >= 2) continue;
             BoolePolynomial poly = eqs[i];
             bool changed = false;
             // Reduce until no monomial is divisible by any rule's lead. Each
@@ -210,7 +210,7 @@ size_t ANF::reduce_by_short_polys()
                 if (poly.isConstant()) break;
             }
             if (!changed) continue;
-            if (breaks_xnf(eqs[i], poly)) continue;
+            if (breaks_product(eqs[i], poly)) continue;
 
             round_rewrites++;
             if (config.verbosity >= 5) {
@@ -265,10 +265,10 @@ size_t ANF::shorten_polys()
     // NOTE: BooleMonomial::hash() is the address of the ZDD node, and the
     // monomials produced while iterating a polynomial are temporaries whose
     // nodes get recycled, so it cannot key a map. stableHash() is structural.
-    // In XNF-preserving mode only the linear equations take part.
+    // In product-preserving mode only the linear equations take part.
     unordered_map<mhash, vector<size_t> > occ_m;
     for (size_t i = 0; i < eqs.size(); i++) {
-        if (keep_xnf == 1 && eqs[i].deg() >= 2) continue;
+        if (keep_factor == 1 && eqs[i].deg() >= 2) continue;
         for (const BooleMonomial& t : eqs[i]) {
             occ_m[t.stableHash()].push_back(i);
         }
@@ -301,7 +301,7 @@ size_t ANF::shorten_polys()
         if (budget < 0 || cpuTime() > config.maxTime) break;
         const BoolePolynomial& f = eqs[f_idx];
         if (f.isConstant()) continue;
-        if (keep_xnf == 1 && f.deg() >= 2) continue;
+        if (keep_factor == 1 && f.deg() >= 2) continue;
         const size_t f_len = f.length();
         const int f_deg = f.deg();
 
@@ -329,7 +329,7 @@ size_t ANF::shorten_polys()
                 // cannot happen with an exact index; never make things worse
                 continue;
             }
-            if (breaks_xnf(eqs[p], newp)) continue;
+            if (breaks_product(eqs[p], newp)) continue;
             if (config.verbosity >= 5) {
                 cout << "c [poly-shorten] " << eqs[p] << "  -->  " << newp
                      << "  (by " << f << ")" << endl;
@@ -588,12 +588,12 @@ size_t ANF::probe_small_polys()
 size_t ANF::rewrite_inplace()
 {
     size_t total = 0;
-    if (keep_xnf == -1) {
-        if (config.keepXnf != 2) {
-            keep_xnf = config.keepXnf;
+    if (keep_factor == -1) {
+        if (config.keepFactor != 2) {
+            keep_factor = config.keepFactor;
         } else {
-            // auto: XNF-preserving when most nonlinear equations are
-            // products of linerals (XNF clauses written out as polynomials)
+            // auto: product-preserving when most nonlinear equations are
+            // products of linear factors (e.g. XNF written out as polynomials)
             size_t nonlin = 0, products = 0;
             vector<Lineral> f;
             for (const BoolePolynomial& p : eqs) {
@@ -601,11 +601,11 @@ size_t ANF::rewrite_inplace()
                 nonlin++;
                 if (factor_into_linerals(p, f) && f.size() >= 2) products++;
             }
-            keep_xnf = (nonlin > 0 && 2 * products >= nonlin) ? 1 : 0;
+            keep_factor = (nonlin > 0 && 2 * products >= nonlin) ? 1 : 0;
             if (config.verbosity >= 1) {
                 cout << "c [rewrite] " << products << "/" << nonlin
-                     << " nonlinear eqs are products of linerals, XNF-preserving mode: "
-                     << keep_xnf << endl;
+                     << " nonlinear eqs are products of linerals, product-preserving mode: "
+                     << keep_factor << endl;
             }
         }
     }

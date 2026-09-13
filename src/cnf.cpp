@@ -161,8 +161,8 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly,
     }
 
     vector<Clause> setOfClauses;
-    if (config.doXnf && poly.deg() > 1 && tryAddingAsXnf(poly, factors, setOfClauses)) {
-        addedAsXnf++;
+    if (config.doFactor && poly.deg() > 1 && tryAddingAsProduct(poly, factors, setOfClauses)) {
+        addedAsProduct++;
     } else if (poly.deg() > 1 && poly.nUsedVariables() <= config.brickestein_algo_cutoff &&
         BrickesteinAlgo32(poly, setOfClauses)) {
         addedAsCNF++;
@@ -208,16 +208,16 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// XNF: a polynomial that is a product of linerals (l_1 + c_1)...(l_k + c_k)
-// is the clause "l_1 = c_1 or ... or l_k = c_k". Every lineral with more
-// than one variable gets one CNF variable y equal to its XOR, shared between
-// all clauses that use the lineral, and the clause is written over those.
-// This keeps the linerals whole: CryptoMiniSat then sees one XOR per lineral
-// instead of the chain of cut pieces the standard linearisation produces,
-// and its Gauss-Jordan matrices stay small.
+// A polynomial that is a product of linear factors (l_1 + c_1)...(l_k + c_k)
+// is 0 exactly when some factor is: it is the clause "l_1 = c_1 or ... or
+// l_k = c_k". Every factor with more than one variable gets one CNF variable
+// y equal to its XOR, shared between all polynomials that contain the same
+// factor, and the clause is written over those. Compared to one variable per
+// monomial (a product of three 50-variable factors has 125000 monomials)
+// this is a tiny encoding, and the XORs stay whole.
 ///////////////////////////////////////////////////////////////////////////////
 
-bool CNF::tryAddingAsXnf(const BoolePolynomial& poly, const vector<Lineral>* known,
+bool CNF::tryAddingAsProduct(const BoolePolynomial& poly, const vector<Lineral>* known,
                          vector<Clause>& setOfClauses)
 {
     vector<Lineral> factors;
@@ -237,7 +237,7 @@ bool CNF::tryAddingAsXnf(const BoolePolynomial& poly, const vector<Lineral>* kno
             lits.push_back(Lit(lineralVar(f.vars), !f.c));
         }
     }
-    // with shared variables two factors can be the same lineral
+    // with shared variables two factors can be the same linear form
     std::sort(lits.begin(), lits.end());
     lits.erase(std::unique(lits.begin(), lits.end()), lits.end());
     for (size_t i = 0; i + 1 < lits.size(); i++) {

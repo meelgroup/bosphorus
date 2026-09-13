@@ -3,7 +3,7 @@ c RUN: %solver --anfread %s --cnfwrite %t.cnf --verb 0 --simplify 0 --xorcls 1
 c RUN: %verify cnf %s %t.cnf
 c RUN: %solver --anfread %s --cnfwrite %t.cnf --simplify 0 | %OutputCheck %s
 c
-c Products of linear factors (XNF clauses), written out as polynomials:
+c Products of linear factors written out as polynomials:
 c   (x1+x2+x3+x4+1)*(x5+x6+x7)*(x8+1)            three linerals
 c   (x1+x2+x3+x4+1)*(x9+x10+1)                   shares the first lineral
 c   (x5+x6+x7)*(x11)                             shares the second
@@ -14,4 +14,4 @@ x1*x9 + x1*x10 + x1 + x2*x9 + x2*x10 + x2 + x3*x9 + x3*x10 + x3 + x4*x9 + x4*x10
 x5*x11 + x6*x11 + x7*x11
 x12*x13 + x12
 x1 + x5 + x9 + x12 + x13 + 1
-c CHECK: \[cnf-stats\] vars 17 clauses 48 lits 213 anf_vars 14 monom_vars 0 chunk_vars 0 chunk_terms 0 cut_vars 0 lineral_vars 3 xnf_cls 4 xor_cls 0
+c CHECK: \[cnf-stats\] vars 17 clauses 48 lits 213 anf_vars 14 monom_vars 0 chunk_vars 0 chunk_terms 0 cut_vars 0 linfactor_vars 3 product_cls 4 xor_cls 0

@@ -165,25 +165,28 @@ how many monomial, chunk (partner) and XOR-cut variables were introduced;
 with `--comments 1` every auxiliary variable's meaning is written into the
 CNF as a comment.
 
-#### XNF clauses and native XOR clauses
+#### Products of linear factors and native XOR clauses
 
-Before any of the above, a polynomial that is a product of linear factors
-with disjoint variables, `(l1 + c1) * (l2 + c2) * (l3 + c3)`, is recognised
-(`--xnf`, default on). Such a polynomial is an XNF clause, "`l1 = c1` or
-`l2 = c2` or `l3 = c3`", and this is how e.g. the bivium/Trivium keystream
-instances of the XNF solver benchmarks look once expanded into ANF (a
-product of three linerals of 50 variables each has 125000 terms). It is
-encoded as one clause over one shared CNF variable per lineral, each
-defined by a single XOR, so the linerals stay whole.
+Before any of the above, a polynomial that is a product of linear factors,
+`(l1 + c1) * (l2 + c2) * (l3 + c3)`, is recognised (`--factor`, default on).
+Such a polynomial is 0 exactly when one factor is, so it is encoded as one
+clause "`l1 = c1` or `l2 = c2` or `l3 = c3`" over one shared CNF variable
+per multi-variable factor, each defined by a single XOR. This is how e.g.
+the bivium/Trivium keystream instances of the XNF solver benchmarks look
+once written as ANF (a product of three linerals of 50 variables each has
+125000 terms, which the monomial-per-variable encoding cannot handle). The
+input is still ANF and the output still CNF; the factorisation is tracked
+through the simplification so it survives substitutions, and in
+product-preserving mode (`--keepfactor`, auto-detected) the in-place rules
+leave such products alone.
 
 By default every XOR is cut into pieces of `--cutnum` variables and written
 as plain clauses. With `--xorcls 1` the XORs are instead written as
-CryptoMiniSat's native xor clauses (`x 1 2 3 0` lines); the output is then
-CNF-XOR, which only CryptoMiniSat reads. This matters for XOR-heavy systems:
-from the cut pieces CryptoMiniSat recovers thousands of 5-variable XORs and
-builds huge Gauss-Jordan matrices, whereas whole linerals give it one row
-each. The built-in solver (`--solve`, `--solve-xnf`) and the SAT-based
-simplification always use native xor clauses.
+CryptoMiniSat's native xor clauses (`x 1 2 3 0` lines, optionally chained
+into pieces of `--xormaxlen`); the output is then CNF-XOR, which only
+CryptoMiniSat reads. The built-in solver (`--solve`, `--solve-xnf`) and the
+SAT-based simplification always use native xor clauses. On the bivium
+instances plain cutting at 5 was as good as or better than native XORs.
 
 ## List all solutions of an ANF
 

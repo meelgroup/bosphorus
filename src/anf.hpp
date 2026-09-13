@@ -96,7 +96,7 @@ class ANF
     const BoolePolyRing& getRing() const;
     const vector<BoolePolynomial>& getEqs() const;
     /// The lineral factorisation of equation idx if known (a product of
-    /// >= 2 linerals, i.e. an XNF clause), else empty. Found once with
+    /// >= 2 linear factors), else empty. Found once with
     /// factor_into_linerals() and then maintained through propagation, so
     /// it stays known even when substitutions make the factors share
     /// variables and the expanded polynomial can no longer be factored.
@@ -143,10 +143,10 @@ class ANF
     bool rewrite_eq(size_t idx, const BoolePolynomial& newpoly,
                     unordered_set<uint32_t>& updatedVars,
                     vector<size_t>& empty_equations);
-    // XNF-preserving mode (config.keepXnf): true if `from` is a product of
+    // product-preserving mode (config.keepFactor): true if `from` is a product of
     // >= 2 linerals and `to` is nonlinear but not such a product
-    bool breaks_xnf(const BoolePolynomial& from, const BoolePolynomial& to) const;
-    int keep_xnf = -1; // -1: not decided yet (config.keepXnf == 2)
+    bool breaks_product(const BoolePolynomial& from, const BoolePolynomial& to) const;
+    int keep_factor = -1; // -1: not decided yet (config.keepFactor == 2)
     bool finish_rewrites(unordered_set<uint32_t>& updatedVars,
                          vector<size_t>& empty_equations);
 
