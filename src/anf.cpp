@@ -31,6 +31,7 @@ SOFTWARE.
 #include "replacer.hpp"
 #include "time_mem.h"
 #include <algorithm>
+#include <iterator>
 
 using std::cout;
 using std::endl;
@@ -598,6 +599,19 @@ BooleMonomial ANF::varsOf(size_t idx) const
     return used;
 }
 
+VarVec ANF::varsVecOf(size_t idx) const
+{
+    VarVec out;
+    if (poly_valid[idx]) {
+        for (const uint32_t v : eqs[idx].usedVariables()) out.push_back(v);
+        return out; // already sorted
+    }
+    for (const Lineral& l : factors[idx]) out.insert(out.end(), l.vars.begin(), l.vars.end());
+    std::sort(out.begin(), out.end());
+    out.erase(std::unique(out.begin(), out.end()), out.end());
+    return out;
+}
+
 size_t ANF::nVarsOf(size_t idx) const
 {
     if (poly_valid[idx]) return eqs[idx].nUsedVariables();
@@ -708,7 +722,7 @@ bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
                           vector<size_t>& empty_equations,
                           const vector<Lineral>* newfactors)
 {
-    BooleMonomial prev_used = varsOf(eq_idx);
+    const VarVec prev_used = varsVecOf(eq_idx);
     const bool erased = eraseKey(eq_idx);
     assert(erased);
     (void)erased;
@@ -767,12 +781,19 @@ bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
         }
     }
 
-    BooleMonomial curr_used(varsOf(eq_idx));
-    BooleMonomial gcd = prev_used.GCD(curr_used);
-    prev_used /= gcd; // update remove list
-    curr_used /= gcd; // update insert list
-    removePolyFromOccur(prev_used, eq_idx);
-    addPolyToOccur(curr_used, eq_idx);
+    // occurrence lists: drop the variables that went away, add the new ones
+    const VarVec curr_used = varsVecOf(eq_idx);
+    VarVec gone, came;
+    std::set_difference(prev_used.begin(), prev_used.end(), curr_used.begin(), curr_used.end(), std::back_inserter(gone));
+    std::set_difference(curr_used.begin(), curr_used.end(), prev_used.begin(), prev_used.end(), std::back_inserter(came));
+    for (const uint32_t v : gone) {
+        vector<size_t>& occ = occur[v];
+        auto it = std::find(occ.begin(), occ.end(), eq_idx);
+        assert(it != occ.end());
+        *it = occ.back();
+        occ.pop_back();
+    }
+    for (const uint32_t v : came) occur[v].push_back(eq_idx);
     return true;
 }
 

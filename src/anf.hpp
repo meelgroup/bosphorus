@@ -119,6 +119,8 @@ class ANF
     }
     /// Number of variables of equation idx (an upper bound for a product).
     size_t nVarsOf(size_t idx) const;
+    /// Sorted, distinct variables of equation idx (no ZDD work for a product).
+    VarVec varsVecOf(size_t idx) const;
     /// Degree of equation idx (the number of factors for a product, an
     /// upper bound if the factors share variables).
     int degOf(size_t idx) const;
