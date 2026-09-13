@@ -34,6 +34,7 @@ SOFTWARE.
 #include "bosphincludes.hpp"
 #include "anfstats.hpp"
 #include <memory>
+#include <unordered_set>
 #include "elimlin.hpp"
 #include "extendedlinearization.hpp"
 #include "simplifybysat.hpp"
@@ -62,6 +63,15 @@ public:
     BoolePolyRing* pring = nullptr;
     vector<Clause> clauses_needed_for_anf_import;
     vector<BoolePolynomial> learnt;
+    // stableHash of every fact ever learnt by XL/ElimLin/SAT: a fact that
+    // was learnt before is not new even if the in-place rules have since
+    // rewritten the equation it became into another form (otherwise XL
+    // keeps re-learning the same linear equations and the loop never ends)
+    std::unordered_set<BoolePolynomial::hash_type> ever_learnt;
+    bool is_new_fact(const BoolePolynomial& p)
+    {
+        return ever_learnt.insert(p.stableHash()).second;
+    }
 
     bool read_in_data = false;
 };
@@ -533,7 +543,14 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                     if (dat->config.doRewrite) {
                         sub_iter_performed = true;
                         needs_propagate = false; // the rules propagate themselves
-                        num_learnt = anf->rewrite_inplace();
+                        // progress means a smaller system or more variables
+                        // known, not the number of rewrites: rewriting the
+                        // same equations back and forth is no progress
+                        const BLib::ANFStats bef = anf->get_stats();
+                        anf->rewrite_inplace();
+                        const BLib::ANFStats aft = anf->get_stats();
+                        num_learnt = (aft.monoms < bef.monoms || aft.eqs < bef.eqs ||
+                                      aft.set_vars + aft.repl_vars > bef.set_vars + bef.repl_vars) ? 1 : 0;
                     }
                     break;
                 case S_XL:
@@ -544,6 +561,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                             anf->setNOTOK();
                         } else {
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
+                                if (!dat->is_new_fact(dat->learnt[i])) continue;
                                 num_learnt +=
                                     anf->addBoolePolynomial(dat->learnt[i]);
 
@@ -561,6 +579,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                             anf->setNOTOK();
                         } else {
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
+                                if (!dat->is_new_fact(dat->learnt[i])) continue;
                                 num_learnt +=
                                     anf->addBoolePolynomial(dat->learnt[i]);
 
@@ -597,6 +616,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
 
                         if (ret != l_False) {
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
+                                if (!dat->is_new_fact(dat->learnt[i])) continue;
                                 num_learnt += anf->addLearntBoolePolynomial(dat->learnt[i]);
 
                                 if (dat->config.verbosity > 4)  {
