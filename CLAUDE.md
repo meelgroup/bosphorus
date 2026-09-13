@@ -36,6 +36,16 @@ PolyBoRi/CUDD tend to dominate; check which rule calls them.
 - `cd build && ctest` runs the lit suite (`tests/anf-files`); `lit -v build/tests/anf-files --filter NAME` for one test.
 - End-to-end tests verify against brute force (`tests/utils/verify_anf.py`).
 
+## Benchmarking discipline
+- CryptoMiniSat times vary 2-3x between seeds (`--random N`): never conclude
+  from one run; compare several seeds or many instances.
+- Benchmark a snapshot copy of the binary and library (`cp build/bosphorus
+  build/lib/libbosphorus.so* somewhere/; LD_LIBRARY_PATH=somewhere`) so that
+  rebuilding during a batch does not change (or break) what is measured.
+- Long batches: run them detached (`setsid nohup script > log 2>&1 &`); the
+  harness kills background tasks as "low memory" when big CNF files fill the
+  page cache. Verify every model against the original ANF.
+
 ## Benchmarks
 - The bivium family lives in `/home/soos/development/sat_solvers/xnf/xorricane-bench/bivium/`.
   Run Bosphorus with `--el 0` there; every `.anf` starts with a variable-list line.
