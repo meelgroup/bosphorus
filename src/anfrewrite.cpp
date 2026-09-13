@@ -619,22 +619,19 @@ size_t ANF::canon_factors()
     };
     std::unordered_map<uint32_t, Row> rows; // pivot -> row (words bits + [words] constant)
     auto reduce = [&](Row& r) {
-        // eliminate pivots from the top down
-        while (true) {
-            bool did = false;
-            for (long w = words - 1; w >= 0 && !did; w--) {
-                uint64_t x = r[w];
-                while (x) {
-                    const size_t i = w * 64 + (63 - __builtin_clzll(x));
-                    x &= ~((uint64_t)1 << (i % 64));
-                    auto it = rows.find(i);
-                    if (it == rows.end()) continue;
-                    for (size_t k = 0; k <= words; k++) r[k] ^= it->second[k];
-                    did = true;
-                    break;
-                }
+        // The rows are pairwise reduced (each pivot is the highest variable
+        // of its row and occurs in no other row), so one pass from the
+        // highest bit down eliminates every pivot: adding a pivot row only
+        // changes bits below its pivot.
+        for (long w = words - 1; w >= 0; w--) {
+            uint64_t mask = ~(uint64_t)0; // bits of r[w] still to look at
+            while (r[w] & mask) {
+                const size_t b = 63 - __builtin_clzll(r[w] & mask);
+                mask &= ((uint64_t)1 << b) - 1;
+                auto it = rows.find(w * 64 + b);
+                if (it == rows.end()) continue;
+                for (size_t k = 0; k <= words; k++) r[k] ^= it->second[k];
             }
-            if (!did) break;
         }
     };
     size_t num_lin = 0;

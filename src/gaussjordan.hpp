@@ -120,12 +120,19 @@ class GaussJordan
             printMatrix();
         }
 
-        // Process Gauss Jordan output results
+        // Process Gauss Jordan output results: scan the words of each row for
+        // set bits instead of reading every cell (the matrix is sparse and
+        // wide)
+        const int const_col = mat->ncols - 1;
         for (int row = 0; row < mat->nrows; row++) {
-            // Read row
-            BoolePolynomial poly(mzd_read_bit(mat, row, mat->ncols - 1), ring);
-            for (int col = 0; col < mat->ncols - 1; col++) {
-                if (mzd_read_bit(mat, row, col)) {
+            BoolePolynomial poly(mzd_read_bit(mat, row, const_col), ring);
+            const word* r = mzd_row(mat, row);
+            for (int w = 0; w < mat->width; w++) {
+                word x = r[w];
+                while (x) {
+                    const int col = w * 64 + __builtin_ctzll(x);
+                    x &= x - 1;
+                    if (col >= const_col) break;
                     poly += revMonomMap[col];
                 }
             }
