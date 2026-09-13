@@ -26,7 +26,6 @@ SOFTWARE.
 #include <cctype>
 #include <fstream>
 #include <string>
-#include <boost/lexical_cast.hpp>
 #include <iomanip>
 
 #include "replacer.hpp"

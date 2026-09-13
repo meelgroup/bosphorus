@@ -37,9 +37,9 @@ set(bosph_lib_files
 
 add_library(bosphorus ${bosph_lib_files})
 
-# polybori's headers include Boost, so the library needs Boost's include dir
-# even though only bosphorus-bin links a Boost library. Matters wherever Boost
-# is not in the default search path, e.g. Homebrew.
+# polybori's headers include Boost headers, so the library needs Boost's
+# include dir (nothing from Boost is linked). Matters wherever Boost is not in
+# the default search path, e.g. Homebrew.
 target_include_directories(bosphorus
   PRIVATE
     ${PROJECT_SOURCE_DIR}
@@ -82,7 +82,6 @@ target_include_directories(bosphorus-bin PRIVATE
 
 target_link_libraries(bosphorus-bin PRIVATE
     bosphorus
-    Boost::program_options
 )
 
 bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.hpp)

@@ -236,12 +236,13 @@ and call `map_solution` on it, as before.
 
 The build uses CMake and automatically fetches and compiles CryptoMiniSat (and
 in turn its own dependencies), so the only C++ dependencies you need to provide
-are Boost, zlib, GMP, m4ri and BRiAl. Install the system packages:
+are zlib, GMP, m4ri and BRiAl (whose headers need Boost). Install the system
+packages:
 
 ```bash
 # Debian/Ubuntu
 sudo apt-get install build-essential cmake pkg-config git zlib1g-dev libgmp-dev \
-                     libboost-program-options-dev libboost-test-dev
+                     libboost-dev
 
 # macOS (brew)
 brew install cmake pkg-config automake libtool boost gmp

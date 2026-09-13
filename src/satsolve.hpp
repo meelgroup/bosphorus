@@ -25,7 +25,6 @@ SOFTWARE.
 #define SATSOLVE__H
 
 #include <stdio.h>
-#include <boost/lexical_cast.hpp>
 #include <string>
 
 #include "anf.hpp"

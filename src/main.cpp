@@ -21,9 +21,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
+#include <charconv>
+#include <cctype>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <map>
+#include <stdexcept>
+#include <string>
 
 #include "bosphorus.hpp"
 #include "time_mem.h"
@@ -31,7 +36,7 @@ SOFTWARE.
 
 #include <cryptominisat5/solvertypesmini.h>
 #include <cryptominisat5/cryptominisat.h>
-#include <boost/program_options.hpp>
+#include "argparse.hpp"
 
 using std::cerr;
 using std::cout;
@@ -39,7 +44,6 @@ using std::endl;
 using std::string;
 
 using namespace Bosph;
-namespace po = boost::program_options;
 
 //inputs and outputs
 string anfInput;
@@ -63,10 +67,79 @@ int only_new_cnf_clauses = 0;
 uint32_t maxiters = 100;
 uint32_t max_sol = 1;
 
-po::variables_map vm;
+argparse::ArgumentParser program("bosphorus", "", argparse::default_arguments::help);
 BLib::ConfigData config;
 
 void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf);
+
+// Converters for argparse: strict, whole-string parsing so that "3x" or
+// "1.5" given to an integer option is rejected instead of silently truncated.
+template<typename T>
+static T fc_integral(const std::string& s)
+{
+    T val = 0;
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
+    if (ec != std::errc{}) {
+        throw std::invalid_argument("not an integer in range: '" + s + "'");
+    }
+    if (ptr != s.data() + s.size()) {
+        throw std::invalid_argument("trailing characters in integer: '" + s + "'");
+    }
+    return val;
+}
+static double fc_double(const std::string& s)
+{
+    size_t pos = 0;
+    double val;
+    try {
+        val = std::stod(s, &pos);
+    } catch (const std::exception&) {
+        throw std::invalid_argument("not a number: '" + s + "'");
+    }
+    if (pos != s.size()) {
+        throw std::invalid_argument("trailing characters in number: '" + s + "'");
+    }
+    return val;
+}
+static bool fc_bool(const std::string& s)
+{
+    std::string l = s;
+    for (auto& c : l) c = std::tolower(c);
+    if (l == "1" || l == "true" || l == "yes" || l == "on") return true;
+    if (l == "0" || l == "false" || l == "no" || l == "off") return false;
+    throw std::invalid_argument("not a boolean (0/1/true/false): '" + s + "'");
+}
+
+template<typename T, typename F>
+static void add_arg(const char* name, T& var, F fun, const char* hhelp)
+{
+    program.add_argument(name)
+        .action([&var, fun](const auto& a) { var = fun(a); })
+        .default_value(var)
+        .help(hhelp);
+}
+template<typename T, typename F>
+static void add_arg2(const char* name1, const char* name2, T& var, F fun, const char* hhelp)
+{
+    program.add_argument(name1, name2)
+        .action([&var, fun](const auto& a) { var = fun(a); })
+        .default_value(var)
+        .help(hhelp);
+}
+// Option that takes a value but has no default, e.g. a file name.
+static void add_str_arg(const char* name, string& var, const char* hhelp)
+{
+    program.add_argument(name)
+        .action([&var](const auto& a) { var = a; })
+        .help(hhelp);
+}
+static void add_flag(const char* name, bool& var, const char* hhelp)
+{
+    program.add_argument(name)
+        .action([&var](const auto&) { var = true; })
+        .flag()
+        .help(hhelp);
+}
 
 void parseOptions(int argc, char* argv[])
 {
@@ -75,156 +148,104 @@ void parseOptions(int argc, char* argv[])
         config.executedArgs.append(string(argv[i]).append(" "));
     }
 
-    std::ostringstream maxTime_str;
-    maxTime_str << std::scientific << std::setprecision(2) << config.maxTime
-                << std::fixed;
+    program.add_description("ANF and CNF simplifier and converter");
 
     /* clang-format off */
-    // Declare the supported options.
-    po::options_description generalOptions("Main options");
-    generalOptions.add_options()
-    ("help,h", "produce help message")
-    ("version", "print version number and exit")
+    // Main options
+    program.add_argument("--version")
+        .action([&](const auto&) {
+            cout << "bosphorus " << Bosphorus::get_version_sha1() << '\n'
+                 << Bosphorus::get_version_tag() << '\n'
+                 << Bosphorus::get_compilation_env() << endl;
+            exit(0);
+        })
+        .flag()
+        .help("print version number and exit");
     // Input/Output
-    ("anfread", po::value(&anfInput), "Read ANF from this file")
-    ("cnfread", po::value(&cnfInput), "Read CNF from this file")
-    ("anfwrite", po::value(&anfOutput), "Write ANF output to file")
-    ("cnfwrite", po::value(&cnfOutput), "Write CNF output to file")
-    ("verb,v", po::value<uint32_t>(&config.verbosity)->default_value(config.verbosity),
-     "Verbosity setting: 0(slient) - 3(noisy)")
-    ("simplify", po::value<int>(&config.simplify)->default_value(config.simplify),
-     "Simplify ANF")
-    ("solve", po::bool_switch(&solve_with_cms), "Solve the resulting ANF")
-    ("solve-xnf", po::bool_switch(&solve_xnf), "Solve the resulting ANF, tuning the SAT solver for XOR-heavy (XNF) problems")
-    ("solvewrite", po::value(&solution_output_file), "Solve the resulting ANF and print the solution to this file")
-    ("allsol", po::bool_switch(&all_solutions), "Find all solutions")
-    ("maxsol", po::value(&max_sol)->default_value(max_sol), "Find at most this many solutions")
-    ("maxiters", po::value(&maxiters)->default_value(maxiters),
-     "Maximum iterations to simplify")
+    add_str_arg("--anfread", anfInput, "Read ANF from this file");
+    add_str_arg("--cnfread", cnfInput, "Read CNF from this file");
+    add_str_arg("--anfwrite", anfOutput, "Write ANF output to file");
+    add_str_arg("--cnfwrite", cnfOutput, "Write CNF output to file");
+    add_arg2("-v", "--verb", config.verbosity, fc_integral<uint32_t>,
+        "Verbosity setting: 0(slient) - 3(noisy)");
+    add_arg("--simplify", config.simplify, fc_integral<int>, "Simplify ANF");
+    add_flag("--solve", solve_with_cms, "Solve the resulting ANF");
+    add_flag("--solve-xnf", solve_xnf,
+        "Solve the resulting ANF, tuning the SAT solver for XOR-heavy (XNF) problems");
+    add_str_arg("--solvewrite", solution_output_file,
+        "Solve the resulting ANF and print the solution to this file");
+    add_flag("--allsol", all_solutions, "Find all solutions");
+    add_arg("--maxsol", max_sol, fc_integral<uint32_t>, "Find at most this many solutions");
+    add_arg("--maxiters", maxiters, fc_integral<uint32_t>, "Maximum iterations to simplify");
 
     // Processes
-    ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
-     "Stop solving after this much time (s); Use 0 if you only want to propagate")
+    add_arg("--maxtime", config.maxTime, fc_double,
+        "Stop solving after this much time (s); Use 0 if you only want to propagate");
     // checks
-    ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
-     "Do not write comments to output files")
-    ;
+    add_arg("--comments", config.writecomments, fc_bool,
+        "Do not write comments to output files");
 
-    po::options_description cnf_conv_options("CNF conversion");
-    cnf_conv_options.add_options()
-    ("cutnum", po::value<uint32_t>(&config.cutNum)->default_value(config.cutNum),
-     "Cutting number when not using XOR clauses")
-    ("karn", po::value(&config.brickestein_algo_cutoff)->default_value(config.brickestein_algo_cutoff),
-     "Uses this cutoff for doing Brickenstein's algorithm for translation of complex ANFs")
-    ("onlynewcnfcls", po::value(&only_new_cnf_clauses)->default_value(only_new_cnf_clauses),
-         "Only output to CNF the newly discovered CNF clauses. Must have CNF as input.")
-    ;
+    // CNF conversion
+    add_arg("--cutnum", config.cutNum, fc_integral<uint32_t>,
+        "Cutting number when not using XOR clauses");
+    add_arg("--karn", config.brickestein_algo_cutoff, fc_integral<uint32_t>,
+        "Uses this cutoff for doing Brickenstein's algorithm for translation of complex ANFs");
+    add_arg("--onlynewcnfcls", only_new_cnf_clauses, fc_integral<int>,
+        "Only output to CNF the newly discovered CNF clauses. Must have CNF as input.");
 
-    po::options_description xl_options("XL");
-    xl_options.add_options()
-    ("xl", po::value(&config.doXL), "Turn on/off XL-based simplification. Default: ON")
-    ("xldeg", po::value<uint32_t>(&config.xlDeg)->default_value(config.xlDeg),
-     "Expansion degree for XL algorithm. Default = 1 (0 = Just GJE. For now we only support 0 <= xldeg = 3)")
-    ("xlsample", po::value<double>(&config.XLsample)->default_value(config.XLsample),
-     "Size of matrix to sample for XL, in log2")
-    ("xlsamplex", po::value<double>(&config.XLsampleX)->default_value(config.XLsampleX),
-     "Size of matrix to sample for XL, in log2, that we can expand by")
-    ;
+    // XL
+    add_arg("--xl", config.doXL, fc_integral<int>,
+        "Turn on/off XL-based simplification. Default: ON");
+    add_arg("--xldeg", config.xlDeg, fc_integral<uint32_t>,
+        "Expansion degree for XL algorithm. Default = 1 (0 = Just GJE. For now we only support 0 <= xldeg = 3)");
+    add_arg("--xlsample", config.XLsample, fc_double,
+        "Size of matrix to sample for XL, in log2");
+    add_arg("--xlsamplex", config.XLsampleX, fc_double,
+        "Size of matrix to sample for XL, in log2, that we can expand by");
 
-    po::options_description elimlin_options("ElimLin options");
-    elimlin_options.add_options()
-    ("el", po::value(&config.doEL), "Turn on/off ElimLin-based simplification. Default: ON")
-    ("elsample", po::value<double>(&config.ELsample)->default_value(config.ELsample),
-     "Size of matrixto sample for EL, in log2")
-    ;
+    // ElimLin options
+    add_arg("--el", config.doEL, fc_integral<int>,
+        "Turn on/off ElimLin-based simplification. Default: ON");
+    add_arg("--elsample", config.ELsample, fc_double,
+        "Size of matrixto sample for EL, in log2");
 
-    po::options_description sat_options("SAT options");
-    sat_options.add_options()
-    ("sat", po::value(&config.doSAT),  "Turn on/off SAT-based simplification. Default: ON")
-    ("satinc", po::value<uint64_t>(&config.numConfl_inc)->default_value(config.numConfl_inc),
-     "Conflict inc for built-in SAT solver.")
-    ("satlim", po::value<uint64_t>(&config.numConfl_lim)->default_value(config.numConfl_lim),
-     "Conflict limit for built-in SAT solver.")
-    ("threads,t", po::value<unsigned int>(&config.numThreads)->default_value(config.numThreads),
-     "Number of threads to use for SAT solver (same value is used for built-in and external).")
-    ("solmap", po::value(&solmap_file_write), "Write solution map to this file")
-    ;
-
+    // SAT options
+    add_arg("--sat", config.doSAT, fc_integral<int>,
+        "Turn on/off SAT-based simplification. Default: ON");
+    add_arg("--satinc", config.numConfl_inc, fc_integral<uint64_t>,
+        "Conflict inc for built-in SAT solver.");
+    add_arg("--satlim", config.numConfl_lim, fc_integral<uint64_t>,
+        "Conflict limit for built-in SAT solver.");
+    add_arg2("-t", "--threads", config.numThreads, fc_integral<unsigned int>,
+        "Number of threads to use for SAT solver (same value is used for built-in and external).");
+    add_str_arg("--solmap", solmap_file_write, "Write solution map to this file");
     /* clang-format on */
-    po::options_description cmdline_options;
-    cmdline_options.add(generalOptions);
-    cmdline_options.add(cnf_conv_options);
-    cmdline_options.add(xl_options);
-    cmdline_options.add(elimlin_options);
-    cmdline_options.add(sat_options);
 
     try {
-        po::store(
-            po::command_line_parser(argc, argv).options(cmdline_options).run(),
-            vm);
-        if (vm.count("help")) {
-            cout << generalOptions << endl;
-            cout << cnf_conv_options << endl;
-            cout << xl_options << endl;
-            cout << elimlin_options << endl;
-            cout << sat_options << endl;
-            exit(0);
+        program.parse_args(argc, argv);
+    } catch (const std::exception& err) {
+        string msg = err.what();
+        if (msg == "Duplicate argument") {
+            std::map<string, int> seen;
+            for (int i = 1; i < argc; i++) {
+                if (argv[i][0] == '-') seen[argv[i]]++;
+            }
+            for (const auto& [k, v] : seen) {
+                if (v > 1) msg += ": " + k;
+            }
         }
-        po::notify(vm);
-    } catch (boost::exception_detail::clone_impl<
-             boost::exception_detail::error_info_injector<po::unknown_option> >&
-                 c) {
-        cout << "Some option you gave was wrong. Please give '--help' to get "
-                "help"
-             << endl;
-        cout << "Unkown option: " << c.what() << endl;
+        cerr << "ERROR parsing options: " << msg << endl
+             << "Please give '--help' to get help" << endl;
         exit(-1);
-    } catch (boost::bad_any_cast& e) {
-        cerr << e.what() << endl;
-        exit(-1);
-    } catch (boost::exception_detail::clone_impl<
-             boost::exception_detail::error_info_injector<
-                 po::invalid_option_value> >& what) {
-        cerr << "Invalid value '" << what.what() << "'"
-             << " given to option '" << what.get_option_name() << "'" << endl;
-        exit(-1);
-    } catch (boost::exception_detail::clone_impl<
-             boost::exception_detail::error_info_injector<
-                 po::multiple_occurrences> >& what) {
-        cerr << "Error: " << what.what() << " of option '"
-             << what.get_option_name() << "'" << endl;
-        exit(-1);
-    } catch (
-        boost::exception_detail::clone_impl<
-            boost::exception_detail::error_info_injector<po::required_option> >&
-            what) {
-        cerr << "You forgot to give a required option '"
-             << what.get_option_name() << "'" << endl;
-        exit(-1);
-    }
-
-    if (vm.count("version")) {
-        cout << "bosphorus " << Bosphorus::get_version_sha1() << '\n'
-             << Bosphorus::get_version_tag() << '\n'
-             << Bosphorus::get_compilation_env() << endl;
-        exit(0);
     }
 
     // I/O checks
-    if (vm.count("anfread")) {
-        readANF = true;
-    }
-    if (vm.count("cnfread")) {
-        readCNF = true;
-    }
-    if (vm.count("anfwrite")) {
-        writeANF = true;
-    }
-    if (vm.count("cnfwrite")) {
-        writeCNF = true;
-    }
+    readANF = program.is_used("--anfread");
+    readCNF = program.is_used("--cnfread");
+    writeANF = program.is_used("--anfwrite");
+    writeCNF = program.is_used("--cnfwrite");
 
-    if (vm.count("solvewrite")) {
+    if (program.is_used("--solvewrite")) {
         solve_with_cms = true;
     }
 
