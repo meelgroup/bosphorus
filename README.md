@@ -192,6 +192,37 @@ CryptoMiniSat reads. The built-in solver (`--solve`, `--solve-xnf`) and the
 SAT-based simplification always use native xor clauses. On the bivium
 instances plain cutting at 5 was as good as or better than native XORs.
 
+### Example: the bivium keystream instances
+
+The bivium instances of the XNF solver benchmarks (state recovery from 354 or
+531 keystream bits with 26-50 known state bits) are products of linear factors
+once written as ANF. With Bosphorus's output (`bosphorus X.anf --el 0
+--cnfwrite X.cnf`) CryptoMiniSat (`--sls 0 --autodisablegauss 0 --presimp 1
+--maxmatrixrows 100000 --maxmatrixcols 100000 --maxnummatrices 1000000
+--minmatrixrows 1`, 200 s, one seed, models checked against the original
+ANF) solves 18 of the 21 instances against 13 for the benchmark's own CNF,
+and is 2-3x faster on the ones both solve; simplifying a 531-step instance
+takes about 8 seconds. Solver times vary 2-3x between seeds, so compare
+several.
+
+| instance | steps | known bits | benchmark CNF | Bosphorus output |
+|---|---|---|---|---|
+| tmpdvd4qqhc | 354 | 26 | timeout | 194 s |
+| tmp0pckmywp | 354 | 34 | 54 s | 16 s |
+| tmpafl2snvs | 354 | 35 | 36 s | 10 s |
+| tmpc2byc16q | 354 | 37 | 11 s | 4 s |
+| tmpbi2n8e6d | 531 | 26 | timeout | timeout |
+| tmp0c_s736b | 531 | 27 | timeout | 31 s |
+| tmpec79lh8f | 531 | 28 | timeout | timeout |
+| tmp65a5rlro | 531 | 29 | timeout | timeout |
+| tmpcatw2met | 531 | 30 | timeout | 27 s |
+| tmp4grsp1np | 531 | 31 | timeout | 103 s |
+| tmp3ce4vlbu | 531 | 33 | 53 s | 27 s |
+| tmp_ifs1zce | 531 | 35 | timeout | 7 s |
+| tmp2v65y1ui | 531 | 43 | 16 s | 4 s |
+| tmp9_e6244z | 531 | 46 | 10 s | 4 s |
+| easy ones (40-50 known) | | | 3-12 s | 3-5 s |
+
 ## List all solutions of an ANF
 
 To find all solutions to `myfile.anf`:
