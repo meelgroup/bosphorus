@@ -99,6 +99,72 @@ Explanation of simplifications performed:
 * The second polynomial becomes `(x2 + x3) * x2 + x2 * x3 + 1 = 0`, which simplifies to `x2 + 1 = 0`
 * Substituting `x2 + 1 = 0` yields `x1 + x3 + 1 = 0`
 
+## ANF rewrite rules and statistics
+
+Simplification runs a set of rewrite rules in rounds until nothing changes
+any more. The cheap in-place rules come first in every round, then the
+strategies that work on a copy of the system and feed back what they learnt:
+
+| rule | what it does | switch |
+|---|---|---|
+| `anf-prop` | propagates units (`x`, `x+1`), (anti-)equivalences (`x+y`, `x+y+1`) and `m+1` (all variables of monomial `m` are true) through the system | always on |
+| `binom-red` | reduces every equation modulo the monomial and binomial equations: `x*y = 0` deletes every monomial divisible by `x*y`, `x*y + x = 0` (x implies y) turns `x*y*z` into `x*z`, and a definition `x*y + z = 0` lowers the degree of every monomial containing `x*y`. The degree-lexicographic leading term is rewritten, so degrees never grow | `--binomred 0/1`, `--binomredlen N` uses equations of up to N terms as rules (default 2) |
+| `poly-shorten` | replaces an equation `p` by `p + f` whenever the two share more than half of the terms of `f`, so the result is shorter. Shortens XORs and re-uses definitions (`y + x1*x2 + x3` in the system rewrites `x1*x2 + x3 + ...` to `y + ...`) | `--shorten 0/1` |
+| `lit-probe` | partial evaluation of small equations: `p|x=0 == 1` forces `x = 1`, the four evaluations on a pair of variables give equivalences (`x*y + x + 1` gives `x = 1, y = 0`; `x*y*(z+1) + 1` gives `x = y = 1, z = 0`) and binary implications; the strongly connected components of the implication graph give further equivalences (`x*y + x` with `x*y + y` gives `x = y`) | `--probe 0/1`, `--probevars N` only looks at equations with at most N variables (default 8) |
+| `xl` | eXtended Linearization: multiplies equations by variables and Gauss-Jordan eliminates, learning linear equations | `--xl 0/1`, `--xldeg`, `--xlsample` |
+| `elimlin` | ElimLin: Gauss-Jordan elimination and substitution of the linear equations found, iterated | `--el 0/1`, `--elsample` |
+| `sat-simp` | converts to CNF, runs CryptoMiniSat for a bounded number of conflicts and imports the units, binary XORs and recovered XORs it found | `--sat 0/1`, `--satinc`, `--satlim` |
+
+`--rewrite 0` turns off all in-place rules at once. Every rule is sound: the
+in-place rules only ever add a multiple of another equation still in the
+system to an equation, or add a fact implied by a single equation, so the
+solution set over all variables is unchanged.
+
+Before and after every rule the size of the system is printed, in the style
+of CryptoMiniSat's `[simp-stats]` lines, so it is easy to see what each rule
+achieved:
+
+```
+c [simp-stats] bef binom-red              eqs 2294 monoms 288610 lin_eqs 314 nonlin_eqs 1980 max_deg 3
+c [simp-stats]                            free_vars 789 set_vars 97 repl_vars 0 mem_MB 60 T: 5.58 depth 0
+c [binom-red] rewrote 1427 eqs (59364 monomials) T: 2.95
+c [simp-stats] aft binom-red              eqs 2225 monoms 261892 lin_eqs 355 nonlin_eqs 1870 max_deg 3
+c [simp-stats]                            free_vars 789 set_vars 97 repl_vars 0 mem_MB 62 T: 8.53 T-step: 2.95 depth 0
+```
+
+On a terminal the rule name is orange, numbers that went down are green and
+numbers that went up are red (`--color 0/1/2` = never/always/auto; the
+`NO_COLOR` environment variable is honoured). `depth` is the nesting: a rule
+that runs inside another one (e.g. propagation of what XL learnt) is indented
+and shown at verbosity 2 and above.
+
+### ANF-to-CNF conversion strategies
+
+When a polynomial is too large for Brickenstein's direct conversion
+(`--karn`), it is linearised: every nonlinear part becomes a CNF variable and
+the parts are XORed together with the cutting number `--cutnum`. Instead of
+one CNF variable per monomial (the *standard strategy*), Bosphorus uses the
+*partner strategies* of Jovanovic and Kreuzer, "Algebraic Attacks using
+SAT-Solvers" (Groups Complexity Cryptology, 2010), which fold small
+combinations of terms into one variable with a short clause set each:
+
+| combination | name | CNF variable `y` |
+|---|---|---|
+| `x*y + x` | linear partner (LPS) | `y = x & !y` (3 clauses) |
+| `x*y + x + y + 1` | double partner (DPS) | `y = !x & !y` (3 clauses) |
+| `x*y + x*z` | quadratic partner (QPS) | `y = x & (y ^ z)` (5 clauses) |
+| `x*y*z + x*y*w` | cubic partner (CPS) | `y = x & y & (z ^ w)` (6 clauses) |
+
+All of these are of the form `P * h(F)`, a common monomial `P` times a small
+polynomial `h` in a few free variables `F`; the cover is searched for
+generally, so mixtures such as `x*(y + z + 1)` and `x*(y+1)*(z+1)` are found
+too, and the search accounts for monomials that already have a CNF variable
+from another polynomial. `--partner 0` restores the standard strategy. The
+`[cnf-stats]` line reports the number of variables, clauses, literals and
+how many monomial, chunk (partner) and XOR-cut variables were introduced;
+with `--comments 1` every auxiliary variable's meaning is written into the
+CNF as a comment.
+
 ## List all solutions of an ANF
 
 To find all solutions to `myfile.anf`:
