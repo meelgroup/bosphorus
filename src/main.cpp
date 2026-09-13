@@ -198,6 +198,8 @@ void parseOptions(int argc, char* argv[])
         "Encode polynomials that are products of linear factors (XNF clauses) with one shared CNF variable per lineral, keeping the XORs whole. Default: ON");
     add_arg("--xorcls", config.xorClauses, fc_integral<int>,
         "Write XORs as native CryptoMiniSat xor clauses ('x 1 2 3 0' lines) instead of cutting them into CNF. The output is then CNF-XOR, which only CryptoMiniSat reads; --solve always uses them. Default: OFF");
+    add_arg("--xormaxlen", config.xorMaxLen, fc_integral<uint32_t>,
+        "With --xorcls 1: cut native xor clauses longer than this into a chain of native pieces of this length (0 = never cut). Default: 0");
     add_arg("--partner", config.doPartner, fc_integral<int>,
         "ANF-to-CNF partner strategies (Jovanovic & Kreuzer): fold x*y+x, x*y+x+y+1, x*y+x*z, x*y*z+x*y*w and their generalisations into one CNF variable each. Default: ON");
     add_arg("--karn", config.brickestein_algo_cutoff, fc_integral<uint32_t>,

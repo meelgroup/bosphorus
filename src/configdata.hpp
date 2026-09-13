@@ -47,6 +47,7 @@ struct ConfigData {
     int doPartner = true; // Jovanovic-Kreuzer partner strategies (LPS/DPS/QPS/CPS)
     int doXnf = true;      // encode products of linear factors as XNF clauses
     int xorClauses = false; // emit XORs as native CryptoMiniSat xor clauses instead of cutting them
+    uint32_t xorMaxLen = 0;  // with xorClauses: cut native XORs longer than this into native pieces (0 = never)
 
     // Processes
     double maxTime = 1e20;

@@ -265,7 +265,34 @@ void CNF::addXor(const vector<uint32_t>& vars, bool rhs,
         addXorWithCuts(vars, rhs, setOfClauses);
         return;
     }
-    xor_clauses.push_back(std::make_pair(vars, rhs));
+    if (config.xorMaxLen < 3 || vars.size() <= config.xorMaxLen) {
+        xor_clauses.push_back(std::make_pair(vars, rhs));
+        return;
+    }
+    // long XOR: chain of native pieces of at most xorMaxLen variables,
+    // linked by fresh variables (each piece XORs to 0 except the last)
+    size_t pos = 0;
+    bool have_carry = false;
+    uint32_t carry = 0;
+    BoolePolynomial upto(getANFRing());
+    while (true) {
+        vector<uint32_t> cur;
+        if (have_carry) cur.push_back(carry);
+        while (pos < vars.size()) {
+            if (cur.size() >= config.xorMaxLen - 1 && vars.size() - pos != 1) break;
+            if (config.writecomments) upto += revCombinedMap[vars[pos]];
+            cur.push_back(vars[pos++]);
+        }
+        if (pos == vars.size()) {
+            xor_clauses.push_back(std::make_pair(cur, rhs));
+            return;
+        }
+        carry = newVar(kind_cut, upto);
+        numCutVars++;
+        have_carry = true;
+        cur.push_back(carry);
+        xor_clauses.push_back(std::make_pair(cur, false));
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
