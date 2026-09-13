@@ -163,7 +163,7 @@ inline void CNF::print_without_header(std::ostream& os) const
     for (const auto& set_of_cls: clauses) {
         os << set_of_cls.first;
         if (config.writecomments) {
-            os << "c " << set_of_cls.second << std::endl;
+            os << "c " << set_of_cls.second << '\n';
             os << "c ------------\n";
         }
     }
@@ -174,7 +174,7 @@ inline void CNF::print_without_header(std::ostream& os) const
         for (size_t i = 0; i < x.first.size(); i++) {
             os << ' ' << ((i == 0 && !x.second) ? "-" : "") << (x.first[i] + 1);
         }
-        os << " 0" << std::endl;
+        os << " 0\n";
     }
 }
 

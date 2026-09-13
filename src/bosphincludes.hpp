@@ -102,7 +102,7 @@ inline std::ostream& operator<<(std::ostream& os, const Clause& cl)
 inline std::ostream& operator<<(std::ostream& os, const vector<Clause>& clauses)
 {
     for (const auto& it: clauses) {
-        os << it << std::endl;
+        os << it << '\n'; // no flush per clause: these files have 10^5-10^6 of them
     }
     return os;
 }
