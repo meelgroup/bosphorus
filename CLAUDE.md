@@ -18,6 +18,17 @@ shows which of our functions (rules) sit above the hot leaves. Big ANFs (the
 bivium family) have polynomials with thousands of terms, so ZDD operations of
 PolyBoRi/CUDD tend to dominate; check which rule calls them.
 
+## Rules
+- **No wall-clock or CPU-time budgets inside algorithms.** Limit work with
+  deterministic counters (steps, S-polynomials, monomial visits, iterations,
+  e.g. `--gbsteps`, `--shortenbudget`), never with seconds: time limits make
+  runs irreproducible and bugs impossible to replay. The only time limit is the
+  user's global `--maxtime`.
+- **Fuzz before every commit**: `python3 utils/fuzz.py --iters 60` (about 15 s)
+  generates random small ANF and CNF inputs with random option settings and
+  checks Bosphorus's solutions/CNF against brute force. Commit only when it
+  reports no failures; a failing case is saved under `fuzz-fail-*` for replay.
+
 ## Testing
 - `cd build && ctest` runs the lit suite (`tests/anf-files`); `lit -v build/tests/anf-files --filter NAME` for one test.
 - End-to-end tests verify against brute force (`tests/utils/verify_anf.py`).

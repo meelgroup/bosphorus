@@ -796,6 +796,7 @@ size_t ANF::resolve_factors()
         if (with0.empty() || with1.empty()) continue;
         for (const size_t p : with0) {
             for (const size_t q : with1) {
+                if (p == q) continue; // a product with l and l+1 is 0: no equation at all
                 if (++pairs > max_pairs) break;
                 // resolvent: all factors of p and q except the resolved one
                 vector<Lineral> res;
@@ -881,6 +882,8 @@ size_t ANF::rewrite_inplace()
         if (config.doFacCanon) changes += canon_factors();
         if (!getOK()) break;
         if (config.doFacRes) changes += resolve_factors();
+        if (!getOK()) break;
+        if (config.doGB) changes += groebner_windows();
         total += changes;
         if (changes == 0) break;
         if (cpuTime() > config.maxTime) break;

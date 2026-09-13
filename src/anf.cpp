@@ -565,9 +565,13 @@ bool ANF::addTerms(vector<VarVec>& terms)
     return addBoolePolynomial(poly);
 }
 
-bool ANF::addProduct(const vector<Lineral>& f)
+bool ANF::addProduct(const vector<Lineral>& f_in)
 {
-    assert(f.size() >= 2);
+    vector<Lineral> f(f_in);
+    if (!normalize_product(f)) return false; // identically 0: nothing to add
+    if (f.size() < 2) {
+        return addBoolePolynomial(expand_linerals(*ring, f));
+    }
     const VarVec key = product_key(f);
     if (!prod_keys.insert(key).second) return false;
     BooleMonomial used(*ring);
@@ -708,12 +712,31 @@ bool ANF::updateEquations(size_t eq_idx, const BoolePolynomial newpoly,
     (void)erased;
 
     bool removed = false;
-    if (newfactors != nullptr && newfactors->size() >= 2) {
+    vector<Lineral> nf;
+    if (newfactors != nullptr) {
+        nf = *newfactors;
+        if (!normalize_product(nf)) nf.clear(); // identically 0: the equation is trivially true
+    }
+    if (newfactors != nullptr && nf.empty() && !newfactors->empty()) {
+        // a product that became identically 0
+        factors[eq_idx].clear();
+        eqs[eq_idx] = BoolePolynomial(*ring);
+        poly_valid[eq_idx] = 1;
+        eq_len[eq_idx] = 0;
+        removed = true;
+    } else if (newfactors != nullptr && nf.size() == 1) {
+        // collapsed to a single factor: a linear polynomial
+        factors[eq_idx].clear();
+        eqs[eq_idx] = expand_linerals(*ring, nf);
+        poly_valid[eq_idx] = 1;
+        eq_len[eq_idx] = eqs[eq_idx].length();
+        if (!insertKey(eq_idx)) removed = true;
+    } else if (newfactors != nullptr && nf.size() >= 2) {
         // stays a product: no polynomial is built
-        factors[eq_idx] = *newfactors;
+        factors[eq_idx] = nf;
         eqs[eq_idx] = BoolePolynomial(*ring);
         poly_valid[eq_idx] = 0;
-        eq_len[eq_idx] = product_size(*newfactors);
+        eq_len[eq_idx] = product_size(nf);
         if (!insertKey(eq_idx)) removed = true; // duplicate product
     } else {
         factors[eq_idx].clear();

@@ -62,4 +62,8 @@ include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(BRiAl  DEFAULT_MSG
                                   BRiAl_LIBRARIES BRiAl_INCLUDE_DIRS)
 
-mark_as_advanced(BRiAl_INCLUDE_DIRS BRiAl_LIBRARIES)
+find_library(BRiAl_GROEBNER_LIBRARIES
+    NAMES brial_groebner
+    HINTS ${BRiAl_ROOT}/lib ${BRiAl_ROOT}/lib64 /usr/local/lib /usr/lib
+)
+mark_as_advanced(BRiAl_INCLUDE_DIRS BRiAl_LIBRARIES BRiAl_GROEBNER_LIBRARIES)

@@ -76,6 +76,12 @@ struct ConfigData {
     int doFacCanon = true;        // canonicalise linear factors modulo the linear equations
     int doFacRes = true;          // resolution between products sharing a factor
     uint32_t facResMaxFactors = 2; // resolvents with more factors than this are not added
+    // windowed, degree-bounded Groebner bases (rule gb-window)
+    int doGB = false;
+    uint32_t gbDeg = 3;        // S-polynomials above this degree are dropped
+    uint32_t gbWindow = 24;    // equations per window
+    size_t gbMaxLen = 32;      // only equations with at most this many terms take part
+    uint64_t gbSteps = 100000; // S-polynomials reduced per call (deterministic budget)
     int keepFactor = 2;           // never rewrite a product of linear factors into a non-product: 0 off, 1 on, 2 auto (when most nonlinear eqs are such products)
 };
 

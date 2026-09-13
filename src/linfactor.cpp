@@ -292,3 +292,18 @@ size_t BLib::product_size(const vector<Lineral>& factors)
     for (const Lineral& l : factors) n *= l.vars.size() + (l.c ? 1 : 0);
     return n;
 }
+
+bool BLib::normalize_product(vector<Lineral>& factors)
+{
+    std::sort(factors.begin(), factors.end());
+    vector<Lineral> out;
+    for (const Lineral& l : factors) {
+        if (!out.empty() && out.back().vars == l.vars) {
+            if (out.back().c != l.c) return false; // l * (l + 1) = 0
+            continue;                              // l * l = l
+        }
+        out.push_back(l);
+    }
+    factors.swap(out);
+    return true;
+}

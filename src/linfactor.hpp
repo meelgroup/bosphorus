@@ -54,6 +54,11 @@ struct VarVecHash {
 /// expanding the factors as lists.
 bool factor_terms(const std::vector<VarVec>& terms, std::vector<Lineral>& factors);
 
+/// Normalises a factor list: sorts it, merges identical factors (l*l = l)
+/// and detects a pair l, l+1 (the product is 0). Returns false when the
+/// product is identically 0, i.e. the equation is trivially true.
+bool normalize_product(std::vector<Lineral>& factors);
+
 /// Canonical key of a product: factors sorted, each followed by a
 /// separator carrying its constant.
 VarVec product_key(const std::vector<Lineral>& factors);

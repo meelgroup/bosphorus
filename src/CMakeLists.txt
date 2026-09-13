@@ -25,6 +25,7 @@ set(bosph_lib_files
     anf.cpp
     anfstats.cpp
     anfrewrite.cpp
+    anfgroebner.cpp
     linfactor.cpp
     cnf.cpp
     anfcnfutils.cpp
@@ -60,6 +61,7 @@ target_link_libraries(bosphorus
   PUBLIC
     ${m4ri_LIBRARIES}
     ${BRiAl_LIBRARIES}
+    ${BRiAl_GROEBNER_LIBRARIES}
     ${CRYPTOMINISAT5_LIBRARIES}
     ${ZLIB_LIBRARY}
 )
