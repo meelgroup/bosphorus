@@ -240,6 +240,8 @@ void parseOptions(int argc, char* argv[])
         "Rewrite rule cnf-probe: the system is converted to CNF and CryptoMiniSat's inprocessing runs on it as Arjun does (equivalent-literal SCCs, probing of every ANF variable, in-tree probing, no variable elimination); the literals fixed at level 0 and the equivalent literals come back as equations (a CNF variable stands for a monomial, an XOR cut or a lineral). Runs once per rewrite round, after the cheap rules and before gb-cone, on a system that changed since its last run. Default: ON");
     add_arg("--cnfprobevars", config.cnfProbeVars, fc_integral<size_t>,
         "cnf-probe: probe at most this many ANF variables, the most incident first. Default: 200000");
+    add_arg("--cnfprobelen", config.cnfProbeLen, fc_integral<size_t>,
+        "cnf-probe: a nonlinear fact with more terms than this is dropped (two equal XOR-cut variables of linearised equations give the sum of the two partial sums, a long polynomial that is a combination of the equations); linear facts of any length go through the span filter. Default: 8");
     add_arg("--varprobe", config.doVarProbe, fc_integral<int>,
         "Rewrite rule var-probe: failed-literal probing with propagation, as CNF preprocessors do it: x = 0 and x = 1 are each propagated through the equations (units, m+1, products with one factor left); a branch that runs into 1 = 0 forces x, a variable set the same way in both branches is set, one set opposite ways is equivalent to x. Only units propagate, so it finds nothing on the S-box and stream-cipher families. Default: OFF");
     add_arg("--varprobebudget", config.varProbeBudget, fc_integral<uint64_t>,

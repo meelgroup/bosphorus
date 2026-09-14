@@ -81,6 +81,7 @@ struct ConfigData {
     int doProdSplit = true;       // p = 0 with 1+p a product of linerals becomes one linear equation per factor (prod-split)
     int doCnfProbe = true;        // cnf-probe: CryptoMiniSat's SCC, probe_all and in-tree probing on the CNF of the system, units and equivalences back into the ANF
     size_t cnfProbeVars = 200000; // cnf-probe: at most this many ANF variables are probed (most incident first)
+    size_t cnfProbeLen = 8;       // cnf-probe: nonlinear facts with more terms than this are dropped (equal XOR cuts of two linearised equations are sums of those equations)
     int doProbe = true;           // forced literals/equivalences/implications
     uint32_t probeVars = 8;       // only probe eqs with at most this many vars
     int doVarProbe = false;       // var-probe (off: unit-only propagation finds nothing on the crypto families and costs 0.3 s per call on bivium): assume x = 0 / x = 1, propagate through the equations, learn what both branches imply

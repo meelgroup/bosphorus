@@ -112,7 +112,14 @@ size_t ANF::cnf_probe()
         return !cnf.getPolyForVar(v).isConstant();
     };
     vector<BoolePolynomial> facts;
-    size_t num_units = 0, num_equiv = 0;
+    size_t num_units = 0, num_equiv = 0, num_long = 0;
+    // a long nonlinear fact (the difference of two XOR cuts of linearised
+    // equations) is a combination of equations already there: dropped
+    auto keep = [&](const BoolePolynomial& p) {
+        if (p.deg() <= 1 || p.length() <= config.cnfProbeLen) { facts.push_back(p); return true; }
+        num_long++;
+        return false;
+    };
     if (ret == CMSat::l_False) {
         facts.push_back(BoolePolynomial(true, *ring));
     } else {
@@ -121,8 +128,7 @@ size_t ANF::cnf_probe()
             BoolePolynomial p = poly_of_var(l.var());
             p += BooleConstant(!l.sign()); // the variable is true: p + 1 = 0
             if (config.verbosity >= 5) cout << "c [cnf-probe] unit " << l << " -> " << p << endl;
-            facts.push_back(p);
-            num_units++;
+            if (keep(p)) num_units++;
         }
         for (const auto& pr : solver.get_all_binary_xors()) {
             const uint32_t v1 = pr.first.var(), v2 = pr.second.var();
@@ -131,8 +137,7 @@ size_t ANF::cnf_probe()
                                 + BooleConstant(pr.first.sign() ^ pr.second.sign());
             if (config.verbosity >= 5) cout << "c [cnf-probe] equiv " << pr.first << " " << pr.second << " -> " << p << endl;
             if (p.isConstant()) { if (p.isOne()) facts.push_back(p); continue; }
-            facts.push_back(p);
-            num_equiv++;
+            if (keep(p)) num_equiv++;
         }
     }
     // The CNF carries the values and equivalences the replacer already
@@ -146,7 +151,7 @@ size_t ANF::cnf_probe()
     if (config.verbosity >= 1) {
         cout << "c [cnf-probe] cnf vars " << cnf.getNumVars() << " cls " << num_cls
              << " probed " << probed << " units " << num_units << " equivs " << num_equiv
-             << " new " << added << (ret == CMSat::l_False ? " UNSAT" : "") << " T: " << std::fixed
+             << " long-dropped " << num_long << " new " << added << (ret == CMSat::l_False ? " UNSAT" : "") << " T: " << std::fixed
              << std::setprecision(2) << (cpuTime() - myTime) << endl;
     }
     return added;
