@@ -170,6 +170,7 @@ size_t ANF::groebner_windows()
             if (config.verbosity >= 1 && whole) {
                 cout << "c [f4] whole system: steps " << f4.stats().steps << " rows " << f4.stats().rows
                      << " max cols " << f4.stats().cols_max << " max degree " << f4.stats().max_deg
+                     << " pairs-to-zero " << f4.stats().zero_reductions
                      << " basis " << basis.size() << (f4.stats().budget_exhausted ? " (budget exhausted)" : "") << endl;
             }
             for (const BoolF4::Poly& cg : basis) {

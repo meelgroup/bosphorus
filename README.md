@@ -157,8 +157,10 @@ the work is bounded by deterministic budgets (`--gbsteps` matrix rows,
 times faster than BRiAl's `symmGB_F2` (`--gbengine 0`, the engine behind
 Sage) on the dense systems that matter here: a random MQ system with
 n = 24, m = 48 in 2.8 s against 15 s, HFE25 in 52 s against 166 s, HFE30 in
-131 s against 1329 s, with the same solutions. Its limit is memory: a degree-5 step for 30-35 variables
-has 100k-400k columns.
+131 s against 1329 s, with the same solutions. Rows are generated from (basis element, multiplier)
+descriptors when the matrix is filled, so the memory is the matrix itself
+(MQ n = 24: 49 MB). Its limit is memory: a degree-5 step for 30-35
+variables has 100k-400k columns.
 
 ### ANF-to-CNF conversion strategies
 
