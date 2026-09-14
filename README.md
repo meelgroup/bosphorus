@@ -214,33 +214,42 @@ instances plain cutting at 5 was as good as or better than native XORs.
 The bivium instances of the XNF solver benchmarks (state recovery from 354 or
 531 keystream bits with 26-50 known state bits) are products of linear factors
 once written as ANF. With Bosphorus's output (`bosphorus X.anf --el 0
---cnfwrite X.cnf`) CryptoMiniSat (`--sls 0 --autodisablegauss 0 --presimp 1
---maxmatrixrows 100000 --maxmatrixcols 100000 --maxnummatrices 1000000
---minmatrixrows 1`, 200 s, one seed, models checked against the original
-ANF) solves 18 of the 21 instances against 13 for the benchmark's own CNF,
-and is 2-3x faster on the ones both solve; with three solver seeds every
-instance is solved. Simplifying a 531-step instance takes about 3 seconds
-(it took 127 seconds before the factored representation and the reader,
-propagation and scheduling work described in the commit history).
-Solver times vary 2-3x between seeds, so compare several.
+--cnfwrite X.cnf`, about 3 seconds per instance) CryptoMiniSat (`--sls 0
+--autodisablegauss 0 --presimp 1 --maxmatrixrows 100000 --maxmatrixcols
+100000 --maxnummatrices 1000000 --minmatrixrows 1`, 200 s, models checked
+against the original ANF) solves the 13 instances the benchmark's own CNF
+solves, 1.5-4x faster on the ones that take more than a few seconds, plus
+tmp_ifs1zce. Of the remaining seven hard instances (26-33 known bits at 531
+steps, or 26 at 354) three more are solved with some solver seed from
+Bosphorus's output and none from the benchmark CNF, but on these the
+outcome is dominated by the seed: the same CNF solves in 10 s with one seed
+and times out with the next, so single runs mean little. Times below are
+with the default seed, and with seeds 1 and 2 for the hard ones (T =
+timeout).
 
 | instance | steps | known bits | benchmark CNF | Bosphorus output |
 |---|---|---|---|---|
-| tmpdvd4qqhc | 354 | 26 | timeout | 194 s |
-| tmp0pckmywp | 354 | 34 | 54 s | 16 s |
-| tmpafl2snvs | 354 | 35 | 36 s | 10 s |
-| tmpc2byc16q | 354 | 37 | 11 s | 4 s |
-| tmpbi2n8e6d | 531 | 26 | timeout | timeout (81 s with `--random 3`) |
-| tmp0c_s736b | 531 | 27 | timeout | 31 s |
-| tmpec79lh8f | 531 | 28 | timeout | timeout (141 s with `--random 2`) |
-| tmp65a5rlro | 531 | 29 | timeout | timeout (6 s with `--random 3`) |
-| tmpcatw2met | 531 | 30 | timeout | 27 s |
-| tmp4grsp1np | 531 | 31 | timeout | 103 s |
-| tmp3ce4vlbu | 531 | 33 | 53 s | 27 s |
-| tmp_ifs1zce | 531 | 35 | timeout | 7 s |
-| tmp2v65y1ui | 531 | 43 | 16 s | 4 s |
-| tmp9_e6244z | 531 | 46 | 10 s | 4 s |
-| easy ones (40-50 known) | | | 3-12 s | 3-5 s |
+| tmpdvd4qqhc | 354 | 26 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: T/T) |
+| tmp0pckmywp | 354 | 34 | 54 s | 14 s |
+| tmpafl2snvs | 354 | 35 | 36 s | 21 s |
+| tmpc2byc16q | 354 | 37 | 11 s | 8 s |
+| tmp44mkq4l9 | 354 | 40 | 5 s | 6 s |
+| tmp6ifbfbz4 | 354 | 43 | 4 s | 5 s |
+| tmp72yj0xcp | 354 | 46 | 4 s | 5 s |
+| tmp09lh13kb | 354 | 49 | 3 s | 3 s |
+| tmp_utof4mt | 354 | 50 | 3 s | 3 s |
+| tmpbi2n8e6d | 531 | 26 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: T/T) |
+| tmp0c_s736b | 531 | 27 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: T/T) |
+| tmpec79lh8f | 531 | 28 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: T/T) |
+| tmp65a5rlro | 531 | 29 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: T/T) |
+| tmpcatw2met | 531 | 30 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: 52/T) |
+| tmp4grsp1np | 531 | 31 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: 15/T) |
+| tmp3ce4vlbu | 531 | 33 | 53 s (seeds 1,2: T/T) | timeout (seeds 1,2: 20/10) |
+| tmp_ifs1zce | 531 | 35 | timeout | 6 s |
+| tmp2v65y1ui | 531 | 43 | 16 s | 7 s |
+| tmp9_e6244z | 531 | 46 | 10 s | 6 s |
+| tmp7akxbh30 | 531 | 49 | 10 s | 6 s |
+| tmpb26sj1pd | 531 | 50 | 12 s | 6 s |
 
 What makes the difference on this family is not the clause set but
 CryptoMiniSat's Gauss-Jordan: the harness flags force it on, the cut XORs
