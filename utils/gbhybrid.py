@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Hybrid guess-and-Groebner solving of a GF(2) polynomial system (Bettale,
-Faugere, Perret): fix k variables to each of their 2^k values and let
-Bosphorus's whole-system Groebner basis (rule gb-cone) solve the remaining,
-over-determined system. Deterministic: guesses are enumerated in Gray-code
-order, the k variables are the ones occurring in most monomials.
+"""Guess-and-Groebner (Bettale, Faugere, Perret) as a PERFORMANCE ESTIMATE
+only: fix k variables to each of their 2^k values and let Bosphorus's
+whole-system Groebner basis (rule gb-cone) handle the remaining system.
+One guess costs what a system with k fewer variables costs, so the run time
+says what 2^k times the compute would reach; it is not a solving method
+(Bosphorus's job is rewriting). Deterministic: guesses are enumerated in
+Gray-code order, the k variables are the ones occurring in most monomials.
 
   python3 utils/gbhybrid.py system.anf k [--bin build/bosphorus] [--wholevars N]
 

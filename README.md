@@ -322,11 +322,14 @@ the scaling on generated instances shows what the Gröbner-basis rule buys:
 The basis is computed automatically when the system has at most
 `--gbwholevars` (24) active variables; raise it for larger systems.
 `utils/gbhybrid.py system.anf k` fixes the k most frequent variables to all
-2^k values and runs the basis on each remaining system (Gray-code order,
-deterministic); with BRiAl's basis a 24-variable system with 56 equations
-costs as much as one with 48, so at these sizes the hybrid brings no gain
-(n = 28, k = 4: 258 s against 196 s directly). The smallest posted
-challenge, n = 55, would need about 2^30 such runs.
+2^k values and runs the basis on each remaining system. This is only for
+estimating how far more compute would reach (one guess costs what the
+system with k fewer variables costs, so 2^k cores or 2^k times the time
+solve k more variables); it is not a solving method of Bosphorus, whose
+job is rewriting. For the record, with BRiAl's basis a 24-variable system
+with 56 equations costs as much as one with 48 (n = 28, k = 4: 258 s
+against 196 s directly), and the smallest posted challenge, n = 55, would
+need about 2^30 such runs.
 
 ### Post-quantum benchmark families
 
