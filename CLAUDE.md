@@ -74,6 +74,9 @@ PolyBoRi/CUDD tend to dominate; check which rule calls them.
   `/home/soos/development/sat_solvers/mq-challenge/` (`utils/mq2anf.py`).
   The whole-system Groebner basis (gb-cone, automatic up to `--gbwholevars`
   active variables) solves n <= 28 alone; n >= 55 is out of reach.
+- Detailed per-instance results (bivium, ascon, MQ, HFE, LowMC) live in the
+  memory notes of this project, not in the README: they depend on the
+  machine and on CryptoMiniSat's heuristics.
 - The ascon family (`.../xorricane-bench/ascon/`, named variables, 50
   instances, raw-CNF CMS results in `*.cnf.out-cms`) is the second reference
   family; the four-round instances (tmp3g3f82vv, tmpgmh2blh0, ...) are the

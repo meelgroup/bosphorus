@@ -107,17 +107,17 @@ strategies that work on a copy of the system and feed back what they learnt:
 
 | rule | what it does | switch |
 |---|---|---|
-| `anf-prop` | propagates units (`x`, `x+1`), (anti-)equivalences (`x+y`, `x+y+1`) and `m+1` (all variables of monomial `m` are true) through the system | always on |
-| `lin-gauss` | Gaussian elimination among the linear equations only, shortest first: an equation that is a combination of shorter ones is deleted, one whose reduced form is shorter is replaced by it, and reduced forms with one or two variables are units and equivalences for `anf-prop`. Nonlinear equations are not touched | `--lingauss 0/1` |
-| `binom-red` | reduces every equation modulo the monomial and binomial equations: `x*y = 0` deletes every monomial divisible by `x*y`, `x*y + x = 0` (x implies y) turns `x*y*z` into `x*z`, and a definition `x*y + z = 0` lowers the degree of every monomial containing `x*y`. The degree-lexicographic leading term is rewritten, so degrees never grow | `--binomred 0/1`, `--binomredlen N` uses equations of up to N terms as rules (default 2) |
-| `poly-shorten` | replaces an equation `p` by `p + f` whenever the two share more than half of the terms of `f`, so the result is shorter. Shortens XORs and re-uses definitions (`y + x1*x2 + x3` in the system rewrites `x1*x2 + x3 + ...` to `y + ...`) | `--shorten 0/1` |
-| `lit-probe` | partial evaluation of small equations: `p[x=0] == 1` (p with x set to 0) forces `x = 1`, the four evaluations on a pair of variables give equivalences (`x*y + x + 1` gives `x = 1, y = 0`; `x*y*(z+1) + 1` gives `x = y = 1, z = 0`) and binary implications; the strongly connected components of the implication graph give further equivalences (`x*y + x` with `x*y + y` gives `x = y`) | `--probe 0/1`, `--probevars N` only looks at equations with at most N variables (default 8) |
-| `fac-canon` | for equations that are products of linear factors: reduces every factor modulo the span of the linear equations and uses the shortest representative of its class, so equal constraints become identical and short. Off by default: it makes the CNF ~15% smaller but CryptoMiniSat slower on average on the bivium family | `--faccanon 0/1` |
-| `fac-res` | resolution between two products sharing a linear factor with opposite constants: `(A+a)*R1 = 0` and `(A+a+1)*R2 = 0` give `R1*R2 = 0`; a one-factor resolvent is a new linear equation. Off by default | `--facres 0/1`, `--facresmax N` |
-| `gb-cone` | Gröbner bases of cones of small equations: a cone starts from a small equation and grows by the equation sharing the most variables with it while the union stays within `--gbmaxvars` variables; per cone both a degree-bounded Buchberger loop in the lexicographic main ring (its bases eliminate variables) and BRiAl's complete `symmGB_F2` in a degree-ordered ring over the cone's variables are run, and short members of the reduced bases (units, equivalences, short XORs; with `--gbfactdeg 2` also small nonlinear relations, at most `--gbfactlen` terms) are added. Off by default for large systems: it costs 2-4x the run time and its effect is instance-dependent (three of the four three-round ascon instances collapse completely, all variables set, with `--gb 1 --gbfactdeg 1`; some four-round ones get slower for CryptoMiniSat). A system with at most `--gbwholevars` free variables (24) is one cone and gets its complete basis even with `--gb 0`: random MQ systems (m = 2n) with n = 16, 20, 24, 28 are solved by the basis alone in 0.3, 1.1, 16 and 196 s, where CryptoMiniSat times out at 200 s from n = 24 on | `--gb 0/1`, `--gbfull`, `--gbwholevars`, `--gbrecursion`, `--gbmaxvars`, `--gbwindow`, `--gbmaxlen`, `--gbfactdeg`, `--gbfactlen`, `--gbdeg`, `--gbsteps` |
-| `xl` | eXtended Linearization: multiplies equations by variables and Gauss-Jordan eliminates, learning linear equations; only sees equations with at most `--xlmaxlen` terms | `--xl 0/1`, `--xldeg`, `--xlsample`, `--xlmaxlen` |
-| `elimlin` | ElimLin: Gauss-Jordan elimination and substitution of the linear equations found, iterated | `--el 0/1`, `--elsample` |
-| `sat-simp` | converts to CNF, runs CryptoMiniSat for a bounded number of conflicts and imports the units, binary XORs and recovered XORs it found | `--sat 0/1`, `--satinc`, `--satlim` |
+| `anf-prop` | propagates units, (anti-)equivalences and `m+1` (all variables of `m` true) | always on |
+| `lin-gauss` | Gaussian elimination among the linear equations: drops redundant ones, shortens others, feeds units and equivalences to `anf-prop` | `--lingauss` |
+| `binom-red` | reduces every equation modulo the monomial and binomial equations (`x*y = 0`, `x*y + x = 0`, definitions `x*y + z = 0`); degrees never grow | `--binomred`, `--binomredlen` |
+| `poly-shorten` | replaces `p` by `p + f` when that is shorter (shortens XORs, re-uses definitions) | `--shorten` |
+| `lit-probe` | partial evaluation of small equations: forced literals, equivalences, binary implications and their SCCs | `--probe`, `--probevars` |
+| `fac-canon` | canonical linear factors of products modulo the linear span (off) | `--faccanon` |
+| `fac-res` | resolution between products sharing a linear factor (off) | `--facres`, `--facresmax` |
+| `gb-cone` | Gröbner bases of cones of small equations (lex degree-bounded loop and a complete degree-ordered basis per cone); short basis members are added. Off for large systems; a system with at most `--gbwholevars` active variables gets its complete basis always | `--gb`, `--gbwholevars`, `--gbengine`, `--gbmaxvars`, `--gbwindow`, `--gbmaxlen`, `--gbfactdeg`, `--gbfactlen`, `--gbdeg`, `--gbsteps`, `--gbmaxcells` |
+| `xl` | eXtended Linearization on equations of at most `--xlmaxlen` terms | `--xl`, `--xldeg`, `--xlsample`, `--xlmaxlen` |
+| `elimlin` | ElimLin: elimination and substitution of linear equations, iterated | `--el`, `--elsample` |
+| `sat-simp` | bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds | `--sat`, `--satinc`, `--satlim` |
 
 `--rewrite 0` turns off all in-place rules at once. A strategy that learns
 nothing twice in a row is not run again. Every rule is sound: the
@@ -146,32 +146,16 @@ and shown at verbosity 2 and above.
 #### The Gröbner engines
 
 Complete bases are computed by Bosphorus's own matrix-F4 engine
-(`src/boolf4.cpp`, `--gbengine 1`, the default): monomials are squarefree
-64-bit masks in degree-reverse-lexicographic order, the critical pairs of
-one degree are reduced together in a dense GF(2) matrix with M4RI
-(Faugère's F4), the field equations `x^2 = x` enter through the Boolean
-product and through the variable pairs `x*p` for `x` in the leading
-monomial of `p`, pairs are pruned with the Gebauer-Möller criteria, and
-the work is bounded by deterministic budgets (`--gbsteps` matrix rows,
-`--gbmaxcells` cells of one matrix, `--gbdeg` for cones). It is several
-times faster than BRiAl's `symmGB_F2` (`--gbengine 0`, the engine behind
-Sage) on the dense systems that matter here: a random MQ system with
-n = 24, m = 48 in 2.8 s against 15 s, HFE25 in 52 s against 166 s, HFE30 in
-131 s against 1329 s, with the same solutions. Rows are generated from (basis element, multiplier)
-descriptors when the matrix is filled, so the memory is the matrix itself
-(MQ n = 24: 49 MB). Its limit is memory: a degree-5 step for 30-35
-variables has 100k-400k columns.
-
-`--gbengine 2` is a Matrix-F5 variant (`src/boolf5.cpp`): degree by degree
-it builds the Macaulay matrix of all multiples `m*f_i` with
-`deg m <= d - deg f_i`, generated in generator order in `--gbf5groups`
-groups, and drops `m*f_i` when `m` is a leading monomial of the
-degree-`deg m` matrix of the earlier groups (the F5 criterion); each group
-is reduced against the reduced echelon form of the earlier ones in place
-(M4RI windows). On random MQ systems it finishes at degree 4 where F4
-needs 5 and is 2-3x faster (n = 24: 1.1 s, 150 MB); on the structured HFE
-systems it goes to degree 6 and runs out of the matrix budget where F4
-solves at degree 5, so F4 stays the default.
+(`src/boolf4.cpp`, `--gbengine 1`, the default): squarefree 64-bit
+monomials in degrevlex order, the critical pairs of one degree reduced
+together in a dense GF(2) matrix with M4RI, the field equations through
+the Boolean product and the variable pairs `x*p`, Gebauer-Möller pruning,
+deterministic budgets (`--gbsteps` rows, `--gbmaxcells` cells per matrix).
+It is several times faster than BRiAl's `symmGB_F2` (`--gbengine 0`) on
+dense systems and its limit is memory. `--gbengine 2` is a Matrix-F5
+variant (`src/boolf5.cpp`): Macaulay matrices per degree with the F5
+criterion across `--gbf5groups` generator groups, reduced in place; faster
+on random quadratic systems, worse on structured ones such as HFE.
 
 ### ANF-to-CNF conversion strategies
 
@@ -240,155 +224,20 @@ CryptoMiniSat reads. The built-in solver (`--solve`, `--solve-xnf`) and the
 SAT-based simplification always use native xor clauses. On the bivium
 instances plain cutting at 5 was as good as or better than native XORs.
 
-### Example: the bivium keystream instances
+### Multivariate quadratic (MQ) and HFE systems
 
-The bivium instances of the XNF solver benchmarks (state recovery from 354 or
-531 keystream bits with 26-50 known state bits) are products of linear factors
-once written as ANF. With Bosphorus's output (`bosphorus X.anf --el 0
---cnfwrite X.cnf`, about 3 seconds per instance) CryptoMiniSat (`--sls 0
---autodisablegauss 0 --presimp 1 --maxmatrixrows 100000 --maxmatrixcols
-100000 --maxnummatrices 1000000 --minmatrixrows 1`, 200 s, models checked
-against the original ANF) solves the 13 instances the benchmark's own CNF
-solves, 1.5-4x faster on the ones that take more than a few seconds, plus
-tmp_ifs1zce. Of the remaining seven hard instances (26-33 known bits at 531
-steps, or 26 at 354) three more are solved with some solver seed from
-Bosphorus's output and none from the benchmark CNF, but on these the
-outcome is dominated by the seed: the same CNF solves in 10 s with one seed
-and times out with the next, so single runs mean little. Times below are
-with the default seed, and with seeds 1 and 2 for the hard ones (T =
-timeout).
-
-| instance | steps | known bits | benchmark CNF | Bosphorus output |
-|---|---|---|---|---|
-| tmpdvd4qqhc | 354 | 26 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: T/T) |
-| tmp0pckmywp | 354 | 34 | 54 s | 14 s |
-| tmpafl2snvs | 354 | 35 | 36 s | 21 s |
-| tmpc2byc16q | 354 | 37 | 11 s | 8 s |
-| tmp44mkq4l9 | 354 | 40 | 5 s | 6 s |
-| tmp6ifbfbz4 | 354 | 43 | 4 s | 5 s |
-| tmp72yj0xcp | 354 | 46 | 4 s | 5 s |
-| tmp09lh13kb | 354 | 49 | 3 s | 3 s |
-| tmp_utof4mt | 354 | 50 | 3 s | 3 s |
-| tmpbi2n8e6d | 531 | 26 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: T/T) |
-| tmp0c_s736b | 531 | 27 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: T/T) |
-| tmpec79lh8f | 531 | 28 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: T/T) |
-| tmp65a5rlro | 531 | 29 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: T/T) |
-| tmpcatw2met | 531 | 30 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: 52/T) |
-| tmp4grsp1np | 531 | 31 | timeout (seeds 1,2: T/T) | timeout (seeds 1,2: 15/T) |
-| tmp3ce4vlbu | 531 | 33 | 53 s (seeds 1,2: T/T) | timeout (seeds 1,2: 20/10) |
-| tmp_ifs1zce | 531 | 35 | timeout | 6 s |
-| tmp2v65y1ui | 531 | 43 | 16 s | 7 s |
-| tmp9_e6244z | 531 | 46 | 10 s | 6 s |
-| tmp7akxbh30 | 531 | 49 | 10 s | 6 s |
-| tmpb26sj1pd | 531 | 50 | 12 s | 6 s |
-
-What makes the difference on this family is not the clause set but
-CryptoMiniSat's Gauss-Jordan: the harness flags force it on, the cut XORs
-of both encodings form matrices of 5000-10000 rows, and with those in use
-CryptoMiniSat needs more than 200 s on tmp_ifs1zce with either CNF. With
-Gauss-Jordan off (`--maxmatrixrows 0`) the Bosphorus CNF solves in 9 s.
-A `c p show` line listing the original variables (`--projshow 1`; the
-default writes one only when the ANF input carries a projection set) makes
-CryptoMiniSat treat them as a sampling set, and it then uses a matrix only
-when at least 60% of the sampling variables occur in it, which is what
-skipped the matrices in the runs of the table (58.8% of them did). The
-margin is thin: a slightly different encoding of the same instance lands at
-61% and times out. The table was measured with that line; without it every
-bivium instance but the easiest ones times out until CryptoMiniSat's
-Gauss-Jordan heuristics change.
-
-### Example: the ascon key-recovery instances
-
-The ascon instances of the same benchmark set (key recovery from the state
-after 2-4 initialization rounds, named variables, 3136 variables, 1280
-quadratic S-box equations) are the opposite case: short XORs, S-box
-equations of 6 variables that Brickenstein's conversion encodes directly.
-Bosphorus's rewriting takes 3 seconds; XL used to re-learn the linear part
-of the S-box equations every iteration, which `lin-gauss` and the span
-filter of learnt facts now stop. CryptoMiniSat times with three seeds
-(min/median/max, 200 s limit, models checked) on the four-round instances
-the benchmark's CNF solves within the limit:
-
-| instance | benchmark CNF | Bosphorus output (run time) | with `--gb 1 --gbfactdeg 1` (run time) |
-|---|---|---|---|
-| tmp3g3f82vv | 12.4/13.7/26.6 | 6.2/9.1/14.8 (2.0 s) | 8.3/11.9/12.0 (11.1 s) |
-| tmpgmh2blh0 | 47.2/66.2/89.5 | 4.5/6.9/10.2 (3.4 s) | 5.8/16.6/63.5 (13.3 s) |
-| tmpn1uaqlcc | 7.0/8.0/8.1 | 0.8/0.9/1.7 (3.4 s) | 0.4/0.6/0.9 (15.3 s) |
-| tmpdchqvtq0 | 8.9/15.7/40.3 | 3.5/3.9/7.6 (2.2 s) | 4.0/13.5/15.0 (7.0 s) |
-| tmppdzw6ahj | 11.6/13.5/14.5 | 1.8/2.7/6.7 (2.0 s) | 3.4/4.1/4.4 (9.4 s) |
-| tmpv1bh0ebt | 11.9/12.3/12.9 | 6.8/11.0/16.3 (2.4 s) | 2.4/3.3/5.6 (10.1 s) |
-| tmpp4b0ewm7 | 9.3/11.5/14.6 | 1.1/1.2/2.8 (2.0 s) | 0.6/1.0/1.8 (8.1 s) |
-| tmpborqf5jg | 17.1/79.1/117.8 | 7.6/11.7/40.8 (2.1 s) | 11.5/33.8/72.7 (8.8 s) |
-| tmpt2t5c67b (3 rounds) | 6.5/6.8/7.3 | 0.9/0.9/1.3 (2.7 s) | 0.4/0.5/0.5 (10.2 s) |
-| tmpvxk1t18u (3 rounds) | 8.1/8.6/9.7 | 26.0/28.7/31.2 (3.1 s) | 0.0/0.0/0.0 (13.6 s) |
-| tmpwchcc7lm (3 rounds) | 7.5/8.8/9.5 | 15.1/70.7/81.9 (3.4 s) | 0.5/1.0/1.1 (10.6 s) |
-| tmp94o0gmwt (3 rounds) | 8.7/9.0/10.4 | 27.4/37.0/46.1 (2.2 s) | 58.2/122.3/timeout (8.1 s) |
-
-Geometric mean of the medians: 14.4 s for the benchmark CNF, 6.6 s for
-Bosphorus's output (defaults: joint S-box encoding, lin-gauss, span
-filter), 3.0 s with the Gröbner cones on, which solve two of the four
-three-round instances outright but cost 8 s of run time and lose on
-others (tmp94o0gmwt, tmpgmh2blh0). The instances that time out with the
-benchmark CNF time out with Bosphorus's output too.
-
-### Example: multivariate quadratic (MQ) systems
-
-Post-quantum multivariate schemes reduce to random-looking quadratic
-systems over GF(2); the [Fukuoka MQ challenge](https://www.mqchallenge.org/)
-posts such systems (Type I: m = 2n equations, n >= 55 variables; the
-records, n = 83 in 2023, took 805,000 CPU hours). `utils/mq2anf.py`
-converts a challenge file to ANF, `utils/mqgen.py n m seed` writes a
-random system of the same shape with a planted solution. The smallest
-posted instance (n = 55) is far beyond a single core with any method, but
-the scaling on generated instances shows what the Gröbner-basis rule buys:
-
-| n (m = 2n) | CryptoMiniSat on Bosphorus's CNF | Bosphorus with the whole-system basis |
-|---|---|---|
-| 16 | 0.7 s | 0.3 s |
-| 20 | 1.4 s | 1.1 s |
-| 24 | timeout (200 s) | 16 s |
-| 28 | timeout | 196 s with BRiAl (390 MB), 187 s with the F4 engine (1.7 GB) |
-
-The basis is computed automatically when the system has at most
-`--gbwholevars` (24) active variables; raise it for larger systems.
-`utils/gbhybrid.py system.anf k` fixes the k most frequent variables to all
-2^k values and runs the basis on each remaining system. This is only for
-estimating how far more compute would reach (one guess costs what the
-system with k fewer variables costs, so 2^k cores or 2^k times the time
-solve k more variables); it is not a solving method of Bosphorus, whose
-job is rewriting. For the record, with BRiAl's basis a 24-variable system
-with 56 equations costs as much as one with 48 (n = 28, k = 4: 258 s
-against 196 s directly), and the smallest posted challenge, n = 55, would
-need about 2^30 such runs.
-
-### Post-quantum benchmark families
-
-Besides the MQ challenge, two other families of GF(2) polynomial systems
-from post-quantum cryptanalysis are available through converters in
-`utils/`:
-
-- **HFE** (Patarin's Hidden Field Equations): the systems with 25, 30 and
-  35 variables and secret degree 96 from Allan Steel's Magma page
-  (`magma.maths.usyd.edu.au/users/allan/gb/magma/HFE<n>_96`, converted with
-  `utils/magma2anf.py`). Their structure keeps the degree of regularity
-  low, which is what Gröbner bases exploit: the whole-system basis solves
-  HFE25 in 52 s, HFE30 in 131 s (1.6 GB) and HFE35 in 167 s (3.9 GB;
-  `--gbwholevars 50 --gbmaxcells 30000000000`) with Bosphorus's F4 engine,
-  against 166 s, 1329 s and no answer in 2 hours with BRiAl, with the
-  solutions Magma found in 2004 (37 s for HFE25 then, on a 750 MHz
-  machine). Patarin's HFE challenge 1 (n = 80) is only available as
-  Magma's output log, not as an input system.
-- **LowMC** (the block cipher of the Picnic signature scheme; the LowMC
-  cryptanalysis challenge at `lowmcchallenge.github.io`):
-  `utils/lowmc2anf.py` turns the challenge's `matrices_and_constants_*.dat`
-  files into round-reduced key-recovery instances with a planted key (one
-  plaintext/ciphertext pair; variables for the key and for every S-box's
-  inputs and outputs, so all equations are linear or the three quadratic
-  S-box equations). Two rounds of the full-layer 129-bit instance are
-  already beyond plain rewriting plus CryptoMiniSat (30 minutes without an
-  answer; the challenge's own
-  solutions for 2-4 rounds combine linearization, guessing and
-  meet-in-the-middle).
+`utils/mq2anf.py` converts a [Fukuoka MQ challenge](https://www.mqchallenge.org/)
+file over GF(2) to ANF, `utils/mqgen.py n m seed` writes a random system
+of the same shape with a planted solution, and `utils/magma2anf.py`
+converts Magma polynomial lists such as the HFE systems of
+`magma.maths.usyd.edu.au/users/allan/gb`. Systems with at most
+`--gbwholevars` active variables are solved by the Gröbner engine alone
+(random MQ up to about n = 28 with m = 2n, HFE up to 35 variables on an
+8 GB machine); the posted MQ challenges (n >= 55) are far beyond a single
+machine with any known method. `utils/gbhybrid.py system.anf k` fixes k
+variables to all 2^k values and runs the basis on each remaining system;
+it only estimates how far more compute would reach and is not a solving
+method.
 
 ## List all solutions of an ANF
 
