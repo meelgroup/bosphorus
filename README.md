@@ -92,9 +92,9 @@ This means x0 is `false`, x1 is `true`, x2 is `true` and x3 is `false`.
 | `binom-red` | reduces every equation modulo the monomial and binomial equations (`x*y = 0`, `x*y + x = 0`, definitions `x*y + z = 0`); degrees never grow |
 | `poly-shorten` | replaces `p` by `p + f` when that is shorter (shortens XORs, re-uses definitions) |
 | `lit-probe` | partial evaluation of small equations: forced literals, equivalences, binary implications and their SCCs |
-| `fac-canon` | canonical linear factors of products modulo the linear span (off) |
-| `fac-res` | resolution between products sharing a linear factor (off) |
-| `gb-cone` | Gröbner bases of cones of small equations; short basis members are added. Off for large systems, always on for systems with few variables |
+| `fac-canon` | canonical linear factors of products modulo the linear span (default: off) |
+| `fac-res` | resolution between products sharing a linear factor (default: off) |
+| `gb-cone` | Gröbner bases of cones of small equations; short basis members are added (default: off for large systems, on for systems with few variables) |
 | `xl` | eXtended Linearization on the short equations |
 | `elimlin` | ElimLin: elimination and substitution of linear equations, iterated |
 | `sat-simp` | bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds |
