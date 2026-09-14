@@ -192,23 +192,31 @@ vector<BoolF4::Poly> BoolF4::echelon(vector<Poly>& rows, vector<Mon>& columns)
 
 void BoolF4::reduce_step(vector<Pair>& selected)
 {
-    // the rows: both halves of every S-pair, or the variable multiple
-    vector<Poly> rows;
+    // Rows are kept as descriptors (basis element, multiplier) and the
+    // polynomials are generated twice: once to collect the columns, once
+    // to fill the matrix row by row. Storing all row polynomials at once
+    // took 3-4 times the memory of the matrix itself.
+    struct RowDesc { int i; Mon u; };
+    vector<RowDesc> rows;
     std::unordered_set<Mon> done; // monomials that have a row with this lead
+    std::unordered_set<Mon> seen; // all monomials of all rows: the columns
+    vector<Mon> todo;
+    auto scan = [&](const Poly& r) {
+        if (r.empty()) return;
+        done.insert(r[0]);
+        for (const Mon t : r) if (seen.insert(t).second) todo.push_back(t);
+    };
     for (const Pair& pr : selected) {
         if (pr.j >= 0) {
-            rows.push_back(mul(G[pr.i], pr.lcm & ~LM[pr.i]));
-            rows.push_back(mul(G[pr.j], pr.lcm & ~LM[pr.j]));
+            rows.push_back(RowDesc{pr.i, pr.lcm & ~LM[pr.i]});
+            rows.push_back(RowDesc{pr.j, pr.lcm & ~LM[pr.j]});
         } else {
-            rows.push_back(mul(G[pr.i], (Mon)1 << (-pr.j - 1)));
+            rows.push_back(RowDesc{pr.i, (Mon)1 << (-pr.j - 1)});
         }
     }
-    for (const Poly& r : rows) if (!r.empty()) done.insert(r[0]);
+    for (const RowDesc& d : rows) scan(mul(G[d.i], d.u));
     // symbolic preprocessing: every other monomial that some lead divides
     // gets a reducer row
-    std::unordered_set<Mon> seen;
-    vector<Mon> todo;
-    for (const Poly& r : rows) for (const Mon m : r) if (seen.insert(m).second) todo.push_back(m);
     while (!todo.empty()) {
         const Mon m = todo.back();
         todo.pop_back();
@@ -216,18 +224,12 @@ void BoolF4::reduce_step(vector<Pair>& selected)
         for (size_t i = 0; i < G.size(); i++) {
             if (!alive[i]) continue;
             if ((m & LM[i]) != LM[i]) continue;
-            Poly r = mul(G[i], m & ~LM[i]);
-            done.insert(m);
-            for (const Mon t : r) if (seen.insert(t).second) todo.push_back(t);
-            rows.push_back(r);
+            const RowDesc d{(int)i, m & ~LM[i]};
+            rows.push_back(d);
+            scan(mul(G[i], d.u));
             break;
         }
     }
-    // the leads present before reduction: rows with a new lead afterwards
-    // are the new basis elements
-    std::unordered_set<Mon> old_leads;
-    for (const Poly& r : rows) if (!r.empty()) old_leads.insert(r[0]);
-    vector<Mon> columns;
     const size_t nrows = rows.size();
     const uint64_t cells = (uint64_t)nrows * seen.size();
     if (cells > opt.maxCells) {
@@ -238,15 +240,44 @@ void BoolF4::reduce_step(vector<Pair>& selected)
         st.budget_exhausted = true;
         return;
     }
-    vector<Poly> red = echelon(rows, columns);
+    // the columns, in decreasing order, and the matrix
+    vector<Mon> columns(seen.begin(), seen.end());
+    seen.clear();
+    std::sort(columns.begin(), columns.end(), greater);
+    std::unordered_map<Mon, size_t> col_of;
+    col_of.reserve(columns.size() * 2);
+    for (size_t c = 0; c < columns.size(); c++) col_of[columns[c]] = c;
+    st.rows += nrows;
+    st.cols_max = std::max<uint64_t>(st.cols_max, columns.size());
+    mzd_t* M = mzd_init(nrows, columns.size());
+    for (size_t r = 0; r < nrows; r++) {
+        const Poly p = mul(G[rows[r].i], rows[r].u);
+        for (const Mon m : p) mzd_write_bit(M, r, col_of[m], 1);
+    }
+    vector<RowDesc>().swap(rows);
+    col_of.clear();
+    const rci_t rank = mzd_echelonize_m4ri(M, 1, 0);
     st.steps++;
+    // rows with a lead that no row had before reduction are the new basis elements
     size_t added = 0;
-    for (const Poly& p : red) {
-        if (old_leads.count(p[0])) continue;
+    const size_t words = (columns.size() + 63) / 64;
+    for (rci_t r = 0; r < rank; r++) {
+        const word* row = mzd_row(M, r);
+        Poly p;
+        for (size_t w = 0; w < words; w++) {
+            word x = row[w];
+            while (x) {
+                const size_t c = w * 64 + __builtin_ctzll(x);
+                x &= x - 1;
+                if (c < columns.size()) p.push_back(columns[c]);
+            }
+        }
+        if (p.empty() || done.count(p[0])) continue;
         add_to_basis(p);
         added++;
-        if (has_one) return;
+        if (has_one) break;
     }
+    mzd_free(M);
     st.zero_reductions += selected.size() - std::min(added, selected.size());
     if (opt.verbosity >= 2) {
         std::cout << "c [f4] degree " << selected[0].degree << " pairs " << selected.size()
