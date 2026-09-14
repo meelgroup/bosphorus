@@ -56,7 +56,9 @@ size_t ANF::groebner_windows()
     // Groebner basis in a degree ordering solves e.g. random MQ systems
     // with up to ~28 variables outright, where SAT solvers time out.
     size_t max_vars = config.gbMaxVars, max_len = config.gbMaxLen, max_window = config.gbWindow;
-    if (config.gbFull && replacer->getNumUnknownVars() <= config.gbWholeVars) {
+    bool whole = false;
+    if (config.gbFull && numActiveVars() <= config.gbWholeVars) {
+        whole = true;
         max_vars = std::max<size_t>(max_vars, config.gbWholeVars);
         max_len = std::numeric_limits<size_t>::max();
         max_window = std::numeric_limits<size_t>::max();
@@ -159,8 +161,9 @@ size_t ANF::groebner_windows()
             GroebnerStrategy cstrat(cring);
             // BRiAl's recursive "implication" bases for split generators
             // dominate the time on small cones (57% of a run) and help
-            // little there: off unless asked for
-            cstrat.optAllowRecursion = config.gbRecursion;
+            // little there, but the whole-system basis of an MQ-like system
+            // needs them (n = 24: 16 s with, > 600 s without)
+            cstrat.optAllowRecursion = config.gbRecursion == 1 || (config.gbRecursion == 2 && whole);
             for (const size_t j : window) {
                 BoolePolynomial q(cring);
                 for (const BooleMonomial& m : eq(j)) {

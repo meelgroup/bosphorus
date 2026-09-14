@@ -1010,7 +1010,7 @@ size_t ANF::rewrite_inplace()
         // free variables), whose complete Groebner basis is cheap and often
         // solves it outright (random MQ systems up to ~28 variables)
         const bool gb_auto = config.gbFull && config.gbWholeVars > 0 &&
-                             replacer->getNumUnknownVars() <= config.gbWholeVars;
+                             numActiveVars() <= config.gbWholeVars;
         if ((config.doGB || gb_auto) && round == 0) {
             // expensive: once per pass, and only when the system changed
             // since the last run (same equations, same replacer state)

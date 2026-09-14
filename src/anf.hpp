@@ -156,6 +156,16 @@ class ANF
         return scanFile(filename).ring_size - 1;
     }
     set<size_t> get_proj_set() const;
+    /// number of variables that occur in some equation and are not set or replaced
+    size_t numActiveVars() const
+    {
+        size_t n = 0;
+        for (size_t v = 0; v < occur.size(); v++) {
+            if (!occur[v].empty() && replacer->getValue(v) == l_Undef &&
+                replacer->getReplaced(v) == Lit(v, false)) n++;
+        }
+        return n;
+    }
     /// the input carried a projection set ('c p show ... END')
     bool proj_set_given() const { return proj_given; }
     void set_proj_set_given(bool g) { proj_given = g; }
