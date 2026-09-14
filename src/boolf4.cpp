@@ -237,6 +237,26 @@ void BoolF4::reduce_step(vector<Pair>& selected)
     }
 }
 
+// Reduces the tails of the live basis elements against each other's leads
+// (their leads stay, so the pending pairs stay valid): shorter polynomials
+// give smaller matrices in the following steps.
+void BoolF4::tail_reduce()
+{
+    vector<size_t> idx;
+    vector<Poly> rows;
+    for (size_t i = 0; i < G.size(); i++) if (alive[i]) { idx.push_back(i); rows.push_back(G[i]); }
+    if (rows.size() < 2) return;
+    vector<Mon> columns;
+    const uint64_t cells = (uint64_t)rows.size() * 0; (void)cells;
+    vector<Poly> red = echelon(rows, columns);
+    std::unordered_map<Mon, size_t> by_lead;
+    for (const size_t i : idx) by_lead[LM[i]] = i;
+    for (const Poly& p : red) {
+        auto it = by_lead.find(p[0]);
+        if (it != by_lead.end()) G[it->second] = p;
+    }
+}
+
 void BoolF4::interreduce()
 {
     vector<Poly> rows;
@@ -265,6 +285,7 @@ vector<BoolF4::Poly> BoolF4::run()
         pairs.swap(rest);
         reduce_step(selected);
         if (st.budget_exhausted) break;
+        if (opt.tailReduce) tail_reduce();
     }
     if (has_one) {
         Poly one(1, 0);

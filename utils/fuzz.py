@@ -218,6 +218,7 @@ def rand_opts(rng):
     if rng.random() < 0.3: o += ['--gbwholevars', str(rng.randint(0, 14))]
     if rng.random() < 0.3: o += ['--gbrecursion', str(rng.randint(0, 2))]
     if rng.random() < 0.3: o += ['--gbengine', str(rng.randint(0, 1))]
+    if rng.random() < 0.3: o += ['--gbtailreduce', str(rng.randint(0, 1))]
     if rng.random() < 0.3: o += ['--gbfactdeg', str(rng.randint(1, 3))]
     if rng.random() < 0.3: o += ['--gbfactlen', str(rng.randint(1, 12))]
     return o

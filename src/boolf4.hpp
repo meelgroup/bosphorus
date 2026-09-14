@@ -47,6 +47,7 @@ class BoolF4 {
         uint64_t maxRows = 20000000; // total matrix rows over the run
         uint64_t maxCells = 16000000000ULL; // rows*cols of any single matrix (2 GB of bits)
         int verbosity = 0;
+        bool tailReduce = true;      // interreduce the basis tails after every step
     };
 
     struct Stats {
@@ -97,6 +98,7 @@ class BoolF4 {
     void reduce_step(std::vector<Pair>& selected);
     std::vector<Poly> echelon(std::vector<Poly>& rows, std::vector<Mon>& columns);
     void interreduce();
+    void tail_reduce();
 };
 
 }
