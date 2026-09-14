@@ -136,7 +136,7 @@ void output_cnf(
         ofs << "c Executed arguments: " << dat->config.executedArgs << endl;
     }
     ofs << *cnf;
-    cnf->write_projection_set(&ofs, proj);
+    if (dat->config.projShow) cnf->write_projection_set(&ofs, proj);
 
     ofs << "c Learnt " << dat->learnt.size() << " fact(s), not all of which have been dumped\n";
     if (dat->config.writecomments) {

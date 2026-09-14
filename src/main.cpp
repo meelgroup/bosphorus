@@ -190,6 +190,11 @@ void parseOptions(int argc, char* argv[])
     // checks
     add_arg("--comments", config.writecomments, fc_bool,
         "Do not write comments to output files");
+    add_arg("--projshow", config.projShow, fc_bool,
+        "Write a 'c p show' line naming the original variables into the CNF. "
+        "Solvers that honour it (CryptoMiniSat, model counters) then treat the "
+        "original variables as a sampling set, which keeps them out of variable "
+        "elimination and can slow solving down a lot. Default: 0");
 
     // CNF conversion
     add_arg("--cutnum", config.cutNum, fc_integral<uint32_t>,

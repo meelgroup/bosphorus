@@ -333,7 +333,12 @@ def check_cnf(anf_path, cnf_path):
             if not 1 <= abs(lit) <= nvars:
                 sys.exit("verify_anf: literal %d out of range 1..%d" % (lit, nvars))
     if projection is None:
-        sys.exit("verify_anf: CNF has no 'c p show' projection line")
+        # no 'c p show' line (the default): CNF variables 1..ring size are
+        # the ANF's variables, everything after them is auxiliary
+        ring = max(max_var_in_file(anf_path) + 1, 1)
+        if nvars < ring:
+            sys.exit("verify_anf: CNF has %d variables, the ANF ring %d" % (nvars, ring))
+        projection = list(range(1, ring + 1))
 
     if nvars > 20:
         sys.exit("verify_anf: %d CNF variables is too many to brute force" % nvars)

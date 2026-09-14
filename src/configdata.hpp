@@ -36,6 +36,7 @@ struct ConfigData {
     // Input/Output
     string executedArgs = "";
     bool writecomments = false;
+    bool projShow = false; // write the 'c p show' projection line into the CNF
     bool printProcessedANF = false;
     uint32_t verbosity = 2;
     int color = 2; // 0 = never, 1 = always, 2 = auto (tty && !NO_COLOR)
