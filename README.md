@@ -107,8 +107,8 @@ Explanation of simplifications performed:
 | `lit-probe` | partial evaluation of small equations: forced literals, equivalences, binary implications and their SCCs |
 | `fac-canon` | canonical linear factors of products modulo the linear span (off) |
 | `fac-res` | resolution between products sharing a linear factor (off) |
-| `gb-cone` | Gröbner bases of cones of small equations; short basis members are added. Off for large systems, always on for systems of at most `--gbwholevars` variables |
-| `xl` | eXtended Linearization on equations of at most `--xlmaxlen` terms |
+| `gb-cone` | Gröbner bases of cones of small equations; short basis members are added. Off for large systems, always on for systems with few variables |
+| `xl` | eXtended Linearization on the short equations |
 | `elimlin` | ElimLin: elimination and substitution of linear equations, iterated |
 | `sat-simp` | bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds |
 
