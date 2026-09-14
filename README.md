@@ -145,27 +145,22 @@ and shown at verbosity 2 and above.
 
 #### The Gröbner engines
 
-Complete bases are computed by Bosphorus's own matrix-F4 engine
-(`src/boolf4.cpp`, `--gbengine 1`, the default): squarefree 64-bit
-monomials in degrevlex order, the critical pairs of one degree reduced
-together in a dense GF(2) matrix with M4RI, the field equations through
-the Boolean product and the variable pairs `x*p`, Gebauer-Möller pruning,
-deterministic budgets (`--gbsteps` rows, `--gbmaxcells` cells per matrix).
-It is several times faster than BRiAl's `symmGB_F2` (`--gbengine 0`) on
-dense systems and its limit is memory. `--gbengine 2` is a Matrix-F5
-variant (`src/boolf5.cpp`): Macaulay matrices per degree with the F5
-criterion across `--gbf5groups` generator groups, reduced in place; faster
-on random quadratic systems, worse on structured ones such as HFE.
+Complete bases come from Bosphorus's own matrix-F4 engine (`--gbengine 1`,
+M4RI over squarefree 64-bit monomials, deterministic budgets `--gbsteps`
+and `--gbmaxcells`); `--gbengine 0` uses BRiAl's `symmGB_F2` and
+`--gbengine 2` a Matrix-F5 variant that is faster on random quadratic
+systems and slower on structured ones.
 
 ### ANF-to-CNF conversion strategies
 
-When a polynomial is too large for Brickenstein's direct conversion
-(`--karn`), it is linearised: every nonlinear part becomes a CNF variable and
-the parts are XORed together with the cutting number `--cutnum`. Instead of
-one CNF variable per monomial (the *standard strategy*), Bosphorus uses the
-*partner strategies* of Jovanovic and Kreuzer, "Algebraic Attacks using
-SAT-Solvers" (Groups Complexity Cryptology, 2010), which fold small
-combinations of terms into one variable with a short clause set each:
+A polynomial with few variables is converted directly (Brickenstein,
+`--karn`); with `--karncluster N` (default 10) small nonlinear equations
+sharing variables, such as the equations of one S-box, are encoded jointly
+over the union of their variables. Larger polynomials are linearised:
+every nonlinear part becomes a CNF variable and the parts are XORed with
+cutting number `--cutnum`. Instead of one variable per monomial, the
+*partner strategies* of Jovanovic and Kreuzer ("Algebraic Attacks using
+SAT-Solvers", 2010) fold small combinations into one variable each:
 
 | combination | name | CNF variable `y` |
 |---|---|---|
@@ -174,55 +169,31 @@ combinations of terms into one variable with a short clause set each:
 | `x*y + x*z` | quadratic partner (QPS) | `y = x & (y ^ z)` (5 clauses) |
 | `x*y*z + x*y*w` | cubic partner (CPS) | `y = x & y & (z ^ w)` (6 clauses) |
 
-All of these are of the form `P * h(F)`, a common monomial `P` times a small
-polynomial `h` in a few free variables `F`; the cover is searched for
-generally, so mixtures such as `x*(y + z + 1)` and `x*(y+1)*(z+1)` are found
-too, and the search accounts for monomials that already have a CNF variable
-from another polynomial. `--partner 0` restores the standard strategy. The
-`[cnf-stats]` line reports the number of variables, clauses, literals and
-how many monomial, chunk (partner) and XOR-cut variables were introduced;
-with `--comments 1` every auxiliary variable's meaning is written into the
-CNF as a comment.
-
-With `--karncluster N` small nonlinear equations that share variables (the
-five output equations of an S-box, say) are encoded jointly: the forbidden
-assignments of all equations of a cluster are covered by one clause set
-(Brickenstein's algorithm) over the union of their variables, as long as
-that union has at most `N` variables, so the clauses propagate across the
-equations of the cluster. Default: 10.
+The cover is searched for any `P * h(F)` shape; `--partner 0` restores the
+standard strategy. The `[cnf-stats]` line reports variables, clauses and
+how many auxiliary variables of each kind were introduced; `--comments 1`
+writes every auxiliary variable's meaning into the CNF.
 
 When the ANF carries a projection set (`c p show x1 x2 ... END`), the CNF
-gets a `c p show` line listing the CNF variables of exactly those ANF
-variables (`--projshow 2`, the default; `1` lists all original variables,
-`0` writes no line). Every auxiliary CNF variable is a function of the
-original ones, so the number of CNF solutions over the listed variables is
-the number of ANF solutions over the projection set, and a model counter
-can be run on the CNF. Note that CryptoMiniSat currently treats the listed
-variables as a sampling set with its own heuristics (no elimination of
-those variables, Gauss-Jordan only on matrices containing 60% of them).
+gets a `c p show` line over the CNF variables of exactly those ANF
+variables (`--projshow 2`, default; `1` lists all original variables, `0`
+none). Every auxiliary variable is a function of the original ones, so
+solution counts over the projection agree between ANF and CNF.
 
 #### Products of linear factors and native XOR clauses
 
-Before any of the above, a polynomial that is a product of linear factors,
-`(l1 + c1) * (l2 + c2) * (l3 + c3)`, is recognised (`--factor`, default on).
-Such a polynomial is 0 exactly when one factor is, so it is encoded as one
-clause "`l1 = c1` or `l2 = c2` or `l3 = c3`" over one shared CNF variable
-per multi-variable factor, each defined by a single XOR. This is how e.g.
-the bivium/Trivium keystream instances of the XNF solver benchmarks look
-once written as ANF (a product of three linerals of 50 variables each has
-125000 terms, which the monomial-per-variable encoding cannot handle). The
-input is still ANF and the output still CNF; the factorisation is tracked
-through the simplification so it survives substitutions, and in
-product-preserving mode (`--keepfactor`, auto-detected) the in-place rules
-leave such products alone.
+A polynomial that is a product of linear factors `(l1 + c1) * ... * (lk + ck)`
+is recognised (`--factor`, default on) and encoded as one clause
+"`l1 = c1` or ... or `lk = ck`" over one shared CNF variable per
+multi-variable factor, each defined by a single XOR; the factorisation is
+tracked through the simplification (`--keepfactor`, auto-detected). This is
+what stream-cipher instances like bivium look like as ANF, where the
+expanded products would have 100k+ terms.
 
-By default every XOR is cut into pieces of `--cutnum` variables and written
-as plain clauses. With `--xorcls 1` the XORs are instead written as
-CryptoMiniSat's native xor clauses (`x 1 2 3 0` lines, optionally chained
-into pieces of `--xormaxlen`); the output is then CNF-XOR, which only
-CryptoMiniSat reads. The built-in solver (`--solve`, `--solve-xnf`) and the
-SAT-based simplification always use native xor clauses. On the bivium
-instances plain cutting at 5 was as good as or better than native XORs.
+XORs are cut into pieces of `--cutnum` variables by default; `--xorcls 1`
+writes them as CryptoMiniSat's native xor clauses instead (optionally in
+pieces of `--xormaxlen`). The built-in solver and the SAT-based
+simplification always use native xor clauses.
 
 ### Multivariate quadratic (MQ) and HFE systems
 
