@@ -101,9 +101,6 @@ Explanation of simplifications performed:
 
 ## ANF rewrite rules and statistics
 
-Simplification runs a set of rewrite rules in rounds until nothing changes
-any more. The cheap in-place rules come first in every round, then the
-strategies that work on a copy of the system and feed back what they learnt:
 
 | rule | what it does | switch |
 |---|---|---|
@@ -119,29 +116,6 @@ strategies that work on a copy of the system and feed back what they learnt:
 | `elimlin` | ElimLin: elimination and substitution of linear equations, iterated | `--el`, `--elsample` |
 | `sat-simp` | bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds | `--sat`, `--satinc`, `--satlim` |
 
-`--rewrite 0` turns off all in-place rules at once. A strategy that learns
-nothing twice in a row is not run again. Every rule is sound: the
-in-place rules only ever add a multiple of another equation still in the
-system to an equation, or add a fact implied by a single equation, so the
-solution set over all variables is unchanged.
-
-Before and after every rule the size of the system is printed, in the style
-of CryptoMiniSat's `[simp-stats]` lines, so it is easy to see what each rule
-achieved:
-
-```
-c [simp-stats] bef binom-red              eqs 2294 monoms 288610 lin_eqs 314 nonlin_eqs 1980 max_deg 3
-c [simp-stats]                            free_vars 789 set_vars 97 repl_vars 0 mem_MB 60 T: 5.58 depth 0
-c [binom-red] rewrote 1427 eqs (59364 monomials) T: 2.95
-c [simp-stats] aft binom-red              eqs 2225 monoms 261892 lin_eqs 355 nonlin_eqs 1870 max_deg 3
-c [simp-stats]                            free_vars 789 set_vars 97 repl_vars 0 mem_MB 62 T: 8.53 T-step: 2.95 depth 0
-```
-
-On a terminal the rule name is orange, numbers that went down are green and
-numbers that went up are red (`--color 0/1/2` = never/always/auto; the
-`NO_COLOR` environment variable is honoured). `depth` is the nesting: a rule
-that runs inside another one (e.g. propagation of what XL learnt) is indented
-and shown at verbosity 2 and above.
 
 #### The Gröbner engines
 
