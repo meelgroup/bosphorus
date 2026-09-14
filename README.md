@@ -127,47 +127,21 @@ systems and slower on structured ones.
 
 ### ANF-to-CNF conversion strategies
 
-A polynomial with few variables is converted directly (Brickenstein,
-`--karn`); with `--karncluster N` (default 10) small nonlinear equations
-sharing variables, such as the equations of one S-box, are encoded jointly
-over the union of their variables. Larger polynomials are linearised:
-every nonlinear part becomes a CNF variable and the parts are XORed with
-cutting number `--cutnum`. Instead of one variable per monomial, the
-*partner strategies* of Jovanovic and Kreuzer ("Algebraic Attacks using
-SAT-Solvers", 2010) fold small combinations into one variable each:
-
-| combination | name | CNF variable `y` |
-|---|---|---|
-| `x*y + x` | linear partner (LPS) | `y = x & !y` (3 clauses) |
-| `x*y + x + y + 1` | double partner (DPS) | `y = !x & !y` (3 clauses) |
-| `x*y + x*z` | quadratic partner (QPS) | `y = x & (y ^ z)` (5 clauses) |
-| `x*y*z + x*y*w` | cubic partner (CPS) | `y = x & y & (z ^ w)` (6 clauses) |
-
-The cover is searched for any `P * h(F)` shape; `--partner 0` restores the
-standard strategy. The `[cnf-stats]` line reports variables, clauses and
-how many auxiliary variables of each kind were introduced; `--comments 1`
-writes every auxiliary variable's meaning into the CNF.
-
-When the ANF carries a projection set (`c p show x1 x2 ... END`), the CNF
-gets a `c p show` line over the CNF variables of exactly those ANF
-variables (`--projshow 2`, default; `1` lists all original variables, `0`
-none). Every auxiliary variable is a function of the original ones, so
-solution counts over the projection agree between ANF and CNF.
-
-#### Products of linear factors and native XOR clauses
-
-A polynomial that is a product of linear factors `(l1 + c1) * ... * (lk + ck)`
-is recognised (`--factor`, default on) and encoded as one clause
-"`l1 = c1` or ... or `lk = ck`" over one shared CNF variable per
-multi-variable factor, each defined by a single XOR; the factorisation is
-tracked through the simplification (`--keepfactor`, auto-detected). This is
-what stream-cipher instances like bivium look like as ANF, where the
-expanded products would have 100k+ terms.
-
-XORs are cut into pieces of `--cutnum` variables by default; `--xorcls 1`
-writes them as CryptoMiniSat's native xor clauses instead (optionally in
-pieces of `--xormaxlen`). The built-in solver and the SAT-based
-simplification always use native xor clauses.
+Small polynomials are converted directly (Brickenstein, `--karn`), and with
+`--karncluster N` small equations sharing variables (an S-box, say) are
+encoded jointly. Larger ones are linearised: nonlinear parts become CNF
+variables XORed together with cutting number `--cutnum`, folding small
+combinations into one variable each (the partner strategies of Jovanovic
+and Kreuzer, 2010: `x*y + x`, `x*y + x + y + 1`, `x*y + x*z`,
+`x*y*z + x*y*w`; `--partner 0` uses one variable per monomial). Products
+of linear factors are recognised (`--factor`) and encoded as one clause
+over one XOR-defined variable per factor, which is what stream-cipher
+instances look like as ANF. `--xorcls 1` writes XORs as CryptoMiniSat's
+native xor clauses instead of cutting them. A projection set in the ANF
+(`c p show ... END`) becomes a `c p show` line over the same variables in
+the CNF (`--projshow`), so solution counts over it agree. `[cnf-stats]`
+reports the sizes and `--comments 1` writes every auxiliary variable's
+meaning into the CNF.
 
 ### Multivariate quadratic (MQ) and HFE systems
 
