@@ -162,6 +162,17 @@ descriptors when the matrix is filled, so the memory is the matrix itself
 (MQ n = 24: 49 MB). Its limit is memory: a degree-5 step for 30-35
 variables has 100k-400k columns.
 
+`--gbengine 2` is a Matrix-F5 variant (`src/boolf5.cpp`): degree by degree
+it builds the Macaulay matrix of all multiples `m*f_i` with
+`deg m <= d - deg f_i`, generated in generator order in `--gbf5groups`
+groups, and drops `m*f_i` when `m` is a leading monomial of the
+degree-`deg m` matrix of the earlier groups (the F5 criterion); each group
+is reduced against the reduced echelon form of the earlier ones in place
+(M4RI windows). On random MQ systems it finishes at degree 4 where F4
+needs 5 and is 2-3x faster (n = 24: 1.1 s, 150 MB); on the structured HFE
+systems it goes to degree 6 and runs out of the matrix budget where F4
+solves at degree 5, so F4 stays the default.
+
 ### ANF-to-CNF conversion strategies
 
 When a polynomial is too large for Brickenstein's direct conversion
