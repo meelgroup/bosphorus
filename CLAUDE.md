@@ -45,12 +45,22 @@ PolyBoRi/CUDD tend to dominate; check which rule calls them.
 - Long batches: run them detached (`setsid nohup script > log 2>&1 &`); the
   harness kills background tasks as "low memory" when big CNF files fill the
   page cache. Verify every model against the original ANF.
+- A `c p show` line in a CNF makes CryptoMiniSat treat those variables as a
+  sampling set (no elimination, different Gauss heuristics) and can make it
+  many times slower: Bosphorus writes it only with `--projshow 1`. Never
+  compare a CNF with the line against one without.
+- Do not run two CPU-heavy things at once on this 2-core machine while a
+  benchmark batch is running (perf profiles, builds with -j4 distort timings).
 
 ## Benchmarks
 - The bivium family lives in `/home/soos/development/sat_solvers/xnf/xorricane-bench/bivium/`.
   Run Bosphorus with `--el 0` there; every `.anf` starts with a variable-list line.
 - Compare with CryptoMiniSat using the harness flags:
   `cryptominisat5 --sls 0 --autodisablegauss 0 --presimp 1 --maxmatrixrows 100000 --maxmatrixcols 100000 --maxnummatrices 1000000 --minmatrixrows 1`
-  and always verify the model against the original ANF (the CNF's `c p show`
-  line makes CMS print only the projected variables; complete the rest by unit
+  and always verify the model against the original ANF (with `--projshow 1`
+  CMS prints only the projected variables; complete the rest by unit
   propagation over the CNF).
+- The ascon family (`.../xorricane-bench/ascon/`, named variables, 50
+  instances, raw-CNF CMS results in `*.cnf.out-cms`) is the second reference
+  family; the four-round instances (tmp3g3f82vv, tmpgmh2blh0, ...) are the
+  informative ones.
