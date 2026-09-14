@@ -114,7 +114,7 @@ strategies that work on a copy of the system and feed back what they learnt:
 | `lit-probe` | partial evaluation of small equations: forced literals, equivalences, binary implications and their SCCs | `--probe`, `--probevars` |
 | `fac-canon` | canonical linear factors of products modulo the linear span (off) | `--faccanon` |
 | `fac-res` | resolution between products sharing a linear factor (off) | `--facres`, `--facresmax` |
-| `gb-cone` | Gröbner bases of cones of small equations (lex degree-bounded loop and a complete degree-ordered basis per cone); short basis members are added. Off for large systems; a system with at most `--gbwholevars` active variables gets its complete basis always | `--gb`, `--gbwholevars`, `--gbengine`, `--gbmaxvars`, `--gbwindow`, `--gbmaxlen`, `--gbfactdeg`, `--gbfactlen`, `--gbdeg`, `--gbsteps`, `--gbmaxcells` |
+| `gb-cone` | Gröbner bases of cones of small equations; short basis members are added. Off for large systems, always on for systems of at most `--gbwholevars` variables | `--gb`, `--gbwholevars`, `--gbengine`, `--gb*` |
 | `xl` | eXtended Linearization on equations of at most `--xlmaxlen` terms | `--xl`, `--xldeg`, `--xlsample`, `--xlmaxlen` |
 | `elimlin` | ElimLin: elimination and substitution of linear equations, iterated | `--el`, `--elsample` |
 | `sat-simp` | bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds | `--sat`, `--satinc`, `--satlim` |
