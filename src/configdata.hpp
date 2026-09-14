@@ -90,7 +90,8 @@ struct ConfigData {
     int gbFull = 2;            // 0: degree-bounded lex loop per cone; 1: complete dp_asc basis per cone; 2: both for cones, complete basis for a whole small system
     uint32_t gbWholeVars = 24; // with gbFull: a system with at most this many free variables is one cone
     int gbRecursion = 2;       // BRiAl's optAllowRecursion: 0 never, 1 always, 2 only for the whole-system basis
-    int gbEngine = 1;          // complete bases: 0 = BRiAl symmGB_F2, 1 = Bosphorus's matrix F4 (boolf4.cpp)
+    int gbEngine = 1;          // complete bases: 0 = BRiAl symmGB_F2, 1 = matrix F4 (boolf4.cpp), 2 = matrix F5 (boolf5.cpp)
+    uint32_t gbF5Groups = 8;   // matrix F5: generator groups per degree
     uint64_t gbMaxCells = 12000000000ULL; // F4: largest matrix (rows*columns) that is built, ~1.5 GB of bits
     int gbTailReduce = false;  // F4: interreduce the basis tails after every degree step (no gain measured)
     uint32_t gbFactDeg = 2;    // GB members of at most this degree ...

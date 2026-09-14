@@ -39,6 +39,7 @@ SOFTWARE.
 
 #include "anf.hpp"
 #include "boolf4.hpp"
+#include "boolf5.hpp"
 #include "time_mem.h"
 
 using std::cout;
@@ -139,7 +140,7 @@ size_t ANF::groebner_windows()
         }
         windows++;
 
-        if (config.gbEngine == 1 && (config.gbFull == 1 || (config.gbFull == 2 && whole)) && cvars.size() <= 64) {
+        if ((config.gbEngine == 1 || config.gbEngine == 2) && (config.gbFull == 1 || (config.gbFull == 2 && whole)) && cvars.size() <= 64) {
             // Bosphorus's own matrix-F4 engine over the Boolean ring
             // (boolf4.cpp): dense GF(2) linear algebra with M4RI on the
             // critical pairs of one degree at a time
@@ -154,6 +155,33 @@ size_t ANF::groebner_windows()
             fopt.maxCells = config.gbMaxCells;
             fopt.tailReduce = config.gbTailReduce;
             fopt.verbosity = config.verbosity;
+            vector<BoolF4::Poly> basis;
+            if (config.gbEngine == 2) {
+                BoolF5::Options f5opt;
+                f5opt.maxDeg = whole ? 64 : config.gbDeg;
+                f5opt.maxCells = config.gbMaxCells;
+                f5opt.verbosity = config.verbosity;
+                f5opt.groups = config.gbF5Groups;
+                BoolF5 f5(cvars.size(), f5opt);
+                for (const size_t j : window) {
+                    BoolF4::Poly q;
+                    for (const BooleMonomial& m : eq(j)) {
+                        BoolF4::Mon mask = 0;
+                        for (const uint32_t v : m) mask |= (BoolF4::Mon)1 << local[v];
+                        q.push_back(mask);
+                    }
+                    f5.add(q);
+                }
+                basis = f5.run();
+                spolys += f5.stats().rows;
+                if (f5.stats().budget_exhausted) timeout = true;
+                if (config.verbosity >= 1 && whole) {
+                    cout << "c [f5] whole system: rows " << f5.stats().rows << " pruned " << f5.stats().rows_pruned
+                         << " zero rows " << f5.stats().zero_rows << " max cols " << f5.stats().cols_max
+                         << " max degree " << f5.stats().max_deg << " basis " << basis.size()
+                         << (f5.stats().budget_exhausted ? " (budget exhausted)" : "") << endl;
+                }
+            } else {
             BoolF4 f4(cvars.size(), fopt);
             for (const size_t j : window) {
                 BoolF4::Poly q;
@@ -164,7 +192,7 @@ size_t ANF::groebner_windows()
                 }
                 f4.add(q);
             }
-            const vector<BoolF4::Poly> basis = f4.run();
+            basis = f4.run();
             spolys += f4.stats().rows;
             if (f4.stats().budget_exhausted) timeout = true;
             if (config.verbosity >= 1 && whole) {
@@ -172,6 +200,7 @@ size_t ANF::groebner_windows()
                      << " max cols " << f4.stats().cols_max << " max degree " << f4.stats().max_deg
                      << " pairs-to-zero " << f4.stats().zero_reductions
                      << " basis " << basis.size() << (f4.stats().budget_exhausted ? " (budget exhausted)" : "") << endl;
+            }
             }
             for (const BoolF4::Poly& cg : basis) {
                 if (cg.size() == 1 && cg[0] == 0) { facts.push_back(BoolePolynomial(true, *ring)); break; }
