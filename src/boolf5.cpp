@@ -106,17 +106,13 @@ vector<BoolF4::Poly> BoolF5::run()
         vector<std::unordered_set<Mon> >& leads_d = leads_by_deg[d];
         leads_d.assign(ngroups + 1, std::unordered_set<Mon>());
 
-        mzd_t* E = nullptr; // RREF of the rows of the groups processed so far
-        size_t erows = 0;
-        vector<Poly> degree_rows; // the reduced rows of this degree (to become basis elements)
+        // the rows of every group, pruned by the F5 criterion (which only
+        // consults leads recorded at earlier degrees, so all groups can be
+        // generated up front); one matrix holds the whole degree and is
+        // echelonized in place group by group through M4RI windows
+        vector<vector<std::pair<size_t, Mon> > > descs(ngroups);
+        size_t total_rows = 0;
         for (uint32_t g = 0; g < ngroups; g++) {
-            // rows of this group: m*f_i for deg(m) = d - deg(f_i), F5 criterion
-            // against the leads of degree d - deg(f_i) of the groups < g
-            // the system is affine, so the degree-d matrix holds every
-            // multiple m*f_i with deg(m) <= d - deg(f_i) (a Macaulay matrix
-            // of degree d), each pruned by the leads of degree deg(m) of
-            // the earlier groups
-            vector<std::pair<size_t, Mon> > desc;
             for (size_t i = 0; i < m; i++) {
                 if (group_of[i] != g) continue;
                 const int kmax = d - Fdeg[i];
@@ -129,34 +125,39 @@ vector<BoolF4::Poly> BoolF5::run()
                     if (it != leads_by_deg.end() && g < it->second.size()) crit = &it->second[g];
                     for (const Mon u : mult) {
                         if (crit && crit->count(u)) { st.rows_pruned++; continue; }
-                        desc.push_back(std::make_pair(i, u));
+                        descs[g].push_back(std::make_pair(i, u));
                     }
                 }
             }
-            if (desc.empty()) { leads_d[g + 1] = leads_d[g]; continue; }
-            const uint64_t cells = (uint64_t)(erows + desc.size()) * columns.size();
-            if (cells > opt.maxCells) {
-                if (opt.verbosity >= 1) {
-                    std::cout << "c [f5] degree " << d << ": " << (erows + desc.size()) << " rows x "
-                              << columns.size() << " columns exceed the cell budget" << std::endl;
-                }
-                st.budget_exhausted = true;
-                break;
+            total_rows += descs[g].size();
+        }
+        const uint64_t cells = (uint64_t)total_rows * columns.size();
+        if (cells > opt.maxCells) {
+            if (opt.verbosity >= 1) {
+                std::cout << "c [f5] degree " << d << ": " << total_rows << " rows x "
+                          << columns.size() << " columns exceed the cell budget" << std::endl;
             }
-            // matrix [E; new rows], full echelon: E's pivots come first, so the
-            // new rows are reduced by them and among themselves
-            mzd_t* M = mzd_init(erows + desc.size(), columns.size());
-            if (E) { mzd_copy(M, E); mzd_free(E); E = nullptr; }
-            for (size_t r = 0; r < desc.size(); r++) {
-                const Poly p = BoolF4::mul(G[desc[r].first], desc[r].second);
-                for (const Mon mm : p) mzd_write_bit(M, erows + r, col_of[mm], 1);
+            st.budget_exhausted = true;
+            break;
+        }
+        mzd_t* M = mzd_init(total_rows, columns.size());
+        size_t erows = 0; // rows of the reduced echelon form so far (top of M)
+        vector<Poly> degree_rows;
+        const size_t words = (columns.size() + 63) / 64;
+        for (uint32_t g = 0; g < ngroups; g++) {
+            if (descs[g].empty()) { leads_d[g + 1] = leads_d[g]; continue; }
+            // the rows of this group go right after the echelon rows
+            for (size_t r = 0; r < descs[g].size(); r++) {
+                const size_t row = erows + r;
+                mzd_row_clear_offset(M, row, 0);
+                const Poly p = BoolF4::mul(G[descs[g][r].first], descs[g][r].second);
+                for (const Mon mm : p) mzd_write_bit(M, row, col_of[mm], 1);
             }
-            st.rows += desc.size();
-            const rci_t rank = mzd_echelonize_m4ri(M, 1, 0);
-            st.zero_rows += (erows + desc.size()) - rank;
-            // read the rows back, record leads (the rows of the last group
-            // are the complete reduced matrix of this degree)
-            const size_t words = (columns.size() + 63) / 64;
+            st.rows += descs[g].size();
+            mzd_t* W = mzd_init_window(M, 0, 0, erows + descs[g].size(), columns.size());
+            const rci_t rank = mzd_echelonize_m4ri(W, 1, 0);
+            mzd_free_window(W);
+            st.zero_rows += (erows + descs[g].size()) - rank;
             leads_d[g + 1] = leads_d[g];
             degree_rows.clear();
             for (rci_t r = 0; r < rank; r++) {
@@ -174,12 +175,9 @@ vector<BoolF4::Poly> BoolF5::run()
                 leads_d[g + 1].insert(p[0]);
                 degree_rows.push_back(p);
             }
-            E = mzd_init(rank, columns.size());
-            for (rci_t r = 0; r < rank; r++) mzd_copy_row(E, r, M, r);
-            mzd_free(M);
             erows = rank;
         }
-        if (E) mzd_free(E);
+        mzd_free(M);
         if (opt.verbosity >= 2) {
             std::cout << "c [f5] degree " << d << " cols " << columns.size() << " rows " << erows
                       << " pruned so far " << st.rows_pruned << " zero rows so far " << st.zero_rows << std::endl;
