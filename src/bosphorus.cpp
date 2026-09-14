@@ -589,15 +589,15 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                                                    dat->learnt)) {
                             anf->setNOTOK();
                         } else {
+                            vector<BoolePolynomial> fresh;
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
                                 if (!dat->is_new_fact(dat->learnt[i])) continue;
-                                num_learnt +=
-                                    anf->addBoolePolynomial(dat->learnt[i]);
-
+                                fresh.push_back(dat->learnt[i]);
                                 if (dat->config.verbosity > 4)  {
                                     cout << "Xl Learnt poly: " << dat->learnt[i] << endl;
                                 }
                             }
+                            num_learnt += anf->add_linearly_new_facts(fresh, false);
                         }
                     }
                     break;
@@ -608,15 +608,15 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                         if (!elimLin(dat->config, eqs_for_el, dat->learnt)) {
                             anf->setNOTOK();
                         } else {
+                            vector<BoolePolynomial> fresh;
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
                                 if (!dat->is_new_fact(dat->learnt[i])) continue;
-                                num_learnt +=
-                                    anf->addBoolePolynomial(dat->learnt[i]);
-
+                                fresh.push_back(dat->learnt[i]);
                                 if (dat->config.verbosity > 4)  {
                                     cout << "EL Learnt poly: " << dat->learnt[i] << endl;
                                 }
                             }
+                            num_learnt += anf->add_linearly_new_facts(fresh, false);
                         }
                     }
                     break;
@@ -645,14 +645,15 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                                       no_cls, dat->learnt, *anf);
 
                         if (ret != l_False) {
+                            vector<BoolePolynomial> fresh;
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
                                 if (!dat->is_new_fact(dat->learnt[i])) continue;
-                                num_learnt += anf->addLearntBoolePolynomial(dat->learnt[i]);
-
+                                fresh.push_back(dat->learnt[i]);
                                 if (dat->config.verbosity > 4)  {
                                     cout << "SAT Learnt poly: " << dat->learnt[i] << endl;
                                 }
                             }
+                            num_learnt += anf->add_linearly_new_facts(fresh, true);
                         }
                     }
                     break;

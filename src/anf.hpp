@@ -169,6 +169,10 @@ class ANF
     size_t reduce_by_short_polys();  // "binom-red"
     size_t shorten_polys();          // "poly-shorten"
     size_t probe_small_polys();      // "lit-probe" (+ "impl-scc")
+    size_t gauss_linear();           // "lin-gauss"
+    // adds facts learnt by a strategy, dropping linear ones that are
+    // combinations of the linear equations already in the system
+    size_t add_linearly_new_facts(const vector<BoolePolynomial>& facts, bool contextualize);
     size_t canon_factors();          // "fac-canon"
     size_t resolve_factors();        // "fac-res"
     size_t groebner_windows();       // "gb-window" (anfgroebner.cpp)

@@ -1,0 +1,15 @@
+c RUN: %solver --anfread %s --anfwrite /dev/stdout --xl 0 --el 0 --sat 0 --shorten 0 --probe 0 --binomred 0 | %OutputCheck %s
+c RUN: %solver --anfread %s --solve --allsol --verb 0 | %verify allsol %s
+c RUN: %solver --anfread %s --cnfwrite %t.cnf --verb 0 && %verify cnf %s %t.cnf
+c
+c lin-gauss: x1+x2+x3+x5+x6 is the sum of the two shorter linear equations,
+c so it is deleted; x4+x6+x7+x8+1 reduced by x4+x5+x6 (pivot x6) is the
+c shorter x5+x7+x8+1. The nonlinear equation is left alone.
+x1 + x2 + x3 + x4
+x4 + x5 + x6
+x1 + x2 + x3 + x5 + x6
+x4 + x6 + x7 + x8 + 1
+x1*x2*x9 + x5*x6 + x9
+c CHECK: \[lin-gauss\] linear 4 rank 3 deleted 1 shortened 1
+c CHECK-L: x(5) + x(7) + x(8) + 1
+c CHECK-L: x(1)*x(2)*x(9) + x(5)*x(6) + x(9)

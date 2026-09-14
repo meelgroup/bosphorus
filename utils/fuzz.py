@@ -84,7 +84,7 @@ def rand_cnf(rng):
 
 def rand_opts(rng):
     o = []
-    for flag in ['--xl', '--el', '--sat', '--rewrite', '--binomred', '--shorten', '--probe',
+    for flag in ['--xl', '--el', '--sat', '--rewrite', '--lingauss', '--binomred', '--shorten', '--probe',
                  '--faccanon', '--facres', '--gb', '--partner', '--factor', '--xorcls']:
         if rng.random() < 0.5:
             o += [flag, str(rng.randint(0, 1))]

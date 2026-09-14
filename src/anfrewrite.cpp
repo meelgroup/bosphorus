@@ -34,6 +34,7 @@ SOFTWARE.
 
 #include "anf.hpp"
 #include "linfactor.hpp"
+#include "linbasis.hpp"
 #include "time_mem.h"
 
 using std::cout;
@@ -588,6 +589,125 @@ size_t ANF::probe_small_polys()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// lin-gauss: Gaussian elimination among the linear equations
+//
+// The linear equations are inserted, shortest first, into an echelon basis
+// (pivot = highest variable, kept fully reduced). An equation that reduces
+// to 0 is a combination of shorter ones and is deleted; one whose reduced
+// form has fewer terms is replaced by it (sound: the equations it was
+// reduced by stay in the system, and the span of the linear part never
+// changes). Reduced forms with one or two variables are units and
+// equivalences that propagation then substitutes everywhere. Nonlinear
+// equations are never touched, so nothing can grow.
+///////////////////////////////////////////////////////////////////////////////
+
+size_t ANF::gauss_linear()
+{
+    SimpStatsScope scope(*this, "lin-gauss");
+    const double myTime = cpuTime();
+    LinBasis basis(ring->nVariables());
+
+    // shortest first, ties by index: the short equations become the basis
+    // and the long ones are reduced by them
+    vector<size_t> order;
+    for (size_t i = 0; i < eqs.size(); i++) {
+        if (isProduct(i) || degOf(i) != 1) continue;
+        order.push_back(i);
+    }
+    std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+        return eq_len[a] < eq_len[b];
+    });
+
+    unordered_set<uint32_t> updatedVars;
+    vector<size_t> empty_equations;
+    size_t num_deleted = 0, num_shortened = 0;
+    const size_t num_lin = order.size();
+    for (const size_t i : order) {
+        LinBasis::Row r = basis.row_of(eqs[i]);
+        const size_t len_before = basis.length(r);
+        basis.reduce(r);
+        if (basis.pivot(r) < 0) {
+            if (basis.constant(r)) {
+                // reduced to 1 = 0: UNSAT
+                replacer->setNOTOK();
+                return num_deleted + num_shortened + 1;
+            }
+            // a combination of the equations already in the basis
+            num_deleted++;
+            if (!rewrite_eq(i, BoolePolynomial(*ring), updatedVars, empty_equations)) {
+                return num_deleted + num_shortened;
+            }
+            continue;
+        }
+        if (basis.length(r) < len_before) {
+            const BoolePolynomial np = basis.poly_of(r, *ring);
+            if (config.verbosity >= 5) {
+                cout << "c [lin-gauss] " << eqs[i] << "  -->  " << np << endl;
+            }
+            num_shortened++;
+            if (!rewrite_eq(i, np, updatedVars, empty_equations)) {
+                return num_deleted + num_shortened;
+            }
+        }
+        basis.insert(r);
+    }
+    finish_rewrites(updatedVars, empty_equations);
+
+    if (config.verbosity >= 1) {
+        cout << "c [lin-gauss] linear " << num_lin << " rank " << basis.rank()
+             << " deleted " << num_deleted << " shortened " << num_shortened
+             << " T: " << std::fixed << std::setprecision(2) << (cpuTime() - myTime) << endl;
+    }
+    return num_deleted + num_shortened;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Facts learnt by a strategy (XL, ElimLin, SAT) are often linear
+// combinations of equations the system already has: they add nothing but
+// long XORs to the CNF. Linear facts are therefore reduced modulo the span
+// of the current linear equations; the ones in the span are dropped, the
+// others are added in the shorter of their two forms.
+///////////////////////////////////////////////////////////////////////////////
+
+size_t ANF::add_linearly_new_facts(const vector<BoolePolynomial>& facts, bool contextualize)
+{
+    LinBasis basis(ring->nVariables());
+    for (size_t i = 0; i < eqs.size(); i++) {
+        if (isProduct(i) || degOf(i) != 1) continue;
+        LinBasis::Row r = basis.row_of(eqs[i]);
+        basis.reduce(r);
+        if (basis.pivot(r) >= 0) basis.insert(r);
+    }
+
+    size_t num_added = 0, num_in_span = 0;
+    for (const BoolePolynomial& f : facts) {
+        const BoolePolynomial p = contextualize ? replacer->update(f) : f;
+        if (p.deg() > 1 || p.isZero()) {
+            num_added += addBoolePolynomial(p);
+            continue;
+        }
+        LinBasis::Row r = basis.row_of(p);
+        const size_t len_before = basis.length(r);
+        basis.reduce(r);
+        if (basis.pivot(r) < 0) {
+            if (basis.constant(r)) {
+                num_added += addBoolePolynomial(BoolePolynomial(true, *ring)); // UNSAT
+                continue;
+            }
+            num_in_span++;
+            continue;
+        }
+        basis.insert(r);
+        num_added += addBoolePolynomial(basis.length(r) < len_before ? basis.poly_of(r, *ring) : p);
+    }
+    if (config.verbosity >= 2 && num_in_span > 0) {
+        cout << "c [learnt] " << num_in_span << " linear fact(s) already in the span of the linear equations, "
+             << num_added << " added" << endl;
+    }
+    return num_added;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // fac-canon: canonical linear factors
 //
 // The linear equations of the system span a space L. Two linear factors that
@@ -870,6 +990,8 @@ size_t ANF::rewrite_inplace()
     for (unsigned round = 0; round < config.rewriteRounds; round++) {
         if (!getOK()) break;
         size_t changes = 0;
+        if (config.doLinGauss) changes += gauss_linear();
+        if (!getOK()) break;
         if (config.doBinomRed) changes += reduce_by_short_polys();
         if (!getOK()) break;
         if (config.doShorten) changes += shorten_polys();

@@ -215,6 +215,8 @@ void parseOptions(int argc, char* argv[])
     // In-place ANF rewrite rules
     add_arg("--rewrite", config.doRewrite, fc_integral<int>,
         "Turn on/off all in-place ANF rewrite rules. Default: ON");
+    add_arg("--lingauss", config.doLinGauss, fc_integral<int>,
+        "Rewrite rule lin-gauss: Gaussian elimination among the linear equations, shortest first; deletes the redundant ones, shortens the others and finds units and equivalences. Default: ON");
     add_arg("--binomred", config.doBinomRed, fc_integral<int>,
         "Rewrite rule binom-red: reduce all equations modulo monomial and binomial equations (x*y+x=0 turns x*y*z into x*z). Default: ON");
     add_arg("--binomredlen", config.binomRedLen, fc_integral<uint32_t>,
@@ -365,6 +367,7 @@ void parseOptions(int argc, char* argv[])
              << config.maxTime << std::fixed << endl
              << "c Rewrite rules: " << config.doRewrite
              << " (binom-red " << config.doBinomRed << " len " << config.binomRedLen
+             << ", lin-gauss " << config.doLinGauss
              << ", poly-shorten " << config.doShorten
              << ", lit-probe " << config.doProbe << " vars " << config.probeVars << ")" << endl
              << "c XL simp (deg = " << config.xlDeg
