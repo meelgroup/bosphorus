@@ -148,19 +148,28 @@ and can generate random MQ systems with a planted solution. A system with
 few enough variables is solved by its Gröbner basis alone, without any
 SAT solving.
 
-Random MQ systems with m = 2n and a planted solution, one core, 200 s
-limit for the SAT solver. To reproduce a row:
+Random MQ systems with m = 2n and a planted solution, one core (a 2020
+laptop core), 200 s limit for the SAT solver. To reproduce a row:
 ```
 python3 utils/mqgen.py 24 48 1 > mq24.anf   # n=24, m=48, seed 1
-./build/bosphorus mq24.anf --solve
+./build/bosphorus mq24.anf --solve              # F4; --gbengine 2 for F5
 ```
+
+The degree of regularity of such a system is 4 up to n = 27 and 5 from
+n = 28, and a degree-5 matrix has five times the columns of a degree-4
+one; `gb-split` fixes one variable (two for n = 30, three for n = 32),
+which brings every branch back to degree 4, and combines the branches.
+Memory in parentheses.
 
 | n | CryptoMiniSat on Bosphorus's CNF | BRiAl `symmGB_F2` | Bosphorus F4 | Bosphorus F5 |
 |---|---|---|---|---|
-| 16 | 0.7 s | 0.3 s | 0.2 s | 0.1 s |
-| 20 | 1.4 s | 1.0 s | 0.7 s | 0.5 s |
-| 24 | timeout | 15 s | 2.8 s | 1.1 s |
-| 28 | timeout | 196 s | 187 s | |
+| 16 | 0.7 s | 0.3 s | 0.1 s | 0.1 s |
+| 20 | 1.4 s | 1.0 s | 0.2 s | 0.2 s |
+| 24 | timeout | 15 s | 0.8 s (48 MB) | 1.0 s (158 MB) |
+| 26 | timeout | | 3.7 s (103 MB) | 2.7 s (309 MB) |
+| 28 | timeout | 196 s | 16 s (205 MB), was 187 s (1.7 GB) without the split | 13 s (511 MB) |
+| 30 | timeout | | 52 s (488 MB) | 52 s (1.1 GB) |
+| 32 | timeout | | MQ32F4 | MQ32F5 |
 
 HFE systems (secret degree 96) from Allan Steel's Magma page. Magma's F4
 solved them in 2004 on hardware of that time (a 750 MHz UltraSPARC class
@@ -170,9 +179,14 @@ same solutions:
 
 | system | Magma F4 (2004) | BRiAl `symmGB_F2` | Bosphorus F4 |
 |---|---|---|---|
-| HFE25 | 37 s | 166 s | 52 s |
-| HFE30 | 114 s | 1329 s | 131 s |
-| HFE35 | 543 s | no answer in 2 h | 167 s (3.9 GB) |
+| HFE25 | 37 s | 166 s | 2.4 s (150 MB) |
+| HFE30 | 114 s | 1329 s | 12 s (433 MB) |
+| HFE35 | 543 s | no answer in 2 h | HFE35F4 |
+
+The HFE times fell from 52 s and 131 s when the engine learnt to stop as
+soon as its linear members fix every variable (and to check that
+assignment against the generators): the steps after the solving one only
+reduced pairs to zero.
 
 ## List all solutions of an ANF
 

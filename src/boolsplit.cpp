@@ -75,7 +75,7 @@ void BoolSplit::add(const Poly& p_in)
 
 vector<BoolSplit::Poly> BoolSplit::run()
 {
-    Result r = solve(gens, n, 0);
+    Result r = solve(gens, n, 0, true);
     st.complete = r.complete;
     if (r.has_one) return vector<Poly>(1, Poly(1, 0));
     return r.polys;
@@ -185,11 +185,17 @@ BoolSplit::Result BoolSplit::combine(const Result& r0, const Result& r1, uint32_
     return out;
 }
 
-BoolSplit::Result BoolSplit::solve(const vector<Poly>& g, uint32_t nv, uint32_t depth)
+BoolSplit::Result BoolSplit::solve(const vector<Poly>& g, uint32_t nv, uint32_t depth, bool try_engine)
 {
-    bool exhausted = false;
-    Result r = engine_run(g, nv, exhausted);
-    if (!exhausted || r.has_one) return r;
+    bool exhausted = true;
+    Result r;
+    if (try_engine) {
+        r = engine_run(g, nv, exhausted);
+        if (!exhausted || r.has_one) return r;
+    } else {
+        st.skipped++;
+        r.complete = false;
+    }
     if (depth >= opt.maxDepth || st.rows >= opt.maxRows) {
         st.budget_branches++;
         return r;
@@ -235,14 +241,17 @@ BoolSplit::Result BoolSplit::solve(const vector<Poly>& g, uint32_t nv, uint32_t 
         std::cout << "c [gb-split] depth " << depth + 1 << ": splitting on variable " << x
                   << " (" << nv - 1 << " variables left)" << std::endl;
     }
-    // the more constrained branch first is no cheaper, so the order is fixed
-    Result r0 = solve(g0, nv - 1, depth + 1);
-    Result r1 = solve(g1, nv - 1, depth + 1);
+    // the more constrained branch first is no cheaper, so the order is
+    // fixed; if the first branch had to split, the second is split right
+    // away (same size, same degree of regularity for a random system)
+    Result r0 = solve(g0, nv - 1, depth + 1, true);
+    Result r1 = solve(g1, nv - 1, depth + 1, !r0.split);
     vector<int> back(nv - 1);
     for (uint32_t k = 0; k + 1 < nv; k++) back[k] = up[k];
     for (Poly& p : r0.polys) p = remap(p, back);
     for (Poly& p : r1.polys) p = remap(p, back);
     Result c = combine(r0, r1, x, opt.condLen);
+    c.split = true;
     // the members found before the split hold as well (a partial basis of
     // the ideal); the leaves' facts are what solves the system
     for (const Poly& p : r.polys) c.polys.push_back(p);

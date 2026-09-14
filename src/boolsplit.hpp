@@ -69,6 +69,7 @@ class BoolSplit {
 
     struct Stats {
         uint64_t branches = 0;        // engine runs (the root included)
+        uint64_t skipped = 0;         // nodes split without an engine run (the sibling had to split)
         uint64_t unsat_branches = 0;  // runs whose basis was {1}
         uint64_t solved_branches = 0; // runs whose basis fixed every variable
         uint64_t budget_branches = 0; // runs that hit a budget and could not split further
@@ -93,6 +94,7 @@ class BoolSplit {
         std::vector<Poly> polys;
         bool has_one = false;
         bool complete = true;
+        bool split = false; // this node had to split
     };
 
     uint32_t n;
@@ -100,7 +102,10 @@ class BoolSplit {
     Stats st;
     std::vector<Poly> gens;
 
-    Result solve(const std::vector<Poly>& g, uint32_t nv, uint32_t depth);
+    // try_engine = false: the sibling branch at this depth had to split,
+    // so the engine run is skipped and the system split right away (its
+    // sibling's matrix would have been the same size)
+    Result solve(const std::vector<Poly>& g, uint32_t nv, uint32_t depth, bool try_engine);
     Result engine_run(const std::vector<Poly>& g, uint32_t nv, bool& exhausted);
     static Result combine(const Result& r0, const Result& r1, uint32_t x, uint32_t condLen);
 };

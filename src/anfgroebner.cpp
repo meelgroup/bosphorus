@@ -177,7 +177,7 @@ size_t ANF::groebner_windows()
             if (!ss.complete) timeout = true;
             if (config.verbosity >= 1 && whole) {
                 cout << "c [gb-split] whole system: engine " << (config.gbEngine == 2 ? "F5" : "F4")
-                     << " runs " << ss.branches << " unsat " << ss.unsat_branches
+                     << " runs " << ss.branches << " split-untried " << ss.skipped << " unsat " << ss.unsat_branches
                      << " solved " << ss.solved_branches << " on-budget " << ss.budget_branches
                      << " max-depth " << ss.max_depth << " rows " << ss.rows
                      << " members " << basis.size() << (ss.complete ? "" : " (budget exhausted)") << endl;
