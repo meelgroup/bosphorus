@@ -178,7 +178,7 @@ class ANF
     size_t add_linearly_new_facts(const vector<BoolePolynomial>& facts, bool contextualize);
     size_t canon_factors();          // "fac-canon"
     size_t resolve_factors();        // "fac-res"
-    size_t groebner_windows();       // "gb-window" (anfgroebner.cpp)
+    size_t groebner_windows();       // "gb-cone" (anfgroebner.cpp)
     /// Adds a product of >= 2 linear factors as a new equation; false if present
     bool addProduct(const vector<Lineral>& f);
 

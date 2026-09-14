@@ -238,12 +238,14 @@ void parseOptions(int argc, char* argv[])
     add_arg("--facresmax", config.facResMaxFactors, fc_integral<uint32_t>,
         "fac-res only adds resolvents with at most this many factors. Default: 2");
     add_arg("--gb", config.doGB, fc_integral<int>,
-        "Rewrite rule gb-window: degree-bounded Groebner bases (BRiAl) of windows of small equations sharing variables; new linear equations are added to the system. Default: OFF");
-    add_arg("--gbdeg", config.gbDeg, fc_integral<uint32_t>, "gb-window: drop S-polynomials above this degree. Default: 3");
-    add_arg("--gbwindow", config.gbWindow, fc_integral<uint32_t>, "gb-window: equations per window. Default: 24");
-    add_arg("--gbmaxlen", config.gbMaxLen, fc_integral<size_t>, "gb-window: only equations with at most this many terms take part. Default: 32");
-    add_arg("--gbsteps", config.gbSteps, fc_integral<uint64_t>, "gb-window: S-polynomials reduced per call, a deterministic work budget. Default: 100000");
-    add_arg("--gbmaxfactvars", config.gbMaxFactVars, fc_integral<uint32_t>, "gb-window: only add linear results with at most this many variables (long ones only bloat the system). Default: 4");
+        "Rewrite rule gb-cone: degree-bounded Groebner bases (BRiAl) of cones of small equations sharing variables; short members of the bases (units, equivalences, short XORs, small nonlinear relations) are added to the system. Default: OFF");
+    add_arg("--gbdeg", config.gbDeg, fc_integral<uint32_t>, "gb-cone: drop S-polynomials above this degree. Default: 3");
+    add_arg("--gbwindow", config.gbWindow, fc_integral<uint32_t>, "gb-cone: at most this many equations per cone. Default: 24");
+    add_arg("--gbmaxvars", config.gbMaxVars, fc_integral<uint32_t>, "gb-cone: a cone grows while its equations use at most this many variables. Default: 16");
+    add_arg("--gbmaxlen", config.gbMaxLen, fc_integral<size_t>, "gb-cone: only equations with at most this many terms take part. Default: 32");
+    add_arg("--gbsteps", config.gbSteps, fc_integral<uint64_t>, "gb-cone: S-polynomials reduced per call, a deterministic work budget. Default: 100000");
+    add_arg("--gbfactdeg", config.gbFactDeg, fc_integral<uint32_t>, "gb-cone: add basis members of at most this degree. Default: 2");
+    add_arg("--gbfactlen", config.gbFactLen, fc_integral<uint32_t>, "gb-cone: add basis members with at most this many terms. Default: 8");
     add_arg("--keepfactor", config.keepFactor, fc_integral<int>,
         "Never rewrite an equation that is a product of linear factors into one that is not, so the product form survives for the CNF encoding: 0 = off, 1 = on, 2 = auto (on when most nonlinear equations are such products). Default: 2");
     add_arg("--rewriterounds", config.rewriteRounds, fc_integral<uint32_t>,
