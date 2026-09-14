@@ -374,11 +374,13 @@ ANF::SubstResult ANF::substituted_factors(size_t idx, vector<Lineral>& out)
         }
     }
     out = f;
-    // apply what the replacer knows to every factor
-    BooleMonomial used(*ring);
-    for (const Lineral& l : out) {
-        for (const uint32_t v : l.vars) used *= ring->variable(v);
-    }
+    // apply what the replacer knows to every factor (the variable set is a
+    // plain sorted vector: building a ZDD monomial of 150 variables one
+    // variable at a time was a quarter of the run on the bivium family)
+    VarVec used;
+    for (const Lineral& l : out) used.insert(used.end(), l.vars.begin(), l.vars.end());
+    std::sort(used.begin(), used.end());
+    used.erase(std::unique(used.begin(), used.end()), used.end());
     for (const uint32_t v : used) {
         const lbool val = replacer->getValue(v);
         if (val != l_Undef) {

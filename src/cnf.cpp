@@ -374,12 +374,22 @@ uint32_t CNF::lineralVar(const vector<uint32_t>& anf_vars)
     const auto it = lineralMap.find(anf_vars);
     if (it != lineralMap.end()) return it->second;
 
-    BoolePolynomial l(anf.getRing());
+    // the polynomial the new variable stands for, summed pairwise (adding
+    // 50 variables one by one to a growing polynomial is quadratic)
+    vector<BoolePolynomial> level;
     vector<uint32_t> cnf_vars;
     for (const uint32_t v : anf_vars) {
-        l += BooleVariable(v, anf.getRing());
+        level.push_back(BoolePolynomial(BooleVariable(v, anf.getRing())));
         cnf_vars.push_back(monomMap.find(BooleVariable(v, anf.getRing()).hash())->second);
     }
+    while (level.size() > 1) {
+        vector<BoolePolynomial> next;
+        for (size_t k = 0; k + 1 < level.size(); k += 2) next.push_back(level[k] + level[k + 1]);
+        if (level.size() % 2) next.push_back(level.back());
+        level.swap(next);
+    }
+    BoolePolynomial l(anf.getRing());
+    if (!level.empty()) l = level.front();
     const uint32_t y = newVar(kind_lineral, l);
     lineralMap[anf_vars] = y;
     numLineralVars++;
