@@ -336,7 +336,7 @@ the scaling on generated instances shows what the Gröbner-basis rule buys:
 | 16 | 0.7 s | 0.3 s |
 | 20 | 1.4 s | 1.1 s |
 | 24 | timeout (200 s) | 16 s |
-| 28 | timeout | 196 s (390 MB) |
+| 28 | timeout | 196 s with BRiAl (390 MB), 187 s with the F4 engine (1.7 GB) |
 
 The basis is computed automatically when the system has at most
 `--gbwholevars` (24) active variables; raise it for larger systems.
@@ -361,12 +361,12 @@ from post-quantum cryptanalysis are available through converters in
   (`magma.maths.usyd.edu.au/users/allan/gb/magma/HFE<n>_96`, converted with
   `utils/magma2anf.py`). Their structure keeps the degree of regularity
   low, which is what Gröbner bases exploit: the whole-system basis solves
-  HFE25 in 52 s and HFE30 in 131 s (1.6 GB; `--gbwholevars 50`) with
-  Bosphorus's F4 engine (166 s and 1329 s with BRiAl), with the solutions
-  Magma found in 2004 (37 s for HFE25 then, on a 750 MHz machine). HFE35
-  ran out of the 2-hour limit with BRiAl at 3.5 GB. Patarin's HFE
-  challenge 1 (n = 80) is only available as Magma's output log, not as an
-  input system.
+  HFE25 in 52 s, HFE30 in 131 s (1.6 GB) and HFE35 in 167 s (3.9 GB;
+  `--gbwholevars 50 --gbmaxcells 30000000000`) with Bosphorus's F4 engine,
+  against 166 s, 1329 s and no answer in 2 hours with BRiAl, with the
+  solutions Magma found in 2004 (37 s for HFE25 then, on a 750 MHz
+  machine). Patarin's HFE challenge 1 (n = 80) is only available as
+  Magma's output log, not as an input system.
 - **LowMC** (the block cipher of the Picnic signature scheme; the LowMC
   cryptanalysis challenge at `lowmcchallenge.github.io`):
   `utils/lowmc2anf.py` turns the challenge's `matrices_and_constants_*.dat`
