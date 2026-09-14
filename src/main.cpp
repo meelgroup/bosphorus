@@ -180,7 +180,7 @@ void parseOptions(int argc, char* argv[])
         "Solve the resulting ANF, tuning the SAT solver for XOR-heavy (XNF) problems");
     add_str_arg("--solvewrite", solution_output_file,
         "Solve the resulting ANF and print the solution to this file");
-    add_flag("--allsol", all_solutions, "Find all solutions");
+    add_flag("--allsol", all_solutions, "Enumerate all solutions with the built-in solver, one SAT call per solution: fine up to some 10000 solutions, use ApproxMC on the written CNF beyond that");
     add_arg("--maxsol", max_sol, fc_integral<uint32_t>, "Find at most this many solutions");
     add_arg("--maxiters", maxiters, fc_integral<uint32_t>, "Maximum iterations to simplify");
 

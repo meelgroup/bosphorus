@@ -182,6 +182,8 @@ c Number of solutions found: 2
 ```
 
 Where `x(0)` means `x(0)` must be FALSE and `x(1)+1` means `x(1)` must be TRUE.
+This enumerates one solution per SAT call and does not scale beyond some
+10000 solutions; count larger solution sets with ApproxMC as below.
 
 ## Counting solutions of an ANF
 
