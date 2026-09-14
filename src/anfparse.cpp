@@ -196,7 +196,20 @@ ANF::Names ANF::scanFile(const string& filename)
     std::vector<Tok> toks;
     string line;
     while (std::getline(ifs, line)) {
-        if (line.empty() || line[0] == 'c') continue;
+        if (line.empty()) continue;
+        if (line[0] == 'c') {
+            // the projection line may name variables that occur in no
+            // equation: they are part of the ring too
+            std::istringstream iss(line);
+            string c, p, show;
+            iss >> c >> p >> show;
+            if (!(c == "c" && p == "show") && !(c == "c" && p == "p" && show == "show")) continue;
+            string rest;
+            std::getline(iss, rest);
+            const size_t end = rest.find("END");
+            if (end == string::npos) continue; // readFile reports the error
+            line = rest.substr(0, end);
+        }
         tokenize(line, toks);
         for (const Tok& t : toks) {
             if (t.t == T_VAR_NUM) max_num = std::max<long>(max_num, t.num);
@@ -268,10 +281,12 @@ size_t ANF::readFile(const string& filename, const Names* names)
                 cout << "ERROR: the projection set line must end with END" << endl;
                 exit(-1);
             }
-            tokenize(rest.substr(0, end), toks);
+            // the token ranges refer to the text that was tokenized
+            const string shown = rest.substr(0, end);
+            tokenize(shown, toks);
             for (const Tok& t : toks) {
                 if (!is_var(t)) parse_error("the projection set may only list variables", line);
-                const uint32_t v = var_index(t, line);
+                const uint32_t v = var_index(t, shown);
                 if (!proj_set.insert(v).second) {
                     cout << "ERROR: variable listed twice in the projection set: " << line << endl;
                     exit(-1);
@@ -340,6 +355,7 @@ size_t ANF::readFile(const string& filename, const Names* names)
             exit(-1);
         }
     }
+    proj_given = proj_set_found;
     if (!proj_set_found) {
         cout << "c setting projection set to ALL variables since we didn't find a 'c p show ... END'" << endl;
         for (uint32_t i = 0; i < ring->nVariables(); i++) proj_set.insert(i);

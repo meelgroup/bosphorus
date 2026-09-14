@@ -156,6 +156,9 @@ class ANF
         return scanFile(filename).ring_size - 1;
     }
     set<size_t> get_proj_set() const;
+    /// the input carried a projection set ('c p show ... END')
+    bool proj_set_given() const { return proj_given; }
+    void set_proj_set_given(bool g) { proj_given = g; }
     /// the projection ("c p show") set: variables 0..n-1
     void set_proj_set_all(size_t n)
     {
@@ -219,6 +222,7 @@ class ANF
 
     // Independent variables
     set<size_t> proj_set;
+    bool proj_given = false;
 
     //State. An equation is either a polynomial (poly_valid) or a product
     //of linear factors (factors non-empty) whose polynomial is only built

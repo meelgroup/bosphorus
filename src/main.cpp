@@ -191,12 +191,10 @@ void parseOptions(int argc, char* argv[])
     add_arg("--comments", config.writecomments, fc_bool,
         "Do not write comments to output files");
     add_arg("--projshow", config.projShow, fc_integral<int>,
-        "Write a 'c p show' line naming the original variables into the CNF: 0 never, 1 always, "
-        "2 only when the CNF has at least as many XOR-cut variables as original variables. "
-        "CryptoMiniSat treats the listed variables as a sampling set: it does not eliminate them, "
-        "and skips Gauss-Jordan on matrices with few of them, which is what makes the big cut-XOR "
-        "systems of the bivium family solvable (7 s instead of a timeout) but slows the ascon family "
-        "down 2-3x. Default: 2");
+        "Write a 'c p show' line into the CNF: 0 never, 1 always (all original variables), "
+        "2 when the input carried a projection set ('c p show ... END' in the ANF), listing the "
+        "CNF variables of exactly those ANF variables, so that solution counts over the projection "
+        "agree between ANF and CNF. Default: 2");
 
     // CNF conversion
     add_arg("--cutnum", config.cutNum, fc_integral<uint32_t>,
@@ -212,7 +210,7 @@ void parseOptions(int argc, char* argv[])
     add_arg("--karn", config.brickestein_algo_cutoff, fc_integral<uint32_t>,
         "Uses this cutoff for doing Brickenstein's algorithm for translation of complex ANFs");
     add_arg("--karncluster", config.karnCluster, fc_integral<uint32_t>,
-        "Encode small nonlinear equations that share variables jointly (one clause set over the union of their variables, e.g. all equations of an S-box) when the union has at most this many variables. 0 = off. Default: 0");
+        "Encode small nonlinear equations that share variables jointly (one clause set over the union of their variables, e.g. all equations of an S-box) when the union has at most this many variables. 0 = off. Default: 10");
     add_arg("--onlynewcnfcls", only_new_cnf_clauses, fc_integral<int>,
         "Only output to CNF the newly discovered CNF clauses. Must have CNF as input.");
 

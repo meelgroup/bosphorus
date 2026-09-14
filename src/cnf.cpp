@@ -925,17 +925,10 @@ void CNF::print_solution_map(std::ofstream* ofs)
 
 void CNF::write_projection_set(std::ofstream* ofs, const set<size_t>& proj) const
 {
+    // CNF variable i+1 is ANF variable i for every original variable
     *ofs << "c p show ";
-    for(const auto i: proj) {
-        // only map monomials which are single variables
-        if (varRepresentsMonomial(i)) {
-            const BooleMonomial& m(revCombinedMap[i].lead());
-
-            //Only single-vars
-            if (m.deg() == 1) {
-                *ofs << i+1 << " ";
-            }
-        }
+    for (const auto i : proj) {
+        if (i < anf.getRing().nVariables()) *ofs << i + 1 << " ";
     }
     *ofs << "0" << endl;
 }

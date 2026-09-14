@@ -51,7 +51,12 @@ def scan_names(path):
     with open(path) as f:
         for line in f:
             if line.startswith('c'):
-                continue
+                # the projection line 'c p show v1 v2 ... END' names
+                # variables too (possibly ones used in no equation)
+                m = re.match(r'c\s+p\s+show\s+(.*?)\s*END\s*$', line)
+                if not m:
+                    continue
+                line = m.group(1)
             for m in re.finditer(r'[xX]\((\d+)\)', line):
                 max_num = max(max_num, int(m.group(1)))
             for tok in NAME_RE.findall(line):

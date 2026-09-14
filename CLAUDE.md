@@ -54,10 +54,11 @@ PolyBoRi/CUDD tend to dominate; check which rule calls them.
   only if >= 60% of the sampling variables occur in it (matrixfinder.cpp).
   On bivium that skipped Gauss-Jordan (which otherwise makes CMS time out on
   every encoding tried; Gauss off: 9 s), on ascon the line costs 2-3x.
-  `--projshow 2` (default) writes the line only for CNFs with many XOR-cut
-  variables. Never compare a CNF with the line against one without, and
-  check the `[matrix] Good/UNused` lines of the CMS log to know whether
-  Gauss-Jordan was in use.
+  `--projshow 2` (default) writes the line only when the input ANF carried a
+  projection set (the CMS heuristic is to be changed on the CMS side). Never
+  compare a CNF with the line against one without, and check the
+  `[matrix] Good/UNused` lines of the CMS log to know whether Gauss-Jordan
+  was in use.
 - Do not run two CPU-heavy things at once on this 2-core machine while a
   benchmark batch is running (perf profiles, builds with -j4 distort timings).
 

@@ -36,7 +36,7 @@ struct ConfigData {
     // Input/Output
     string executedArgs = "";
     bool writecomments = false;
-    int projShow = 2; // 'c p show' projection line in the CNF: 0 never, 1 always, 2 when the XOR system is large (see output_cnf)
+    int projShow = 2; // 'c p show' projection line in the CNF: 0 never, 1 always, 2 when the input had a projection set
     bool printProcessedANF = false;
     uint32_t verbosity = 2;
     int color = 2; // 0 = never, 1 = always, 2 = auto (tty && !NO_COLOR)
@@ -45,7 +45,7 @@ struct ConfigData {
     // CNF conversion
     uint32_t cutNum = 5;
     uint32_t brickestein_algo_cutoff = 10;
-    uint32_t karnCluster = 0; // jointly encode small nonlinear eqs sharing variables, up to this many vars (0 = off)
+    uint32_t karnCluster = 10; // jointly encode small nonlinear eqs sharing variables, up to this many vars (0 = off)
     int doPartner = true; // Jovanovic-Kreuzer partner strategies (LPS/DPS/QPS/CPS)
     int doFactor = true;   // encode polynomials that are products of linear factors as one clause over the factors
     int xorClauses = false; // emit XORs as native CryptoMiniSat xor clauses instead of cutting them

@@ -18,17 +18,22 @@ sys.path.insert(0, os.path.join(HERE, '..', 'tests', 'utils'))
 from verify_anf import Parser, brute_force, parse_solution_lines, NAMES, NAME_RE, var_index, is_declaration  # noqa: E402
 
 
-def rand_anf(rng):
-    # mostly small, sometimes up to 12 variables so that the linearisation
-    # paths for polynomials with more than 10 variables are exercised
-    nvars = rng.randint(2, 8) if rng.random() < 0.7 else rng.randint(9, 12)
-    neqs = rng.randint(1, 9)
-    lines = []
-    style = rng.random()
+def _vname(style, v):
+    if style < 0.4: return 'x(%d)' % v
+    if style < 0.8: return 'x%d' % v
+    return ['K[%d]', 'S_in[1,%d]', 'n_%d', 'v%da'][v % 4] % v  # named variables
+
+
+def _mons_txt(mons, vname):
+    return ' + '.join('1' if not m else '*'.join(vname(v) for v in sorted(m)) for m in mons)
+
+
+def _random_polys(rng, nvars, neqs):
+    """the original generator: random monomials, sometimes products of linerals"""
+    out = []
     for _ in range(neqs):
         r = rng.random()
         if r < 0.25 and nvars >= 4:
-            # a product of linear factors, written out (exercises the factor code)
             k = rng.randint(2, 3)
             vs = list(range(1, nvars + 1))
             rng.shuffle(vs)
@@ -51,22 +56,130 @@ def rand_anf(rng):
                 terms = nt
             if not terms:
                 continue
-            mons = sorted(terms, key=lambda t: sorted(t))
+            out.append(sorted(terms, key=lambda t: sorted(t)))
         else:
             nmon = rng.randint(1, 6) if nvars <= 8 else rng.randint(4, 14)
             mons = []
             for _ in range(nmon):
                 d = rng.choice([0, 1, 1, 2, 2, 3])
                 mons.append(frozenset(rng.sample(range(1, nvars + 1), min(d, nvars))))
-        def vname(v):
-            if style < 0.4: return 'x(%d)' % v
-            if style < 0.8: return 'x%d' % v
-            return ['K[%d]', 'S_in[1,%d]', 'n_%d', 'v%da'][v % 4] % v  # named variables
-        txt = ' + '.join('1' if not m else '*'.join(vname(v) for v in sorted(m)) for m in mons)
-        lines.append(txt)
+            out.append(mons)
+    return out
+
+
+def _circuit_polys(rng, nvars):
+    """a random circuit written as Tseitin-style definitions y = gate(a, b):
+    AND (a*b + y), OR (a*b + a + b + y), XOR (a + b + y), NAND, MAJ, plus a
+    few output constraints and random extra relations between wires"""
+    ninputs = rng.randint(2, 4)
+    wires = list(range(1, ninputs + 1))
+    polys = []
+    while len(wires) < nvars:
+        y = len(wires) + 1
+        a, b = rng.sample(wires, 2) if len(wires) >= 2 else (wires[0], wires[0])
+        gate = rng.choice(['and', 'or', 'xor', 'nand', 'maj', 'not'])
+        if gate == 'and': mons = [{a, b}, {y}]
+        elif gate == 'or': mons = [{a, b}, {a}, {b}, {y}]
+        elif gate == 'xor': mons = [{a}, {b}, {y}]
+        elif gate == 'nand': mons = [{a, b}, {y}, set()]
+        elif gate == 'not': mons = [{a}, {y}, set()]
+        else:
+            c = rng.choice(wires)
+            mons = [{a, b}, {a, c}, {b, c}, {y}]
+        polys.append([frozenset(m) for m in mons])
+        wires.append(y)
+    # constrain some outputs / internal wires
+    for _ in range(rng.randint(1, 3)):
+        w = rng.choice(wires)
+        polys.append([frozenset({w})] + ([frozenset()] if rng.random() < 0.5 else []))
+    if rng.random() < 0.5:  # an extra relation between two wires
+        a, b = rng.sample(wires, 2)
+        polys.append([frozenset({a}), frozenset({b})] + ([frozenset()] if rng.random() < 0.5 else []))
+    return polys
+
+
+def _sbox_polys(rng, nvars):
+    """a random small S-box (2-4 bits) given by its output ANFs, on random
+    input/output wires, plus a few known bits: like the ascon instances"""
+    n = rng.choice([2, 3, 3, 4]) if nvars >= 4 else 2
+    n = min(n, nvars // 2)
+    vs = list(range(1, nvars + 1))
+    rng.shuffle(vs)
+    ins, outs = vs[:n], vs[n:2 * n]
+    # truth table -> ANF (Moebius transform) per output bit
+    table = [rng.randrange(1 << n) for _ in range(1 << n)]
+    polys = []
+    for bit in range(n):
+        f = [(table[x] >> bit) & 1 for x in range(1 << n)]
+        # Moebius transform
+        g = f[:]
+        for i in range(n):
+            for x in range(1 << n):
+                if x & (1 << i): g[x] ^= g[x ^ (1 << i)]
+        mons = [frozenset(ins[i] for i in range(n) if u & (1 << i)) for u in range(1 << n) if g[u]]
+        mons.append(frozenset({outs[bit]}))
+        polys.append(mons)
+    for _ in range(rng.randint(0, n)):
+        w = rng.choice(ins + outs)
+        polys.append([frozenset({w})] + ([frozenset()] if rng.random() < 0.5 else []))
+    if rng.random() < 0.5 and len(vs) > 2 * n:  # a linear layer into the leftovers
+        for w in vs[2 * n:]:
+            mons = [frozenset({v}) for v in rng.sample(ins + outs, min(2, 2 * n))] + [frozenset({w})]
+            polys.append(mons)
+    return polys
+
+
+def _planted_polys(rng, nvars, neqs):
+    """random polynomials adjusted to vanish on a planted assignment, so the
+    system is satisfiable (dense, degree up to 4)"""
+    sol = [rng.randrange(2) for _ in range(nvars + 1)]
+    polys = []
+    for _ in range(neqs):
+        nmon = rng.randint(2, 10)
+        mons = set()
+        for _ in range(nmon):
+            d = rng.choice([1, 2, 2, 3, 4])
+            mons ^= {frozenset(rng.sample(range(1, nvars + 1), min(d, nvars)))}
+        val = 0
+        for m in mons:
+            val ^= all(sol[v] for v in m)
+        if val: mons ^= {frozenset()}
+        if mons: polys.append(sorted(mons, key=lambda t: sorted(t)))
+    return polys
+
+
+def rand_anf(rng):
+    # mostly small, sometimes up to 12 variables so that the linearisation
+    # paths for polynomials with more than 10 variables are exercised
+    nvars = rng.randint(2, 8) if rng.random() < 0.7 else rng.randint(9, 12)
+    style = rng.random()
+    vname = lambda v: _vname(style, v)
+    kind = rng.choice(['random', 'random', 'circuit', 'sbox', 'planted', 'mixed'])
+    if kind == 'random': polys = _random_polys(rng, nvars, rng.randint(1, 9))
+    elif kind == 'circuit': polys = _circuit_polys(rng, nvars)
+    elif kind == 'sbox': polys = _sbox_polys(rng, nvars)
+    elif kind == 'planted': polys = _planted_polys(rng, nvars, rng.randint(1, 8))
+    else:
+        polys = _circuit_polys(rng, nvars)[:3] + _random_polys(rng, nvars, 3) + _sbox_polys(rng, nvars)[:2]
+    rng.shuffle(polys)
+    lines = [_mons_txt(m, vname) for m in polys if m]
+    if not lines: lines = ['1 + ' + vname(1)]
     if rng.random() < 0.3:
         lines.insert(0, ', '.join(vname(v) for v in range(1, nvars + 1)))
-    return '\n'.join(lines) + '\n', nvars
+    proj = None
+    if rng.random() < 0.3:
+        # a projection set: a random subset of the variables
+        proj = sorted(rng.sample(range(1, nvars + 1), rng.randint(1, nvars)))
+        lines.insert(0, 'c p show ' + ' '.join(vname(v) for v in proj) + ' END')
+    return '\n'.join(lines) + '\n', nvars, proj
+
+
+def verify_anf_index(v, txt):
+    """ANF index of fuzzer variable v in the text (numbered: v itself, named: as verify_anf assigns it)"""
+    m = re.search(r'(?m)^c p show (.*) END$', txt)
+    style_named = 'x(' not in txt and re.search(r'\bx\d', txt) is None
+    if not style_named: return v
+    return var_index(_vname(0.9, v))
 
 
 def rand_cnf(rng):
@@ -117,7 +230,7 @@ def cnf_solutions(nvars, cls):
 
 
 def check_anf(binary, rng, seed, tmpdir):
-    txt, nvars = rand_anf(rng)
+    txt, nvars, proj = rand_anf(rng)
     path = os.path.join(tmpdir, 'in.anf')
     open(path, 'w').write(txt)
     opts = rand_opts(rng)
@@ -154,9 +267,34 @@ def check_anf(binary, rng, seed, tmpdir):
     extra = (len(reported[0]) - nv) if reported else 0
     if extra < 0:
         return 'solution covers fewer variables than the equations use', cmd, out
-    got = set(tuple(s[:nv]) for s in reported)
-    if got != expected or len(reported) != len(expected) * (1 << extra):
-        return 'solutions differ: expected %d got %d (extra free vars %d)' % (len(expected), len(reported), extra), cmd, out
+    if proj is not None:
+        # --allsol enumerates one solution per assignment of the projected
+        # variables: each reported one must be a solution, and projected
+        # onto the projection set they must be exactly the projected
+        # brute-forced solutions
+        pidx = [verify_anf_index(v, txt) for v in proj]
+        got_full = set(tuple(s[:nv]) for s in reported)
+        if not got_full <= expected:
+            return 'a reported solution is not a solution', cmd, out
+        # a projected variable used in no equation is free: extend the
+        # brute-forced solutions over it
+        n_all = max([nv] + [i + 1 for i in pidx])
+        if n_all > nv:
+            ext = set()
+            for s0 in expected:
+                for bits in itertools.product([0, 1], repeat=n_all - nv):
+                    ext.add(tuple(s0) + bits)
+            expected = ext
+            if reported and len(reported[0]) < n_all:
+                return 'solution covers fewer variables than the projection', cmd, out
+        exp_proj = set(tuple(s[i] for i in pidx) for s in expected)
+        got_proj = [tuple(s[i] for i in pidx) for s in reported]
+        if set(got_proj) != exp_proj or len(got_proj) != len(exp_proj):
+            return 'projected solutions differ: expected %d got %d' % (len(exp_proj), len(got_proj)), cmd, out
+    else:
+        got = set(tuple(s[:nv]) for s in reported)
+        if got != expected or len(reported) != len(expected) * (1 << extra):
+            return 'solutions differ: expected %d got %d (extra free vars %d)' % (len(expected), len(reported), extra), cmd, out
     # 2) the written ANF must have the same solutions (it lists fixed values and equivalences)
     outanf = os.path.join(tmpdir, 'out.anf')
     cmd2 = [binary, '--anfread', path, '--anfwrite', outanf, '--verb', '0'] + opts

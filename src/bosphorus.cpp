@@ -136,13 +136,13 @@ void output_cnf(
         ofs << "c Executed arguments: " << dat->config.executedArgs << endl;
     }
     ofs << *cnf;
-    // The projection line changes how CryptoMiniSat treats the variables (no
-    // elimination, Gauss-Jordan skipped on matrices with few sampling
-    // variables). Systems whose XORs had to be cut into many pieces are
-    // exactly the ones on which its Gauss-Jordan is slow, so the line is
-    // written for them by default.
+    // The projection set of the input ('c p show ... END' in the ANF) is
+    // written as the CNF's 'c p show' line, over the CNF variables of the
+    // same ANF variables, so that a count over the projected variables of
+    // the CNF is the count over the projected variables of the ANF: every
+    // auxiliary variable is a function of the original ones.
     const bool show = dat->config.projShow == 1 ||
-        (dat->config.projShow == 2 && cnf->getNumCutVars() >= anf->getRing().nVariables());
+        (dat->config.projShow == 2 && anf->proj_set_given());
     if (show) cnf->write_projection_set(&ofs, proj);
 
     ofs << "c Learnt " << dat->learnt.size() << " fact(s), not all of which have been dumped\n";
