@@ -87,7 +87,7 @@ struct ConfigData {
     size_t gbMaxLen = 32;      // only equations with at most this many terms take part
     uint64_t gbSteps = 100000; // S-polynomials reduced per call (deterministic budget)
     uint32_t gbMaxVars = 16;   // a cone grows while its equations use at most this many variables
-    int gbFull = true;         // BRiAl's complete symmGB_F2 per cone instead of the degree-bounded Buchberger loop
+    int gbFull = 2;            // 0: degree-bounded lex loop per cone; 1: complete dp_asc basis per cone; 2: both for cones, complete basis for a whole small system
     uint32_t gbWholeVars = 24; // with gbFull: a system with at most this many free variables is one cone
     int gbRecursion = 2;       // BRiAl's optAllowRecursion: 0 never, 1 always, 2 only for the whole-system basis
     uint32_t gbFactDeg = 2;    // GB members of at most this degree ...

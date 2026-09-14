@@ -138,7 +138,7 @@ size_t ANF::groebner_windows()
         }
         windows++;
 
-        if (config.gbFull) {
+        if (config.gbFull == 1 || (config.gbFull == 2 && whole)) {
             // BRiAl's complete algorithm (the engine behind Sage's
             // groebner_basis for Boolean rings, with its F4-style dense
             // reduction steps): exact, no degree bound; the cones are small
@@ -197,6 +197,50 @@ size_t ANF::groebner_windows()
                 if (eqs_hash.find(g.hash()) == eqs_hash.end()) facts.push_back(g);
             }
             continue;
+        }
+        // Small cones: the degree-bounded Buchberger loop in the main ring
+        // (lexicographic: its bases eliminate variables, which is what
+        // makes the three-round ascon instances collapse) and, with
+        // --gbfull 2, the complete degree-ordered basis as well: the two
+        // orderings find different short consequences.
+        if (config.gbFull == 2) {
+            std::sort(cvars.begin(), cvars.end());
+            std::unordered_map<uint32_t, uint32_t> local;
+            for (uint32_t k = 0; k < cvars.size(); k++) local[cvars[k]] = k;
+            auto rit = gb_rings.find(cvars.size());
+            if (rit == gb_rings.end()) {
+                rit = gb_rings.emplace(cvars.size(), BoolePolyRing(cvars.size(), COrderEnums::dp_asc)).first;
+            }
+            BoolePolyRing& cring = rit->second;
+            GroebnerStrategy cstrat(cring);
+            cstrat.optAllowRecursion = config.gbRecursion == 1;
+            for (const size_t j : window) {
+                BoolePolynomial q(cring);
+                for (const BooleMonomial& m : eq(j)) {
+                    BooleMonomial cm(cring);
+                    for (const uint32_t v : m) cm *= cring.variable(local[v]);
+                    q += cm;
+                }
+                cstrat.addAsYouWish(q);
+            }
+            cstrat.symmGB_F2();
+            spolys += cstrat.generators.size();
+            if (cstrat.containsOne()) {
+                facts.push_back(BoolePolynomial(true, *ring));
+                break;
+            }
+            for (const BoolePolynomial& cg : cstrat.minimalizeAndTailReduce()) {
+                if (cg.isConstant()) { if (cg.isOne()) facts.push_back(BoolePolynomial(true, *ring)); continue; }
+                if ((uint32_t)cg.deg() > config.gbFactDeg || cg.length() > config.gbFactLen) continue;
+                cand_facts++;
+                BoolePolynomial g(*ring);
+                for (const BooleMonomial& m : cg) {
+                    BooleMonomial gm(*ring);
+                    for (const uint32_t v : m) gm *= ring->variable(cvars[v]);
+                    g += gm;
+                }
+                if (eqs_hash.find(g.hash()) == eqs_hash.end()) facts.push_back(g);
+            }
         }
         GroebnerStrategy strat(*ring);
         strat.optLazy = false;

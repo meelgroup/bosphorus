@@ -1011,9 +1011,10 @@ size_t ANF::rewrite_inplace()
         // solves it outright (random MQ systems up to ~28 variables)
         const bool gb_auto = config.gbFull && config.gbWholeVars > 0 &&
                              numActiveVars() <= config.gbWholeVars;
-        if ((config.doGB || gb_auto) && round == 0) {
-            // expensive: once per pass, and only when the system changed
-            // since the last run (same equations, same replacer state)
+        if (config.doGB || gb_auto) {
+            // expensive: only when the system changed since the last run
+            // (same equations, same replacer state); new facts change the
+            // cones of the next round, so the rule runs to a fixed point
             const BLib::ANFStats now = get_stats();
             const bool same = gb_ran && now.eqs == gb_last.eqs && now.monoms == gb_last.monoms &&
                               now.set_vars == gb_last.set_vars && now.repl_vars == gb_last.repl_vars &&

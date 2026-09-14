@@ -239,7 +239,7 @@ void parseOptions(int argc, char* argv[])
         "fac-res only adds resolvents with at most this many factors. Default: 2");
     add_arg("--gb", config.doGB, fc_integral<int>,
         "Rewrite rule gb-cone: degree-bounded Groebner bases (BRiAl) of cones of small equations sharing variables; short members of the bases (units, equivalences, short XORs, small nonlinear relations) are added to the system. Default: OFF");
-    add_arg("--gbfull", config.gbFull, fc_integral<int>, "gb-cone: compute the complete Groebner basis of every cone with BRiAl's symmGB_F2 (exact, F4-style); 0 = degree-bounded Buchberger with --gbdeg. Default: 1");
+    add_arg("--gbfull", config.gbFull, fc_integral<int>, "gb-cone: 0 = degree-bounded Buchberger loop (--gbdeg) in the lexicographic main ring per cone; 1 = complete Groebner basis of every cone with BRiAl's symmGB_F2 in a degree-ordered ring; 2 = both per cone (the orderings find different consequences) and the complete basis for a whole small system (--gbwholevars). Default: 2");
     add_arg("--gbdeg", config.gbDeg, fc_integral<uint32_t>, "gb-cone: with --gbfull 0, drop S-polynomials above this degree. Default: 3");
     add_arg("--gbwindow", config.gbWindow, fc_integral<uint32_t>, "gb-cone: at most this many equations per cone. Default: 24");
     add_arg("--gbmaxvars", config.gbMaxVars, fc_integral<uint32_t>, "gb-cone: a cone grows while its equations use at most this many variables. Default: 16");
