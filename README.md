@@ -148,9 +148,29 @@ meaning into the CNF.
 `utils/mq2anf.py` converts [Fukuoka MQ challenge](https://www.mqchallenge.org/)
 files, `utils/mqgen.py` generates random MQ systems with a planted
 solution, and `utils/magma2anf.py` converts Magma polynomial lists such as
-the HFE systems. Systems of up to `--gbwholevars` variables are solved by
-the Gröbner engine alone; `utils/gbhybrid.py` (guess k variables, solve
-the rest) only estimates what more compute would reach.
+the HFE systems of `magma.maths.usyd.edu.au/users/allan/gb`. Systems of
+up to `--gbwholevars` variables are solved by the Gröbner engine alone;
+`utils/gbhybrid.py` (guess k variables, solve the rest) only estimates
+what more compute would reach.
+
+Random MQ systems with m = 2n and a planted solution, one core, 200 s
+limit for the SAT solver:
+
+| n | CryptoMiniSat on Bosphorus's CNF | BRiAl `symmGB_F2` | Bosphorus F4 | Bosphorus F5 |
+|---|---|---|---|---|
+| 16 | 0.7 s | 0.3 s | 0.2 s | 0.1 s |
+| 20 | 1.4 s | 1.0 s | 0.7 s | 0.5 s |
+| 24 | timeout | 15 s | 2.8 s | 1.1 s |
+| 28 | timeout | 196 s | 187 s | |
+
+HFE systems (secret degree 96) from Allan Steel's Magma page, with the
+solutions Magma found in 2004:
+
+| system | BRiAl `symmGB_F2` | Bosphorus F4 |
+|---|---|---|
+| HFE25 | 166 s | 52 s |
+| HFE30 | 1329 s | 131 s |
+| HFE35 | no answer in 2 h | 167 s (3.9 GB) |
 
 ## List all solutions of an ANF
 
