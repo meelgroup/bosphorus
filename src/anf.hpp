@@ -81,6 +81,8 @@ class ANF
     bool propagate();
     inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
     void printStats() const;
+    void printRuleStats() const;    // totals per rewrite rule over the run
+    void printDensityStats() const; // how full the equations are, how much they share
     ANFStats get_stats() const;
     const ConfigData& get_config() const { return config; }
     void print_solution_map(std::ofstream* ofs);
@@ -182,7 +184,10 @@ class ANF
     size_t reduce_by_short_polys();  // "binom-red"
     size_t shorten_polys();          // "poly-shorten"
     size_t probe_small_polys();      // "lit-probe" (+ "impl-scc")
+    size_t probe_vars();             // "var-probe"
     size_t gauss_linear();           // "lin-gauss"
+    size_t gauss_monomials();        // "mono-gauss"
+    size_t split_products();         // "prod-split"
     // adds facts learnt by a strategy, dropping linear ones that are
     // combinations of the linear equations already in the system
     size_t add_linearly_new_facts(const vector<BoolePolynomial>& facts, bool contextualize);
@@ -216,6 +221,11 @@ class ANF
     bool rewrite_eq(size_t idx, const BoolePolynomial& newpoly,
                     unordered_set<uint32_t>& updatedVars,
                     vector<size_t>& empty_equations);
+    // var-probe: propagates the assumption v = val through the equations
+    // into `assign` (l_Undef = free); false on a conflict. `budget` is
+    // decremented per equation evaluated.
+    bool propagate_assumption(uint32_t v, bool val, vector<lbool>& assign,
+                              vector<uint32_t>& trail, int64_t& budget) const;
     // product-preserving mode (config.keepFactor): true if `from` is a product of
     // >= 2 linerals and `to` is nonlinear but not such a product
     bool breaks_product(const BoolePolynomial& from, const BoolePolynomial& to) const;
@@ -255,6 +265,7 @@ class ANF
 
     // nesting depth of the SimpStatsScope objects currently alive
     unsigned stats_depth = 0;
+    std::map<std::string, RuleStats> rule_stats; // totals per rule, by SimpStatsScope
     friend class SimpStatsScope;
 
     friend std::ostream& operator<<(std::ostream& os, const ANF& anf);
@@ -387,8 +398,10 @@ inline void ANF::printStats() const
          << "c Max deg in eqs: " << deg() << endl
          << "c Simple XORs: " << getNumSimpleXors() << endl
          << "c Num vars set: " << getNumSetVars() << endl
-         << "c Num vars replaced: " << getNumReplacedVars() << endl
-         << "c --------------------" << endl;
+         << "c Num vars replaced: " << getNumReplacedVars() << endl;
+    printDensityStats();
+    cout << "c --------------------" << endl;
+    printRuleStats();
 }
 
 vector<lbool> ANF::extendSolution(const vector<lbool>& solution) const

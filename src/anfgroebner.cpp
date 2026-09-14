@@ -40,6 +40,7 @@ SOFTWARE.
 #include "anf.hpp"
 #include "boolf4.hpp"
 #include "boolf5.hpp"
+#include "boolsplit.hpp"
 #include "time_mem.h"
 
 using std::cout;
@@ -141,48 +142,26 @@ size_t ANF::groebner_windows()
         windows++;
 
         if ((config.gbEngine == 1 || config.gbEngine == 2) && (config.gbFull == 1 || (config.gbFull == 2 && whole)) && cvars.size() <= 64) {
-            // Bosphorus's own matrix-F4 engine over the Boolean ring
-            // (boolf4.cpp): dense GF(2) linear algebra with M4RI on the
-            // critical pairs of one degree at a time
+            // Bosphorus's own matrix engines over the Boolean ring
+            // (boolf4.cpp, boolf5.cpp): dense GF(2) linear algebra with
+            // M4RI on the critical pairs of one degree at a time. A whole
+            // system whose basis needs a matrix over the cell budget is
+            // split on a variable (boolsplit.cpp, rule gb-split).
             if (steps_left < window.size()) { timeout = true; break; }
             steps_left -= window.size();
             std::sort(cvars.begin(), cvars.end());
             std::unordered_map<uint32_t, uint32_t> local;
             for (uint32_t k = 0; k < cvars.size(); k++) local[cvars[k]] = k;
-            BoolF4::Options fopt;
-            fopt.maxDeg = whole ? 64 : config.gbDeg;
-            fopt.maxRows = config.gbSteps;
-            fopt.maxCells = config.gbMaxCells;
-            fopt.tailReduce = config.gbTailReduce;
-            fopt.verbosity = config.verbosity;
-            vector<BoolF4::Poly> basis;
-            if (config.gbEngine == 2) {
-                BoolF5::Options f5opt;
-                f5opt.maxDeg = whole ? 64 : config.gbDeg;
-                f5opt.maxCells = config.gbMaxCells;
-                f5opt.verbosity = config.verbosity;
-                f5opt.groups = config.gbF5Groups;
-                BoolF5 f5(cvars.size(), f5opt);
-                for (const size_t j : window) {
-                    BoolF4::Poly q;
-                    for (const BooleMonomial& m : eq(j)) {
-                        BoolF4::Mon mask = 0;
-                        for (const uint32_t v : m) mask |= (BoolF4::Mon)1 << local[v];
-                        q.push_back(mask);
-                    }
-                    f5.add(q);
-                }
-                basis = f5.run();
-                spolys += f5.stats().rows;
-                if (f5.stats().budget_exhausted) timeout = true;
-                if (config.verbosity >= 1 && whole) {
-                    cout << "c [f5] whole system: rows " << f5.stats().rows << " pruned " << f5.stats().rows_pruned
-                         << " zero rows " << f5.stats().zero_rows << " max cols " << f5.stats().cols_max
-                         << " max degree " << f5.stats().max_deg << " basis " << basis.size()
-                         << (f5.stats().budget_exhausted ? " (budget exhausted)" : "") << endl;
-                }
-            } else {
-            BoolF4 f4(cvars.size(), fopt);
+            BoolSplit::Options sopt;
+            sopt.maxDepth = whole ? config.gbSplitDepth : 0;
+            sopt.maxDeg = whole ? 64 : config.gbDeg;
+            sopt.maxRows = whole ? config.gbSplitRows : config.gbSteps;
+            sopt.maxCells = config.gbMaxCells;
+            sopt.engine = config.gbEngine;
+            sopt.f5groups = config.gbF5Groups;
+            sopt.condLen = config.gbFactLen;
+            sopt.verbosity = whole ? config.verbosity : 0;
+            BoolSplit split(cvars.size(), sopt);
             for (const size_t j : window) {
                 BoolF4::Poly q;
                 for (const BooleMonomial& m : eq(j)) {
@@ -190,17 +169,18 @@ size_t ANF::groebner_windows()
                     for (const uint32_t v : m) mask |= (BoolF4::Mon)1 << local[v];
                     q.push_back(mask);
                 }
-                f4.add(q);
+                split.add(q);
             }
-            basis = f4.run();
-            spolys += f4.stats().rows;
-            if (f4.stats().budget_exhausted) timeout = true;
+            const vector<BoolF4::Poly> basis = split.run();
+            const BoolSplit::Stats& ss = split.stats();
+            spolys += ss.rows;
+            if (!ss.complete) timeout = true;
             if (config.verbosity >= 1 && whole) {
-                cout << "c [f4] whole system: steps " << f4.stats().steps << " rows " << f4.stats().rows
-                     << " max cols " << f4.stats().cols_max << " max degree " << f4.stats().max_deg
-                     << " pairs-to-zero " << f4.stats().zero_reductions
-                     << " basis " << basis.size() << (f4.stats().budget_exhausted ? " (budget exhausted)" : "") << endl;
-            }
+                cout << "c [gb-split] whole system: engine " << (config.gbEngine == 2 ? "F5" : "F4")
+                     << " runs " << ss.branches << " unsat " << ss.unsat_branches
+                     << " solved " << ss.solved_branches << " on-budget " << ss.budget_branches
+                     << " max-depth " << ss.max_depth << " rows " << ss.rows
+                     << " members " << basis.size() << (ss.complete ? "" : " (budget exhausted)") << endl;
             }
             for (const BoolF4::Poly& cg : basis) {
                 if (cg.size() == 1 && cg[0] == 0) { facts.push_back(BoolePolynomial(true, *ring)); break; }

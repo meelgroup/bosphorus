@@ -29,6 +29,7 @@ set(bosph_lib_files
     anfgroebner.cpp
     boolf4.cpp
     boolf5.cpp
+    boolsplit.cpp
     linfactor.cpp
     cnf.cpp
     anfcnfutils.cpp

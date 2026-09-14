@@ -1,0 +1,14 @@
+c RUN: %solver --anfread %s --anfwrite /dev/stdout --xl 0 --el 0 --sat 0 --binomred 0 --shorten 0 --probe 0 --prodsplit 0 --gb 0 | %OutputCheck %s
+c RUN: %solver --anfread %s --solve --allsol --verb 0 | %verify allsol %s
+c
+c Gaussian elimination with one column per monomial. The sum of the first
+c three equations cancels every quadratic monomial and leaves x4 + x5 + x6
+c + 1 (a degree fall: a linear equation), and the fourth equation is the
+c sum of the first two, so it is deleted.
+x1*x2 + x2*x3 + x4
+x1*x2 + x1*x3 + x5
+x2*x3 + x1*x3 + x6 + 1
+x2*x3 + x1*x3 + x4 + x5
+x7*x8 + x9
+c CHECK: \[mono-gauss\] eqs 5 monomials [0-9]+ rank 4 deleted 1 shortened 0 degree-falls 1
+c CHECK-L: x(6) + x(5) + x(4) + 1

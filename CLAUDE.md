@@ -26,6 +26,18 @@ bivium family) have polynomials with thousands of terms, so ZDD operations of
 PolyBoRi/CUDD tend to dominate; check which rule calls them.
 
 ## Rules
+- Rule totals (`c ---- rule stats`) and the `c Density:` line are printed
+  with the ANF stats at the end of a run (verbosity >= 1): use them before
+  perf to see which rule did what and what it cost.
+- Random MQ systems: the degree of regularity (Bardet: first non-positive
+  coefficient of (1+z)^n / (1+z^2)^m) is 4 up to n = 27 and 5 from n = 28
+  for m = 2n; fixing k variables lowers it (n = 28: k = 1, n = 30: k = 2,
+  n = 32: k = 3, n = 36: k = 6). gb-split does exactly that when the F4/F5
+  matrix exceeds `--gbmaxcells`; the F5 engine finishes a degree-4 branch
+  only with its MutantXL step (the plain Macaulay matrix at degree 4 has
+  fewer rows than columns for n = 27).
+- The Groebner engines compile with `-mpopcnt` (CMake checks the flag):
+  without it `__builtin_popcountll` is a libgcc call and was 29% of a run.
 - **No wall-clock or CPU-time budgets inside algorithms.** Limit work with
   deterministic counters (steps, S-polynomials, monomial visits, iterations,
   e.g. `--gbsteps`, `--shortenbudget`), never with seconds: time limits make
@@ -72,8 +84,11 @@ PolyBoRi/CUDD tend to dominate; check which rule calls them.
   propagation over the CNF).
 - Random MQ systems: `utils/mqgen.py n m seed`; Fukuoka challenge files in
   `/home/soos/development/sat_solvers/mq-challenge/` (`utils/mq2anf.py`).
-  The whole-system Groebner basis (gb-cone, automatic up to `--gbwholevars`
-  active variables) solves n <= 28 alone; n >= 55 is out of reach.
+  The whole-system Groebner basis (gb-cone with gb-split, automatic up to
+  `--gbwholevars` = 40 active variables) solves n <= 32 alone; n >= 55 is
+  out of reach. With `--gbwholevars` below n nothing algebraic runs and
+  the SAT solver grinds for hours: check the `[gb-split] whole system`
+  line is there.
 - Detailed per-instance results (bivium, ascon, MQ, HFE, LowMC) live in the
   memory notes of this project, not in the README: they depend on the
   machine and on CryptoMiniSat's heuristics.

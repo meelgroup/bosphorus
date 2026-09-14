@@ -198,7 +198,7 @@ def rand_cnf(rng):
 def rand_opts(rng):
     o = []
     for flag in ['--xl', '--el', '--sat', '--rewrite', '--lingauss', '--spanfilter', '--binomred', '--shorten', '--probe',
-                 '--faccanon', '--facres', '--partner', '--factor', '--xorcls']:
+                 '--faccanon', '--facres', '--partner', '--factor', '--xorcls', '--monogauss', '--prodsplit', '--varprobe']:
         if rng.random() < 0.5:
             o += [flag, str(rng.randint(0, 1))]
     if rng.random() < 0.5: o += ['--cutnum', str(rng.randint(3, 6))]
@@ -222,6 +222,11 @@ def rand_opts(rng):
     if rng.random() < 0.3: o += ['--gbtailreduce', str(rng.randint(0, 1))]
     if rng.random() < 0.3: o += ['--gbfactdeg', str(rng.randint(1, 3))]
     if rng.random() < 0.3: o += ['--gbfactlen', str(rng.randint(1, 12))]
+    if rng.random() < 0.3: o += ['--gbsplit', str(rng.randint(0, 4))]
+    if rng.random() < 0.3: o += ['--gbmaxcells', str(rng.choice([50, 500, 5000, 100000]))]
+    if rng.random() < 0.3: o += ['--gbsplitrows', str(rng.choice([10, 1000, 100000]))]
+    if rng.random() < 0.3: o += ['--monogausslen', str(rng.randint(1, 10))]
+    if rng.random() < 0.2: o += ['--varprobebudget', str(rng.choice([0, 5, 100]))]
     return o
 
 

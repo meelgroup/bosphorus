@@ -28,6 +28,8 @@ SOFTWARE.
 #include <iostream>
 #include <sstream>
 #include <unistd.h>
+#include <map>
+#include <unordered_set>
 
 #include "anf.hpp"
 #include "time_mem.h"
@@ -131,15 +133,101 @@ SimpStatsScope::SimpStatsScope(ANF& _anf, const char* _rule)
     depth = anf.stats_depth++;
     const uint32_t verb = anf.get_config().verbosity;
     active = (depth == 0) ? (verb >= 1) : (verb >= 2);
+    bef = anf.get_stats(); // always: the totals per rule are kept at every verbosity
     if (!active) return;
-    bef = anf.get_stats();
     print_simp_stats(anf.get_config(), "bef", rule, bef, nullptr, depth);
 }
 
 SimpStatsScope::~SimpStatsScope()
 {
     anf.stats_depth--;
-    if (!active) return;
     const ANFStats aft = anf.get_stats();
+    RuleStats& rs = anf.rule_stats[rule];
+    rs.calls++;
+    rs.time += aft.time - bef.time;
+    rs.eqs += (int64_t)aft.eqs - (int64_t)bef.eqs;
+    rs.monoms += (int64_t)aft.monoms - (int64_t)bef.monoms;
+    rs.lin_eqs += (int64_t)aft.lin_eqs - (int64_t)bef.lin_eqs;
+    rs.set_vars += (int64_t)aft.set_vars - (int64_t)bef.set_vars;
+    rs.repl_vars += (int64_t)aft.repl_vars - (int64_t)bef.repl_vars;
+    if (aft.eqs != bef.eqs || aft.monoms != bef.monoms || aft.set_vars != bef.set_vars ||
+        aft.repl_vars != bef.repl_vars || aft.lin_eqs != bef.lin_eqs) rs.effective++;
+    if (!active) return;
     print_simp_stats(anf.get_config(), "aft", rule, aft, &bef, depth);
+}
+
+void ANF::printRuleStats() const
+{
+    if (rule_stats.empty()) return;
+    cout << "c ---- rule stats (nested rules are included in the rule that called them) ----" << endl;
+    cout << "c " << std::left << std::setw(14) << "rule" << std::right
+         << std::setw(6) << "calls" << std::setw(6) << "eff" << std::setw(9) << "T"
+         << std::setw(9) << "eqs" << std::setw(10) << "monoms" << std::setw(8) << "lin"
+         << std::setw(7) << "set" << std::setw(7) << "repl" << std::setw(8) << "T/call" << endl;
+    double total_time = 0;
+    for (const auto& kv : rule_stats) {
+        const RuleStats& r = kv.second;
+        cout << "c " << std::left << std::setw(14) << kv.first << std::right
+             << std::setw(6) << r.calls << std::setw(6) << r.effective
+             << std::setw(9) << std::fixed << std::setprecision(2) << r.time
+             << std::setw(9) << r.eqs << std::setw(10) << r.monoms << std::setw(8) << r.lin_eqs
+             << std::setw(7) << r.set_vars << std::setw(7) << r.repl_vars
+             << std::setw(8) << std::fixed << std::setprecision(3) << (r.calls ? r.time / r.calls : 0.0) << endl;
+        total_time += r.time;
+    }
+    cout << "c ------------------------------------------------------------------------------" << endl;
+}
+
+// Density: how full the equations are and how much they share.
+void ANF::printDensityStats() const
+{
+    if (eqs.empty()) return;
+    uint64_t terms = 0, vars_sum = 0, max_len = 0, max_vars = 0;
+    std::map<int, uint64_t> deg_hist;
+    double fill_sum = 0;
+    uint64_t fill_n = 0;
+    std::unordered_set<uint64_t> distinct;
+    // distinct monomials: over the polynomial equations only (a product of
+    // long linerals has thousands of terms that are not worth expanding)
+    for (size_t i = 0; i < eqs.size(); i++) {
+        terms += eq_len[i];
+        max_len = std::max<uint64_t>(max_len, eq_len[i]);
+        const size_t nv = nVarsOf(i);
+        vars_sum += nv;
+        max_vars = std::max<uint64_t>(max_vars, nv);
+        const int d = degOf(i);
+        deg_hist[d]++;
+        if (poly_valid[i]) {
+            for (const BooleMonomial& t : eqs[i]) distinct.insert(t.stableHash());
+            // fill: terms / squarefree monomials of degree <= d over the
+            // equation's own variables (1 = every possible monomial is there)
+            if (d >= 1 && nv <= 40) {
+                double possible = 0, c = 1;
+                for (int k = 0; k <= d; k++) {
+                    possible += c;
+                    c = c * (double)(nv - k) / (double)(k + 1);
+                }
+                fill_sum += (double)eq_len[i] / possible;
+                fill_n++;
+            }
+        }
+    }
+    uint64_t active = 0, occ_sum = 0, occ_max = 0;
+    for (size_t v = 0; v < occur.size(); v++) {
+        if (occur[v].empty()) continue;
+        active++;
+        occ_sum += occur[v].size();
+        occ_max = std::max<uint64_t>(occ_max, occur[v].size());
+    }
+    cout << "c Density: terms/eq " << std::fixed << std::setprecision(1)
+         << (double)terms / eqs.size() << " (max " << max_len << "), vars/eq "
+         << (double)vars_sum / eqs.size() << " (max " << max_vars << "), fill "
+         << std::setprecision(3) << (fill_n ? fill_sum / fill_n : 0.0)
+         << ", distinct monoms " << distinct.size() << " (sharing "
+         << std::setprecision(2) << (distinct.empty() ? 0.0 : (double)terms / distinct.size())
+         << "x), active vars " << active << ", eqs/var " << std::setprecision(1)
+         << (active ? (double)occ_sum / active : 0.0) << " (max " << occ_max << ")" << endl;
+    cout << "c Degree histogram:";
+    for (const auto& kv : deg_hist) cout << " deg" << kv.first << ":" << kv.second;
+    cout << endl;
 }

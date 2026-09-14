@@ -224,8 +224,22 @@ void parseOptions(int argc, char* argv[])
         "Max number of terms of an equation used as a rule by binom-red. Default: 2");
     add_arg("--shorten", config.doShorten, fc_integral<int>,
         "Rewrite rule poly-shorten: replace p by p+f whenever that has fewer terms. Default: ON");
+    add_arg("--monogauss", config.doMonoGauss, fc_integral<int>,
+        "Rewrite rule mono-gauss: Gaussian elimination among all equations with one column per monomial (linearisation), shortest first; deletes the equations that are combinations of others, replaces an equation by its reduced form when that is shorter or of lower degree (a linear combination of nonlinear equations that cancels every nonlinear monomial is a new linear equation). Default: ON");
+    add_arg("--monogausslen", config.monoGaussLen, fc_integral<size_t>,
+        "mono-gauss: only equations with at most this many terms take part. Default: 64");
+    add_arg("--monogausscols", config.monoGaussCols, fc_integral<size_t>,
+        "mono-gauss: not run when the participating equations have more distinct monomials than this. Default: 100000");
+    add_arg("--prodsplit", config.doProdSplit, fc_integral<int>,
+        "Rewrite rule prod-split: an equation p = 0 where 1 + p is a product of linear factors (l1+c1)*(l2+c2)*... becomes the linear equations l1+c1+1 = 0, l2+c2+1 = 0, ... (every factor must be 1); generalises 'x*y*z + 1 = 0 sets x, y, z'. Default: ON");
     add_arg("--probe", config.doProbe, fc_integral<int>,
         "Rewrite rule lit-probe: forced literals, equivalences and implication-graph SCCs from small equations. Default: ON");
+    add_arg("--varprobe", config.doVarProbe, fc_integral<int>,
+        "Rewrite rule var-probe: failed-literal probing with propagation, as CNF preprocessors do it: x = 0 and x = 1 are each propagated through the equations (units, m+1, products with one factor left); a branch that runs into 1 = 0 forces x, a variable set the same way in both branches is set, one set opposite ways is equivalent to x. Only units propagate, so it finds nothing on the S-box and stream-cipher families. Default: OFF");
+    add_arg("--varprobebudget", config.varProbeBudget, fc_integral<uint64_t>,
+        "var-probe: equation evaluations per call, a deterministic work budget. Default: 2e6");
+    add_arg("--varprobelen", config.varProbeLen, fc_integral<size_t>,
+        "var-probe: polynomial equations with more terms than this are not evaluated (products of linear factors always are). Default: 64");
     add_arg("--probevars", config.probeVars, fc_integral<uint32_t>,
         "lit-probe only looks at equations with at most this many variables. Default: 8");
     add_arg("--faccanon", config.doFacCanon, fc_integral<int>,
@@ -241,11 +255,13 @@ void parseOptions(int argc, char* argv[])
     add_arg("--gbwindow", config.gbWindow, fc_integral<uint32_t>, "gb-cone: at most this many equations per cone. Default: 24");
     add_arg("--gbmaxvars", config.gbMaxVars, fc_integral<uint32_t>, "gb-cone: a cone grows while its equations use at most this many variables. Default: 16");
     add_arg("--gbengine", config.gbEngine, fc_integral<int>, "gb-cone: engine for the complete bases: 0 = BRiAl's symmGB_F2, 1 = Bosphorus's matrix F4 over the Boolean ring (M4RI, up to 64 variables per cone), 2 = matrix F5 (signature criterion, no reductions to zero for regular sequences). Default: 1");
-    add_arg("--gbmaxcells", config.gbMaxCells, fc_integral<uint64_t>, "gb-cone with the F4 engine: largest matrix (rows times columns) that is built; a step needing more stops the basis (partial result). Default: 12e9, about 1.5 GB");
+    add_arg("--gbmaxcells", config.gbMaxCells, fc_integral<uint64_t>, "gb-cone with the F4/F5 engines: largest matrix (rows times columns) that is built; a step needing more stops the basis and, for a whole-system basis, makes gb-split split the system on a variable. Default: 2e9, 250 MB");
+    add_arg("--gbsplit", config.gbSplitDepth, fc_integral<uint32_t>, "Rule gb-split: when the whole-system basis needs a matrix over --gbmaxcells, fix a variable both ways and combine the bases of the two branches, recursively up to this depth (0 = never). Fixing one variable of a random MQ system with n = 28 brings its degree of regularity from 5 back to 4. Default: 8");
+    add_arg("--gbsplitrows", config.gbSplitRows, fc_integral<uint64_t>, "gb-split: matrix rows over all branches together, a deterministic work budget. Default: 2e7");
     add_arg("--gbtailreduce", config.gbTailReduce, fc_integral<int>, "gb-cone with the F4 engine: interreduce the tails of the basis after every degree step (no gain measured on MQ). Default: 0");
     add_arg("--gbf5groups", config.gbF5Groups, fc_integral<uint32_t>, "gb-cone with the F5 engine: generator groups per degree (more groups prune more rows but cost more eliminations). Default: 8");
     add_arg("--gbrecursion", config.gbRecursion, fc_integral<int>, "gb-cone with --gbfull 1: BRiAl's recursive implication bases for split generators (optAllowRecursion): 0 never, 1 always, 2 only for the whole-system basis of a small system (they cost 3-4x on small cones and are essential on MQ-like systems). Default: 2");
-    add_arg("--gbwholevars", config.gbWholeVars, fc_integral<uint32_t>, "gb-cone with --gbfull 1: a system with at most this many free variables is taken as one cone and its complete Groebner basis computed, even with --gb 0 (solves random MQ systems up to ~28 variables outright); 0 = never. Default: 24");
+    add_arg("--gbwholevars", config.gbWholeVars, fc_integral<uint32_t>, "gb-cone with --gbfull 1: a system with at most this many free variables is taken as one cone and its complete Groebner basis computed (with gb-split when its matrices exceed --gbmaxcells); solves random MQ systems with up to ~32 variables outright; 0 = never. Default: 40");
     add_arg("--gbmaxlen", config.gbMaxLen, fc_integral<size_t>, "gb-cone: only equations with at most this many terms take part. Default: 32");
     add_arg("--gbsteps", config.gbSteps, fc_integral<uint64_t>, "gb-cone: S-polynomials reduced per call, a deterministic work budget. Default: 100000");
     add_arg("--gbfactdeg", config.gbFactDeg, fc_integral<uint32_t>, "gb-cone: add basis members of at most this degree. Default: 2");

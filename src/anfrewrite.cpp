@@ -589,6 +589,172 @@ size_t ANF::probe_small_polys()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// var-probe: failed-literal probing with propagation
+//
+// The probing of CNF preprocessors, lifted to the ANF: x = 0 is assumed
+// and propagated (an equation all of whose other variables are assigned
+// becomes a constant or a unit; a product with all factors but one equal
+// to 1 forces the last factor to 0; m + 1 = 0 sets every variable of m),
+// then x = 1. A branch that reaches 1 = 0 forces x to the other value; a
+// variable that both branches set to the same value is set; one that they
+// set to opposite values equals x or x + 1. lit-probe looks at one
+// equation at a time; this rule follows chains through the system.
+///////////////////////////////////////////////////////////////////////////////
+
+bool ANF::propagate_assumption(uint32_t v0, bool val0, vector<lbool>& assign,
+                               vector<uint32_t>& trail, int64_t& budget) const
+{
+    auto set = [&](uint32_t v, bool val) -> bool {
+        if (assign[v] != l_Undef) return assign[v] == (val ? l_True : l_False);
+        assign[v] = val ? l_True : l_False;
+        trail.push_back(v);
+        return true;
+    };
+    if (!set(v0, val0)) return true;
+    size_t head = trail.size() - 1;
+    while (head < trail.size()) {
+        const uint32_t u = trail[head++];
+        for (const size_t i : occur[u]) {
+            if (budget <= 0) return true; // out of budget: whatever was found so far holds
+            budget--;
+            if (!poly_valid[i]) {
+                // a product: factors that are constant under the assignment
+                bool zero = false;
+                size_t open = 0;      // factors not yet constant
+                const Lineral* last = nullptr;
+                uint32_t last_free = 0;
+                size_t last_nfree = 0;
+                bool last_c = false;
+                for (const Lineral& l : factors[i]) {
+                    bool c = l.c;
+                    size_t nfree = 0;
+                    uint32_t free_var = 0;
+                    for (const uint32_t w : l.vars) {
+                        if (assign[w] == l_Undef) { nfree++; free_var = w; }
+                        else if (assign[w] == l_True) c = !c;
+                    }
+                    if (nfree == 0) {
+                        if (!c) { zero = true; break; } // factor 0: equation satisfied
+                        continue;                       // factor 1: drops out
+                    }
+                    open++;
+                    last = &l; last_free = free_var; last_nfree = nfree; last_c = c;
+                }
+                if (zero) continue;
+                if (open == 0) return false;            // every factor is 1: 1 = 0
+                if (open == 1 && last_nfree == 1) {
+                    // the last factor must be 0: free_var + c = 0
+                    if (!set(last_free, last_c)) return false;
+                }
+                (void)last;
+                continue;
+            }
+            if (eq_len[i] > config.varProbeLen) continue;
+            const BoolePolynomial& p = eqs[i];
+            BooleSet s = p.set();
+            bool any = false;
+            for (const uint32_t w : p.usedVariables()) {
+                if (assign[w] == l_Undef) continue;
+                any = true;
+                const BooleSet s0 = s.subset0(w);
+                s = (assign[w] == l_True) ? s0.Xor(s.subset1(w)) : s0;
+            }
+            if (!any) continue;
+            if (s.isZero()) continue;
+            if (s.isSingleton() && s.ownsOne()) return false; // 1 = 0
+            const BoolePolynomial q(s);
+            if (q.nUsedVariables() == 1 && q.deg() == 1) {
+                // y or y + 1
+                const uint32_t y = q.usedVariables().firstVariable().index();
+                if (!set(y, q.hasConstantPart())) return false;
+                continue;
+            }
+            if (q.isPair() && q.hasConstantPart()) {
+                // m + 1 = 0: every variable of m is 1
+                for (const uint32_t y : q.firstTerm()) {
+                    if (!set(y, true)) return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+size_t ANF::probe_vars()
+{
+    SimpStatsScope scope(*this, "var-probe");
+    const double myTime = cpuTime();
+    int64_t budget = config.varProbeBudget;
+    const size_t n = ring->nVariables();
+
+    // candidates: active variables, the ones in the most equations first
+    vector<uint32_t> cand;
+    for (uint32_t v = 0; v < n; v++) {
+        if (occur[v].empty()) continue;
+        if (replacer->getValue(v) != l_Undef || replacer->getReplaced(v) != Lit(v, false)) continue;
+        cand.push_back(v);
+    }
+    std::stable_sort(cand.begin(), cand.end(), [&](uint32_t a, uint32_t b) {
+        return occur[a].size() > occur[b].size();
+    });
+
+    vector<lbool> a0(n, l_Undef), a1(n, l_Undef);
+    vector<uint32_t> t0, t1;
+    vector<BoolePolynomial> facts;
+    size_t probes = 0, failed = 0, units = 0, equivs = 0;
+    bool unsat = false;
+    for (const uint32_t v : cand) {
+        if (budget <= 0 || unsat) break;
+        probes++;
+        for (const uint32_t w : t0) a0[w] = l_Undef;
+        for (const uint32_t w : t1) a1[w] = l_Undef;
+        t0.clear();
+        t1.clear();
+        const bool ok0 = propagate_assumption(v, false, a0, t0, budget);
+        const bool ok1 = propagate_assumption(v, true, a1, t1, budget);
+        if (!ok0 && !ok1) { unsat = true; facts.push_back(BoolePolynomial(true, *ring)); break; }
+        if (!ok0 || !ok1) {
+            // one branch is impossible: v is forced, and everything the
+            // other branch derived holds
+            failed++;
+            const vector<uint32_t>& t = ok0 ? t0 : t1;
+            const vector<lbool>& a = ok0 ? a0 : a1;
+            for (const uint32_t w : t) {
+                facts.push_back(BoolePolynomial(BooleVariable(w, *ring)) + BooleConstant(a[w] == l_True));
+                units++;
+            }
+            continue;
+        }
+        // both possible: what they agree on, and what they decide oppositely
+        for (const uint32_t w : t0) {
+            if (w == v || a1[w] == l_Undef) continue;
+            if (a0[w] == a1[w]) {
+                facts.push_back(BoolePolynomial(BooleVariable(w, *ring)) + BooleConstant(a0[w] == l_True));
+                units++;
+            } else {
+                // w = v + c: w is a0[w] when v = 0
+                facts.push_back(BoolePolynomial(BooleVariable(w, *ring)) + BooleVariable(v, *ring)
+                                + BooleConstant(a0[w] == l_True));
+                equivs++;
+            }
+        }
+    }
+
+    size_t num_added = 0;
+    for (const BoolePolynomial& f : facts) num_added += addBoolePolynomial(f);
+    if (num_added > 0) {
+        if (!propagate()) setNOTOK();
+    }
+    if (config.verbosity >= 1) {
+        cout << "c [var-probe] probed " << probes << "/" << cand.size() << " vars, failed " << failed
+             << " units " << units << " equivs " << equivs << " new-facts " << num_added
+             << " budget-left " << budget << " T: " << std::fixed << std::setprecision(2)
+             << (cpuTime() - myTime) << endl;
+    }
+    return num_added;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // lin-gauss: Gaussian elimination among the linear equations
 //
 // The linear equations are inserted, shortest first, into an echelon basis
@@ -659,6 +825,175 @@ size_t ANF::gauss_linear()
              << " T: " << std::fixed << std::setprecision(2) << (cpuTime() - myTime) << endl;
     }
     return num_deleted + num_shortened;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// mono-gauss: Gaussian elimination over the monomials
+//
+// Every monomial is a column (linearisation, the degree-0 step of XL) and
+// the equations, shortest first, are inserted into an echelon basis whose
+// pivot is the deglex-largest monomial of a row. An equation that reduces
+// to 0 is a combination of shorter ones and is deleted; one whose reduced
+// form is shorter, or of lower degree (all nonlinear monomials cancelled:
+// a linear consequence), is replaced by it. Sound like lin-gauss: the rows
+// it was reduced by stay in the system. Reduction by a row only brings in
+// monomials below its pivot, so no degree ever grows.
+///////////////////////////////////////////////////////////////////////////////
+
+size_t ANF::gauss_monomials()
+{
+    SimpStatsScope scope(*this, "mono-gauss");
+    const double myTime = cpuTime();
+    typedef BooleMonomial::hash_type mhash;
+
+    vector<size_t> order;
+    for (size_t i = 0; i < eqs.size(); i++) {
+        if (!poly_valid[i] || eq_len[i] == 0 || eq_len[i] > config.monoGaussLen) continue;
+        if (keep_factor == 1 && degOf(i) >= 2) continue;
+        if (eqs[i].isConstant() || degOf(i) < 1) continue;
+        order.push_back(i);
+    }
+    if (order.size() < 2) return 0;
+
+    // the columns: all monomials, deglex ascending so that the highest
+    // column (the pivot) is the leading monomial
+    unordered_map<mhash, uint32_t> col_of;
+    vector<BooleMonomial> mons;
+    for (const size_t i : order) {
+        for (const BooleMonomial& t : eqs[i]) {
+            if (t.deg() == 0) continue;
+            if (col_of.emplace(t.stableHash(), 0).second) mons.push_back(t);
+            if (mons.size() > config.monoGaussCols) break;
+        }
+        if (mons.size() > config.monoGaussCols) break;
+    }
+    if (mons.size() > config.monoGaussCols) {
+        if (config.verbosity >= 1) {
+            cout << "c [mono-gauss] more than " << config.monoGaussCols << " distinct monomials: skipped" << endl;
+        }
+        return 0;
+    }
+    std::sort(mons.begin(), mons.end(), deglex_less);
+    for (uint32_t c = 0; c < mons.size(); c++) col_of[mons[c].stableHash()] = c;
+
+    std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+        return eq_len[a] < eq_len[b];
+    });
+
+    LinBasis basis(mons.size());
+    unordered_set<uint32_t> updatedVars;
+    vector<size_t> empty_equations;
+    size_t num_deleted = 0, num_shortened = 0, num_degfall = 0;
+    for (const size_t i : order) {
+        LinBasis::Row r = basis.blank();
+        for (const BooleMonomial& t : eqs[i]) {
+            if (t.deg() == 0) basis.set_constant(r, true);
+            else LinBasis::set_col(r, col_of[t.stableHash()]);
+        }
+        const size_t len_before = basis.length(r) + basis.constant(r);
+        const int deg_before = eqs[i].deg();
+        basis.reduce(r);
+        const long piv = basis.pivot(r);
+        if (piv < 0) {
+            if (basis.constant(r)) {
+                replacer->setNOTOK(); // reduced to 1 = 0
+                return num_deleted + num_shortened + 1;
+            }
+            num_deleted++;
+            if (!rewrite_eq(i, BoolePolynomial(*ring), updatedVars, empty_equations)) {
+                return num_deleted + num_shortened;
+            }
+            continue;
+        }
+        const size_t len_after = basis.length(r) + basis.constant(r);
+        const int deg_after = mons[piv].deg();
+        if (len_after < len_before || deg_after < deg_before) {
+            // the polynomial of the row, summed pairwise
+            vector<BoolePolynomial> level;
+            basis.for_each_col(r, [&](size_t c) { level.push_back(BoolePolynomial(mons[c])); });
+            while (level.size() > 1) {
+                vector<BoolePolynomial> next;
+                for (size_t k = 0; k + 1 < level.size(); k += 2) next.push_back(level[k] + level[k + 1]);
+                if (level.size() % 2) next.push_back(level.back());
+                level.swap(next);
+            }
+            BoolePolynomial np(basis.constant(r), *ring);
+            if (!level.empty()) np += level.front();
+            if (config.verbosity >= 5) {
+                cout << "c [mono-gauss] " << eqs[i] << "  -->  " << np << endl;
+            }
+            if (deg_after < deg_before) num_degfall++;
+            else num_shortened++;
+            if (!rewrite_eq(i, np, updatedVars, empty_equations)) {
+                return num_deleted + num_shortened + num_degfall;
+            }
+        }
+        basis.insert(r);
+    }
+    finish_rewrites(updatedVars, empty_equations);
+
+    if (config.verbosity >= 1) {
+        cout << "c [mono-gauss] eqs " << order.size() << " monomials " << mons.size()
+             << " rank " << basis.rank() << " deleted " << num_deleted
+             << " shortened " << num_shortened << " degree-falls " << num_degfall
+             << " T: " << std::fixed << std::setprecision(2) << (cpuTime() - myTime) << endl;
+    }
+    return num_deleted + num_shortened + num_degfall;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// prod-split: an equation whose complement is a product of linerals
+//
+// p = 0 means 1 + p = 1. If 1 + p = (l1 + c1) * ... * (lk + ck) then every
+// factor must be 1, so p = 0 is equivalent to the k linear equations
+// li + ci + 1 = 0. The rule "x*y*z + 1 = 0 sets x, y, z" of anf-prop is the
+// case of single-variable factors; x*y + x + y = 0 (x or y) gives x = 0
+// and y = 0. lit-probe finds these for equations in a few variables by
+// evaluation; here the factors may be long.
+///////////////////////////////////////////////////////////////////////////////
+
+size_t ANF::split_products()
+{
+    SimpStatsScope scope(*this, "prod-split");
+    const double myTime = cpuTime();
+    size_t num_split = 0, num_linear = 0;
+    unordered_set<uint32_t> updatedVars;
+    vector<size_t> empty_equations;
+    vector<BoolePolynomial> extra;
+    const size_t n_eqs = eqs.size();
+    for (size_t i = 0; i < n_eqs; i++) {
+        if (!poly_valid[i] || eq_len[i] < 3 || degOf(i) < 2) continue;
+        const BoolePolynomial& p = eqs[i];
+        // 1 + p is a product of >= 2 non-constant factors only if it has no
+        // constant term (every factor has a variable) -- p has one -- and
+        // at least 2^2 - ... terms: a factor of one variable and a factor
+        // of one variable give x*y (one term); the check is cheap anyway
+        if (!p.hasConstantPart()) continue;
+        const BoolePolynomial q = p + BooleConstant(true);
+        vector<Lineral> f;
+        if (!factor_into_linerals(q, f) || f.size() < 2) continue;
+        vector<BoolePolynomial> lin;
+        for (const Lineral& l : f) {
+            vector<Lineral> one(1, l);
+            lin.push_back(expand_linerals(*ring, one) + BooleConstant(true)); // l + c + 1 = 0
+        }
+        if (config.verbosity >= 5) {
+            cout << "c [prod-split] " << p << "  -->  " << f.size() << " linear equations" << endl;
+        }
+        num_split++;
+        num_linear += lin.size();
+        if (!rewrite_eq(i, lin[0], updatedVars, empty_equations)) return num_split;
+        for (size_t k = 1; k < lin.size(); k++) extra.push_back(lin[k]);
+    }
+    for (const BoolePolynomial& l : extra) {
+        if (addBoolePolynomial(l)) check_if_need_update(l, updatedVars);
+    }
+    finish_rewrites(updatedVars, empty_equations);
+    if (config.verbosity >= 1 && num_split > 0) {
+        cout << "c [prod-split] split " << num_split << " eqs into " << num_linear
+             << " linear ones T: " << std::fixed << std::setprecision(2) << (cpuTime() - myTime) << endl;
+    }
+    return num_split;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -998,9 +1333,15 @@ size_t ANF::rewrite_inplace()
         if (!getOK()) break;
         if (config.doBinomRed) changes += reduce_by_short_polys();
         if (!getOK()) break;
+        if (config.doProdSplit) changes += split_products();
+        if (!getOK()) break;
         if (config.doShorten) changes += shorten_polys();
         if (!getOK()) break;
+        if (config.doMonoGauss) changes += gauss_monomials();
+        if (!getOK()) break;
         if (config.doProbe) changes += probe_small_polys();
+        if (!getOK()) break;
+        if (config.doVarProbe) changes += probe_vars();
         if (!getOK()) break;
         if (config.doFacCanon) changes += canon_factors();
         if (!getOK()) break;

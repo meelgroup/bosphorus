@@ -45,6 +45,20 @@ struct ANFStats {
     double time = 0;         ///< CPU time when the snapshot was taken
 };
 
+/// Totals of one rewrite rule over the run: what it did and what it cost.
+/// Accumulated by SimpStatsScope from the before/after snapshots, printed
+/// as a table by ANF::printRuleStats().
+struct RuleStats {
+    uint64_t calls = 0;      ///< times the rule ran
+    uint64_t effective = 0;  ///< calls that changed the system's size or knowledge
+    double time = 0;         ///< CPU seconds inside the rule (nested rules included)
+    int64_t eqs = 0;         ///< change in the number of equations (negative: fewer)
+    int64_t monoms = 0;      ///< change in the number of monomials
+    int64_t lin_eqs = 0;     ///< change in the number of linear equations
+    int64_t set_vars = 0;    ///< variables newly fixed
+    int64_t repl_vars = 0;   ///< variables newly replaced by another
+};
+
 /// Whether "c [simp-stats]" lines should be coloured, from config.color
 /// (0 = never, 1 = always, 2 = only when stdout is a terminal and NO_COLOR is
 /// not set in the environment).

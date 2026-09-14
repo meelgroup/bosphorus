@@ -93,6 +93,15 @@ if(NOT MSVC)
 
     add_compile_options("$<$<CONFIG:DEBUG>:-O0>")
 
+    # the Groebner engines count bits in every monomial comparison: without
+    # the popcnt instruction __builtin_popcountll is a library call (29% of
+    # a run on a random quadratic system)
+    include(CheckCXXCompilerFlag)
+    check_cxx_compiler_flag("-mpopcnt" COMPILER_SUPPORTS_MPOPCNT)
+    if(COMPILER_SUPPORTS_MPOPCNT)
+        add_compile_options(-mpopcnt)
+    endif()
+
     if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -O2")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O2")

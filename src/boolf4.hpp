@@ -24,8 +24,80 @@ THE SOFTWARE.
 
 #include <cstdint>
 #include <vector>
+#include <algorithm>
 
 namespace BLib {
+
+// Open-addressing hash set of monomial masks (linear probing, all-ones as
+// the empty slot: a monomial in all 64 variables never occurs, the
+// engines take at most 63). std::unordered_set allocated a node per
+// insert and was a third of the symbolic preprocessing.
+class MonSet {
+   public:
+    typedef uint64_t Mon;
+    static constexpr Mon EMPTY = ~(Mon)0;
+    MonSet() { rehash(1024); }
+    void clear() { std::fill(tab.begin(), tab.end(), EMPTY); vals.assign(vals.size(), 0); n = 0; }
+    size_t size() const { return n; }
+    bool count(Mon k) const { return find(k) != (size_t)-1; }
+    // inserts k; returns true if it was not there
+    bool insert(Mon k, uint32_t v = 0)
+    {
+        if (2 * (n + 1) > tab.size()) rehash(tab.size() * 2);
+        size_t i = slot(k);
+        while (tab[i] != EMPTY) {
+            if (tab[i] == k) return false;
+            i = (i + 1) & mask;
+        }
+        tab[i] = k;
+        if (!vals.empty()) vals[i] = v;
+        n++;
+        return true;
+    }
+    // value stored with k (insert with a value first); (uint32_t)-1 if absent
+    uint32_t get(Mon k) const
+    {
+        const size_t i = find(k);
+        return i == (size_t)-1 ? (uint32_t)-1 : vals[i];
+    }
+    void reserve(size_t cnt)
+    {
+        size_t cap = 1024;
+        while (cap < 2 * cnt) cap *= 2;
+        if (cap > tab.size()) rehash(cap);
+    }
+    void with_values(bool yes) { vals.assign(yes ? tab.size() : 0, 0); }
+
+   private:
+    std::vector<Mon> tab;
+    std::vector<uint32_t> vals; // parallel to tab when used as a map
+    size_t mask = 0, n = 0;
+    size_t slot(Mon k) const { return (size_t)((k * 0x9E3779B97F4A7C15ULL) >> 20) & mask; }
+    size_t find(Mon k) const
+    {
+        size_t i = slot(k);
+        while (tab[i] != EMPTY) {
+            if (tab[i] == k) return i;
+            i = (i + 1) & mask;
+        }
+        return (size_t)-1;
+    }
+    void rehash(size_t cap)
+    {
+        std::vector<Mon> old;
+        old.swap(tab);
+        std::vector<uint32_t> oldv;
+        oldv.swap(vals);
+        tab.assign(cap, EMPTY);
+        mask = cap - 1;
+        n = 0;
+        const bool has_vals = !oldv.empty();
+        if (has_vals) vals.assign(cap, 0);
+        for (size_t i = 0; i < old.size(); i++) {
+            if (old[i] != EMPTY) insert(old[i], has_vals ? oldv[i] : 0);
+        }
+    }
+};
 
 // A matrix-F4 Groebner basis engine for the Boolean ring GF(2)[x]/(x^2+x)
 // in up to 64 variables. Monomials are squarefree and stored as 64-bit
@@ -92,6 +164,8 @@ class BoolF4 {
     std::vector<char> alive; // basis elements superseded by others with dividing leads
     std::vector<Pair> pairs;
     bool has_one = false;
+    std::vector<Poly> F0; // the generators, for the solved check
+    std::vector<Mon> columns_scratch;
 
     void add_to_basis(const Poly& p);
     void update_pairs(int h);
@@ -99,6 +173,7 @@ class BoolF4 {
     std::vector<Poly> echelon(std::vector<Poly>& rows, std::vector<Mon>& columns);
     void interreduce();
     void tail_reduce();
+    bool solved();
 };
 
 }

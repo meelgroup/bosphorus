@@ -27,6 +27,8 @@ THE SOFTWARE.
 #include <unordered_map>
 #include <unordered_set>
 #include <m4ri/m4ri.h>
+#include <iomanip>
+#include "time_mem.h"
 
 using namespace BLib;
 using std::vector;
@@ -60,11 +62,38 @@ void BoolF4::normalize(Poly& p)
 
 BoolF4::Poly BoolF4::mul(const Poly& p, Mon u)
 {
-    Poly q;
-    q.reserve(p.size());
-    for (const Mon m : p) q.push_back(m | u);
-    normalize(q); // x*m = m makes distinct terms coincide and cancel
-    return q;
+    if (u == 0) return p;
+    const int du = deg(u);
+    if (du > 3) {
+        Poly q;
+        q.reserve(p.size());
+        for (const Mon m : p) q.push_back(m | u);
+        normalize(q); // x*m = m makes distinct terms coincide and cancel
+        return q;
+    }
+    // The monomials with the same overlap m & u keep their degrevlex order
+    // when the rest of u is added to all of them (same degree change, same
+    // highest differing bit), so the product is a merge of at most 2^deg(u)
+    // sorted lists, with cancellation, instead of a sort (a fifth of a run).
+    uint32_t bits[3];
+    {
+        Mon t = u;
+        for (int k = 0; k < du; k++) { bits[k] = __builtin_ctzll(t); t &= t - 1; }
+    }
+    Poly groups[8];
+    for (const Mon m : p) {
+        unsigned g = 0;
+        for (int k = 0; k < du; k++) g |= ((m >> bits[k]) & 1) << k;
+        groups[g].push_back(m | u);
+    }
+    Poly out;
+    bool have = false;
+    for (unsigned g = 0; g < (1u << du); g++) {
+        if (groups[g].empty()) continue;
+        if (!have) { out.swap(groups[g]); have = true; }
+        else out = add(out, groups[g]);
+    }
+    return out;
 }
 
 BoolF4::Poly BoolF4::add(const Poly& p, const Poly& q)
@@ -89,6 +118,7 @@ void BoolF4::add(const Poly& p_in)
     Poly p = p_in;
     normalize(p);
     if (p.empty()) return;
+    F0.push_back(p);
     add_to_basis(p);
 }
 
@@ -198,13 +228,13 @@ void BoolF4::reduce_step(vector<Pair>& selected)
     // took 3-4 times the memory of the matrix itself.
     struct RowDesc { int i; Mon u; };
     vector<RowDesc> rows;
-    std::unordered_set<Mon> done; // monomials that have a row with this lead
-    std::unordered_set<Mon> seen; // all monomials of all rows: the columns
-    vector<Mon> todo;
+    MonSet done; // monomials that have a row with this lead
+    MonSet seen; // all monomials of all rows: the columns
+    vector<Mon> todo, columns; // columns: every monomial seen, in order of discovery
     auto scan = [&](const Poly& r) {
         if (r.empty()) return;
         done.insert(r[0]);
-        for (const Mon t : r) if (seen.insert(t).second) todo.push_back(t);
+        for (const Mon t : r) if (seen.insert(t)) { todo.push_back(t); columns.push_back(t); }
     };
     for (const Pair& pr : selected) {
         if (pr.j >= 0) {
@@ -214,10 +244,17 @@ void BoolF4::reduce_step(vector<Pair>& selected)
             rows.push_back(RowDesc{pr.i, (Mon)1 << (-pr.j - 1)});
         }
     }
-    for (const RowDesc& d : rows) scan(mul(G[d.i], d.u));
+    // rows and columns only grow, so the matrix is known to be over the
+    // cell budget as soon as their product is: stop before the (long)
+    // preprocessing of a step that will not be run
+    auto over_budget = [&]() { return (uint64_t)rows.size() * seen.size() > opt.maxCells; };
+    for (const RowDesc& d : rows) {
+        if (over_budget()) break;
+        scan(mul(G[d.i], d.u));
+    }
     // symbolic preprocessing: every other monomial that some lead divides
     // gets a reducer row
-    while (!todo.empty()) {
+    while (!todo.empty() && !over_budget()) {
         const Mon m = todo.back();
         todo.pop_back();
         if (done.count(m)) continue;
@@ -231,32 +268,35 @@ void BoolF4::reduce_step(vector<Pair>& selected)
         }
     }
     const size_t nrows = rows.size();
-    const uint64_t cells = (uint64_t)nrows * seen.size();
-    if (cells > opt.maxCells) {
+    if (over_budget()) {
         if (opt.verbosity >= 1) {
             std::cout << "c [f4] degree " << selected[0].degree << ": " << nrows << " rows x "
-                      << seen.size() << " columns exceed the cell budget" << std::endl;
+                      << seen.size() << " columns (or more) exceed the cell budget T: "
+                      << std::fixed << std::setprecision(2) << cpuTime() << std::endl;
         }
         st.budget_exhausted = true;
         return;
     }
     // the columns, in decreasing order, and the matrix
-    vector<Mon> columns(seen.begin(), seen.end());
+    vector<Mon>().swap(todo);
     seen.clear();
     std::sort(columns.begin(), columns.end(), greater);
-    std::unordered_map<Mon, size_t> col_of;
-    col_of.reserve(columns.size() * 2);
-    for (size_t c = 0; c < columns.size(); c++) col_of[columns[c]] = c;
+    MonSet col_of;
+    col_of.reserve(columns.size());
+    col_of.with_values(true);
+    for (size_t c = 0; c < columns.size(); c++) col_of.insert(columns[c], c);
     st.rows += nrows;
     st.cols_max = std::max<uint64_t>(st.cols_max, columns.size());
     mzd_t* M = mzd_init(nrows, columns.size());
     for (size_t r = 0; r < nrows; r++) {
         const Poly p = mul(G[rows[r].i], rows[r].u);
-        for (const Mon m : p) mzd_write_bit(M, r, col_of[m], 1);
+        for (const Mon m : p) mzd_write_bit(M, r, col_of.get(m), 1);
     }
     vector<RowDesc>().swap(rows);
     col_of.clear();
+    const double elim_start = cpuTime();
     const rci_t rank = mzd_echelonize_m4ri(M, 1, 0);
+    const double elim_time = cpuTime() - elim_start;
     st.steps++;
     // rows with a lead that no row had before reduction are the new basis elements
     size_t added = 0;
@@ -282,7 +322,8 @@ void BoolF4::reduce_step(vector<Pair>& selected)
     if (opt.verbosity >= 2) {
         std::cout << "c [f4] degree " << selected[0].degree << " pairs " << selected.size()
                   << " rows " << nrows << " cols " << columns.size() << " new " << added
-                  << " basis " << G.size() << std::endl;
+                  << " basis " << G.size() << " T: " << std::fixed << std::setprecision(2)
+                  << cpuTime() << " (elim " << std::setprecision(2) << elim_time << ")" << std::endl;
     }
 }
 
@@ -304,6 +345,47 @@ void BoolF4::tail_reduce()
         auto it = by_lead.find(p[0]);
         if (it != by_lead.end()) G[it->second] = p;
     }
+}
+
+// The linear basis members fix every variable of the generators: the
+// basis is then {x_i + c_i} if the assignment satisfies the generators
+// and {1} otherwise, and the pending pairs (all reducing to zero) can be
+// skipped. On a random quadratic system half of the rows went into the
+// steps after the solving one.
+bool BoolF4::solved()
+{
+    Mon used = 0, leads = 0;
+    for (const Poly& p : F0) for (const Mon m : p) used |= m;
+    for (size_t i = 0; i < G.size(); i++) {
+        if (alive[i] && deg(LM[i]) == 1) leads |= LM[i];
+    }
+    if (leads != used) return false;
+    // the assignment: x = c from the linear members, in decreasing lead
+    // order so that the tail of each is already known (tails hold smaller
+    // variables only after interreduction; solve by substitution otherwise)
+    vector<Poly> lin;
+    for (size_t i = 0; i < G.size(); i++) {
+        if (alive[i] && deg(LM[i]) == 1) lin.push_back(G[i]);
+    }
+    vector<Poly> red = echelon(lin, columns_scratch);
+    Mon ones = 0; // variables equal to 1
+    for (const Poly& p : red) {
+        if (p.size() > 2 || deg(p[0]) != 1) return false; // not a plain assignment: keep going
+        if (p.size() == 2) {
+            if (p[1] != 0) return false;
+            ones |= p[0];
+        }
+    }
+    for (const Poly& p : F0) {
+        bool val = false;
+        for (const Mon m : p) if ((m & ones) == m) val = !val;
+        if (val) { has_one = true; return true; }
+    }
+    // the basis is the assignment itself
+    G.clear(); LM.clear(); alive.clear();
+    for (const Poly& p : red) { G.push_back(p); LM.push_back(p[0]); alive.push_back(1); }
+    pairs.clear();
+    return true;
 }
 
 void BoolF4::interreduce()
@@ -335,6 +417,7 @@ vector<BoolF4::Poly> BoolF4::run()
         reduce_step(selected);
         if (st.budget_exhausted) break;
         if (opt.tailReduce) tail_reduce();
+        if (solved()) break;
     }
     if (has_one) {
         Poly one(1, 0);

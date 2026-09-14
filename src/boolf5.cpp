@@ -27,6 +27,8 @@ THE SOFTWARE.
 #include <unordered_map>
 #include <unordered_set>
 #include <m4ri/m4ri.h>
+#include <iomanip>
+#include "time_mem.h"
 
 using namespace BLib;
 using std::vector;
@@ -86,7 +88,12 @@ vector<BoolF4::Poly> BoolF5::run()
     std::unordered_map<int, vector<std::unordered_set<Mon> > > leads_by_deg;
 
     vector<Poly> basis; // all reduced rows found so far (leads distinct)
-    std::unordered_set<Mon> basis_leads;
+    std::unordered_set<Mon> mutant_done; // leads of the mutants already multiplied up
+    std::unordered_set<Mon> prev_leads;  // leads of the rows of the previous degree
+    // the variables that occur: a system is solved when each has a linear member
+    Mon used = 0;
+    for (const Poly& p : G) for (const Mon mm : p) used |= mm;
+    const size_t n_used = __builtin_popcountll(used);
     int mindeg = Fdeg.empty() ? 2 : Fdeg[0];
     for (int d = mindeg; (uint32_t)d <= opt.maxDeg; d++) {
         st.max_deg = d;
@@ -180,20 +187,94 @@ vector<BoolF4::Poly> BoolF5::run()
         mzd_free(M);
         if (opt.verbosity >= 2) {
             std::cout << "c [f5] degree " << d << " cols " << columns.size() << " rows " << erows
-                      << " pruned so far " << st.rows_pruned << " zero rows so far " << st.zero_rows << std::endl;
+                      << " pruned so far " << st.rows_pruned << " zero rows so far " << st.zero_rows
+                      << " T: " << std::fixed << std::setprecision(2) << cpuTime() << std::endl;
+        }
+        // finished? every variable determined, or the ideal is the whole ring
+        auto finished = [&]() {
+            bool one = false;
+            size_t linear = 0;
+            for (const Poly& p : degree_rows) {
+                if (p.size() == 1 && p[0] == 0) one = true;
+                if (BoolF4::deg(p[0]) == 1) linear++;
+            }
+            return one || linear >= n_used || degree_rows.size() >= columns.size();
+        };
+        // Mutants (MutantXL): rows of degree below d are combinations that
+        // fell in degree; multiplied up to degree d again they give what
+        // the plain Macaulay matrix of degree d lacks (F4 gets this from
+        // its second step of the same degree). Repeated until no row of
+        // lower degree is new. Only leads are tracked: a mutant is
+        // multiplied once.
+        while (!st.budget_exhausted && !finished()) {
+            // a row of lower degree whose lead the previous degree did not
+            // have: the span grew below degree d
+            vector<Poly> mutants;
+            for (const Poly& p : degree_rows) {
+                if (BoolF4::deg(p[0]) < d && !prev_leads.count(p[0]) && mutant_done.insert(p[0]).second) mutants.push_back(p);
+            }
+            if (mutants.empty()) break;
+            vector<std::pair<size_t, Mon> > mdescs;
+            for (size_t i = 0; i < mutants.size(); i++) {
+                const int kmax = d - BoolF4::deg(mutants[i][0]);
+                for (int k = 1; k <= kmax; k++) {
+                    vector<Mon> mult;
+                    monomials_of_degree(n, k, mult);
+                    for (const Mon u : mult) mdescs.push_back(std::make_pair(i, u));
+                }
+            }
+            const uint64_t mcells = (uint64_t)(erows + mdescs.size()) * columns.size();
+            if (mcells > opt.maxCells) {
+                if (opt.verbosity >= 1) {
+                    std::cout << "c [f5] degree " << d << " mutants: " << erows + mdescs.size() << " rows x "
+                              << columns.size() << " columns exceed the cell budget" << std::endl;
+                }
+                st.budget_exhausted = true;
+                break;
+            }
+            mzd_t* M2 = mzd_init(erows + mdescs.size(), columns.size());
+            for (size_t r = 0; r < degree_rows.size(); r++) {
+                for (const Mon mm : degree_rows[r]) mzd_write_bit(M2, r, col_of[mm], 1);
+            }
+            for (size_t r = 0; r < mdescs.size(); r++) {
+                const Poly p = BoolF4::mul(mutants[mdescs[r].first], mdescs[r].second);
+                for (const Mon mm : p) mzd_write_bit(M2, erows + r, col_of[mm], 1);
+            }
+            st.rows += mdescs.size();
+            const rci_t rank = mzd_echelonize_m4ri(M2, 1, 0);
+            st.zero_rows += (erows + mdescs.size()) - rank;
+            degree_rows.clear();
+            for (rci_t r = 0; r < rank; r++) {
+                const word* row = mzd_row(M2, r);
+                Poly p;
+                for (size_t w = 0; w < words; w++) {
+                    word x = row[w];
+                    while (x) {
+                        const size_t c = w * 64 + __builtin_ctzll(x);
+                        x &= x - 1;
+                        if (c < columns.size()) p.push_back(columns[c]);
+                    }
+                }
+                if (!p.empty()) degree_rows.push_back(p);
+            }
+            mzd_free(M2);
+            if (opt.verbosity >= 2) {
+                std::cout << "c [f5] degree " << d << " mutants " << mutants.size() << " rows " << mdescs.size()
+                          << " rank " << rank << " (was " << erows << ") T: " << std::fixed
+                          << std::setprecision(2) << cpuTime() << std::endl;
+            }
+            const bool grew = (size_t)rank > erows;
+            erows = rank;
+            if (!grew) break;
         }
         // the rows of this degree supersede the basis: they contain every
         // earlier element multiplied up (and reduced), so take them as the
         // current basis
         basis = degree_rows;
+        prev_leads.clear();
+        for (const Poly& p : basis) prev_leads.insert(p[0]);
         if (st.budget_exhausted) break;
-        // finished? every variable determined, or the ideal is the whole ring
-        bool one = false; size_t linear = 0;
-        for (const Poly& p : basis) {
-            if (p.size() == 1 && p[0] == 0) one = true;
-            if (BoolF4::deg(p[0]) == 1) linear++;
-        }
-        if (one || linear >= n) break;
+        if (finished()) break;
         if (degree_rows.empty()) break;
     }
     // minimal reduced basis: drop elements whose lead is divisible by another lead

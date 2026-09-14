@@ -90,22 +90,41 @@ This means x0 is `false`, x1 is `true`, x2 is `true` and x3 is `false`.
 | `anf-prop` | propagates units, (anti-)equivalences and `m+1` (all variables of `m` true) |
 | `lin-gauss` | Gaussian elimination among the linear equations: drops redundant ones, shortens others, feeds units and equivalences to `anf-prop` |
 | `binom-red` | reduces every equation modulo the monomial and binomial equations (`x*y = 0`, `x*y + x = 0`, definitions `x*y + z = 0`); degrees never grow |
+| `prod-split` | `p = 0` where `1 + p` is a product of linear factors `(l1+c1)*(l2+c2)*...` becomes one linear equation per factor (every factor must be 1) |
 | `poly-shorten` | replaces `p` by `p + f` when that is shorter (shortens XORs, re-uses definitions) |
+| `mono-gauss` | Gaussian elimination with one column per monomial (linearisation): deletes equations that are combinations of others, replaces an equation by a shorter or lower-degree combination (a linear consequence of nonlinear equations) |
 | `lit-probe` | partial evaluation of small equations: forced literals, equivalences, binary implications and their SCCs |
+| `var-probe` | failed-literal probing with propagation through the whole system: `x = 0` and `x = 1` are each propagated (units, `m+1`, products with one factor left), a failed branch forces `x`, agreeing branches set a variable, disagreeing ones make it equivalent to `x` (default: off) |
 | `fac-canon` | canonical linear factors of products modulo the linear span (default: off) |
 | `fac-res` | resolution between products sharing a linear factor (default: off) |
 | `gb-cone` | Gröbner bases of cones of small equations; short basis members are added (default: off for large systems, on for systems with few variables) |
+| `gb-split` | when the whole-system Gröbner basis needs a matrix over the cell budget, fixes a variable both ways and combines the bases of the two branches: an inconsistent branch forces the variable, members `f0`, `f1` with the same leading monomial combine to `f0 + x*(f0 + f1)`; fixing one variable of a random MQ system with n = 28 brings its degree of regularity from 5 back to 4 |
 | `xl` | eXtended Linearization on the short equations |
 | `elimlin` | ElimLin: elimination and substitution of linear equations, iterated |
 | `sat-simp` | bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds |
+
+Every rule prints the size of the system before and after it ran
+(`c [simp-stats]` lines, coloured on a terminal), and the run ends with a
+table of totals per rule: calls, calls that changed something, time,
+change in equations, monomials, linear equations, and variables set or
+replaced. The `c Density:` line of the ANF stats gives the mean number of
+terms and variables per equation, the fill (terms divided by the possible
+monomials over the equation's own variables), the number of distinct
+monomials and how often each is shared, and equations per variable.
 
 
 ## The Gröbner Engines
 Complete bases come from Bosphorus's own matrix-F4 engine (`--gbengine 1`,
 M4RI over squarefree 64-bit monomials, deterministic budgets `--gbsteps`
 and `--gbmaxcells`); `--gbengine 0` uses BRiAl's `symmGB_F2` and
-`--gbengine 2` a Matrix-F5 variant that is faster on random quadratic
-systems and slower on structured ones.
+`--gbengine 2` a Matrix-F5 variant (with a MutantXL step: rows that fell
+in degree are multiplied up again before the next degree) that is faster
+on random quadratic systems and slower on structured ones. Both engines
+stop as soon as the linear basis members fix every variable. A step whose
+matrix would exceed `--gbmaxcells` (default 250 MB) is not built: the
+system is split on a variable instead (`gb-split`, up to `--gbsplit`
+levels, `--gbsplitrows` matrix rows in total), so memory stays bounded
+and the degree stays low.
 
 ## ANF-to-CNF conversion strategies
 Small polynomials are converted directly (Brickenstein's algorithm), and

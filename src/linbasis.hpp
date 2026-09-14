@@ -38,6 +38,22 @@ class LinBasis {
 
     explicit LinBasis(size_t num_vars) : words((num_vars + 63) / 64) {}
 
+    // Generic rows: the columns need not be variables (mono-gauss uses one
+    // column per monomial).
+    Row blank() const { return Row(words + 1, 0); }
+    static void set_col(Row& r, size_t i) { flip(r, i); }
+    void set_constant(Row& r, bool c) const { r[words] = c; }
+    template <class F> void for_each_col(const Row& r, F f) const
+    {
+        for (size_t w = 0; w < words; w++) {
+            uint64_t x = r[w];
+            while (x) {
+                f(w * 64 + __builtin_ctzll(x));
+                x &= x - 1;
+            }
+        }
+    }
+
     Row row_of(const polybori::BoolePolynomial& p) const
     {
         Row r(words + 1, 0);
