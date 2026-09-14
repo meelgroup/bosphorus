@@ -237,7 +237,7 @@ void parseOptions(int argc, char* argv[])
     add_arg("--probe", config.doProbe, fc_integral<int>,
         "Rewrite rule lit-probe: forced literals, equivalences and implication-graph SCCs from small equations. Default: ON");
     add_arg("--cnfprobe", config.doCnfProbe, fc_integral<int>,
-        "Rewrite rule cnf-probe: the system is converted to CNF and CryptoMiniSat's inprocessing runs on it as Arjun does (equivalent-literal SCCs, probing of every ANF variable, in-tree probing, no variable elimination); the literals fixed at level 0 and the equivalent literals come back as equations (a CNF variable stands for a monomial, an XOR cut or a lineral). Runs when the other rules have reached a fixed point. Default: ON");
+        "Rewrite rule cnf-probe: the system is converted to CNF and CryptoMiniSat's inprocessing runs on it as Arjun does (equivalent-literal SCCs, probing of every ANF variable, in-tree probing, no variable elimination); the literals fixed at level 0 and the equivalent literals come back as equations (a CNF variable stands for a monomial, an XOR cut or a lineral). Runs once per rewrite round, after the cheap rules and before gb-cone, on a system that changed since its last run. Default: ON");
     add_arg("--cnfprobevars", config.cnfProbeVars, fc_integral<size_t>,
         "cnf-probe: probe at most this many ANF variables, the most incident first. Default: 200000");
     add_arg("--varprobe", config.doVarProbe, fc_integral<int>,

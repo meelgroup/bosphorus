@@ -1348,6 +1348,23 @@ size_t ANF::rewrite_inplace()
         if (!getOK()) break;
         if (config.doFacRes) changes += resolve_factors();
         if (!getOK()) break;
+        // cnf-probe (CryptoMiniSat's inprocessing on the CNF of the
+        // system) costs a CNF conversion, so it runs once per round after
+        // the cheap rules and before the Groebner engine, and only on a
+        // system that changed since its last run (a unit or equivalence
+        // it finds shrinks the basis computation)
+        if (config.doCnfProbe && getOK()) {
+            const BLib::ANFStats now = get_stats();
+            const bool same = cp_ran && now.eqs == cp_last.eqs && now.monoms == cp_last.monoms &&
+                              now.set_vars == cp_last.set_vars && now.repl_vars == cp_last.repl_vars &&
+                              now.lin_eqs == cp_last.lin_eqs;
+            if (!same) {
+                changes += cnf_probe();
+                cp_last = get_stats();
+                cp_ran = true;
+            }
+        }
+        if (!getOK()) break;
         // gb-cone: on request, or automatically on a small system (few
         // free variables), whose complete Groebner basis is cheap and often
         // solves it outright (random MQ systems up to ~28 variables)
@@ -1365,21 +1382,6 @@ size_t ANF::rewrite_inplace()
                 changes += groebner_windows();
                 gb_last = get_stats();
                 gb_ran = true;
-            }
-        }
-        // cnf-probe (CryptoMiniSat's inprocessing on the CNF of the
-        // system) costs a CNF conversion: only once the cheap rules have
-        // reached a fixed point, and only on a system that changed since
-        // its last run
-        if (changes == 0 && config.doCnfProbe && getOK()) {
-            const BLib::ANFStats now = get_stats();
-            const bool same = cp_ran && now.eqs == cp_last.eqs && now.monoms == cp_last.monoms &&
-                              now.set_vars == cp_last.set_vars && now.repl_vars == cp_last.repl_vars &&
-                              now.lin_eqs == cp_last.lin_eqs;
-            if (!same) {
-                changes += cnf_probe();
-                cp_last = get_stats();
-                cp_ran = true;
             }
         }
         total += changes;

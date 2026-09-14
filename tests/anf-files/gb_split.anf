@@ -1,4 +1,4 @@
-c RUN: %solver --anfread %s --solve --verb 1 --xl 0 --el 0 --sat 0 --gbmaxcells 20000 | %OutputCheck %s
+c RUN: %solver --anfread %s --solve --verb 1 --xl 0 --el 0 --sat 0 --gbmaxcells 20000 --cnfprobe 0 | %OutputCheck %s
 c RUN: %solver --anfread %s --solve --allsol --verb 0 --gbmaxcells 20000 | %verify allsol %s
 c RUN: %solver --anfread %s --solve --allsol --verb 0 --gbmaxcells 20000 --gbengine 2 | %verify allsol %s
 c
