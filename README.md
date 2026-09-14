@@ -92,7 +92,7 @@ This means x0 is `false`, x1 is `true`, x2 is `true` and x3 is `false`.
 | `binom-red` | reduces every equation modulo the monomial and binomial equations (`x*y = 0`, `x*y + x = 0`, definitions `x*y + z = 0`); degrees never grow |
 | `prod-split` | `p = 0` where `1 + p` is a product of linear factors `(l1+c1)*(l2+c2)*...` becomes one linear equation per factor (every factor must be 1) |
 | `poly-shorten` | replaces `p` by `p + f` when that is shorter (shortens XORs, re-uses definitions) |
-| `mono-gauss` | Gaussian elimination with one column per monomial (linearisation): deletes equations that are combinations of others, replaces an equation by a shorter or lower-degree combination (a linear consequence of nonlinear equations) |
+| `mono-gauss` | Gaussian elimination with one column per monomial (linearisation): deletes equations that are combinations of others and replaces an equation by a lower-degree combination (a linear consequence of nonlinear equations); replacing by shorter combinations of the same degree is optional (11% smaller CNFs on the bivium family, slower CryptoMiniSat on ascon) |
 | `lit-probe` | partial evaluation of small equations: forced literals, equivalences, binary implications and their SCCs |
 | `var-probe` | failed-literal probing with propagation through the whole system: `x = 0` and `x = 1` are each propagated (units, `m+1`, products with one factor left), a failed branch forces `x`, agreeing branches set a variable, disagreeing ones make it equivalent to `x` (default: off) |
 | `fac-canon` | canonical linear factors of products modulo the linear span (default: off) |
@@ -169,7 +169,8 @@ Memory in parentheses.
 | 26 | timeout | | 3.7 s (103 MB) | 2.7 s (309 MB) |
 | 28 | timeout | 196 s | 16 s (205 MB), was 187 s (1.7 GB) without the split | 13 s (511 MB) |
 | 30 | timeout | | 52 s (488 MB) | 52 s (1.1 GB) |
-| 32 | timeout | | MQ32F4 | MQ32F5 |
+| 32 | timeout | | 119 s (945 MB) | 134 s (2.1 GB) |
+| 34 | timeout | | 603 s (1.5 GB) | 537 s (2.6 GB) |
 
 HFE systems (secret degree 96) from Allan Steel's Magma page. Magma's F4
 solved them in 2004 on hardware of that time (a 750 MHz UltraSPARC class
@@ -181,7 +182,7 @@ same solutions:
 |---|---|---|---|
 | HFE25 | 37 s | 166 s | 2.4 s (150 MB) |
 | HFE30 | 114 s | 1329 s | 12 s (433 MB) |
-| HFE35 | 543 s | no answer in 2 h | HFE35F4 |
+| HFE35 | 543 s | no answer in 2 h | 175 s (1.3 GB, split 3 deep), 167 s (3.9 GB) with `--gbmaxcells 12e9` |
 
 The HFE times fell from 52 s and 131 s when the engine learnt to stop as
 soon as its linear members fix every variable (and to check that

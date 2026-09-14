@@ -230,6 +230,8 @@ void parseOptions(int argc, char* argv[])
         "mono-gauss: only equations with at most this many terms take part. Default: 64");
     add_arg("--monogausscols", config.monoGaussCols, fc_integral<size_t>,
         "mono-gauss: not run when the participating equations have more distinct monomials than this. Default: 100000");
+    add_arg("--monogaussshorten", config.monoGaussShorten, fc_integral<int>,
+        "mono-gauss: replace an equation by a shorter combination of the same degree: 0 = never (only delete redundant equations and keep combinations of lower degree, i.e. linear consequences), 1 = linear equations only (a second XOR shortening with the monomial order as pivot order: 11% smaller CNFs and faster CryptoMiniSat on the bivium family, but 2x slower CryptoMiniSat on two of five ascon instances), 2 = all degrees (same effect on ascon). Default: 0");
     add_arg("--prodsplit", config.doProdSplit, fc_integral<int>,
         "Rewrite rule prod-split: an equation p = 0 where 1 + p is a product of linear factors (l1+c1)*(l2+c2)*... becomes the linear equations l1+c1+1 = 0, l2+c2+1 = 0, ... (every factor must be 1); generalises 'x*y*z + 1 = 0 sets x, y, z'. Default: ON");
     add_arg("--probe", config.doProbe, fc_integral<int>,

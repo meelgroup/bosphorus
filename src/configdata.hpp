@@ -77,6 +77,7 @@ struct ConfigData {
     int doMonoGauss = true;       // Gaussian elimination among all equations over the monomials (mono-gauss)
     size_t monoGaussLen = 64;     // mono-gauss: only equations with at most this many terms take part
     size_t monoGaussCols = 100000; // mono-gauss: skipped when the equations have more distinct monomials than this
+    int monoGaussShorten = 0;     // mono-gauss: replace an equation by a shorter combination of the same degree: 0 never (deletions and degree falls only), 1 linear equations only, 2 all degrees. 1 gives 11% smaller CNFs on bivium but 2x slower CryptoMiniSat on ascon
     int doProdSplit = true;       // p = 0 with 1+p a product of linerals becomes one linear equation per factor (prod-split)
     int doProbe = true;           // forced literals/equivalences/implications
     uint32_t probeVars = 8;       // only probe eqs with at most this many vars

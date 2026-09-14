@@ -36,6 +36,11 @@ PolyBoRi/CUDD tend to dominate; check which rule calls them.
   matrix exceeds `--gbmaxcells`; the F5 engine finishes a degree-4 branch
   only with its MutantXL step (the plain Macaulay matrix at degree 4 has
   fewer rows than columns for n = 27).
+- mono-gauss's same-degree shortening (`--monogaussshorten 1`) is the
+  one switch that trades the families against each other: bivium CNFs 11%
+  smaller and CMS faster (tmp_ifs1zce 112 s -> 73 s median), ascon CMS 2x
+  slower on tmpgmh2blh0 and tmpborqf5jg (3 seeds each). Off by default; the
+  deletions and degree falls (linear consequences) are always on.
 - The Groebner engines compile with `-mpopcnt` (CMake checks the flag):
   without it `__builtin_popcountll` is a libgcc call and was 29% of a run.
 - **No wall-clock or CPU-time budgets inside algorithms.** Limit work with

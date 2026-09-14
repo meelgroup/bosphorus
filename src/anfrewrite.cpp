@@ -907,7 +907,8 @@ size_t ANF::gauss_monomials()
         }
         const size_t len_after = basis.length(r) + basis.constant(r);
         const int deg_after = mons[piv].deg();
-        if (len_after < len_before || deg_after < deg_before) {
+        const bool may_shorten = config.monoGaussShorten == 2 || (config.monoGaussShorten == 1 && deg_before <= 1);
+        if ((may_shorten && len_after < len_before) || deg_after < deg_before) {
             // the polynomial of the row, summed pairwise
             vector<BoolePolynomial> level;
             basis.for_each_col(r, [&](size_t c) { level.push_back(BoolePolynomial(mons[c])); });
