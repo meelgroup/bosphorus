@@ -53,15 +53,11 @@ x(1) + x(2) + x(3)
 x(1)*x(2) + x(2)*x(3) + 1
 ```
 
-Let's simplify, output a simplified ANF, a simplified CNF, solve it and write
-out the solution:
+Simplify it, write the simplified ANF and CNF, solve and write the solution
+(a `.anf` input is read as ANF, a `.cnf` input as CNF):
 ```
-$ ./bosphorus --anfread test.anf --anfwrite out.anf --cnfwrite out.cnf --solvewrite solution
+$ ./bosphorus test.anf --anfwrite out.anf --cnfwrite out.cnf --solvewrite solution
 ```
-
-The input file can also be given as a plain positional argument: a file ending
-in `.anf` is read as ANF and one ending in `.cnf` is read as CNF, so the above
-is the same as `./bosphorus test.anf --anfwrite out.anf ...`.
 
 The simplified ANF is in `out.anf`:
 ```
@@ -172,10 +168,7 @@ solutions Magma found in 2004:
 
 To find all solutions to `myfile.anf`:
 ```
-./bosphorus \
-    --anfread myfile.anf \
-    --cnfwrite myfile.cnf \
-    --solve --allsol
+./bosphorus myfile.anf --solve --allsol
 [...]
 s ANF-SATISFIABLE
 v x(0) x(1)+1 x(2) x(3)
@@ -187,20 +180,15 @@ c Number of solutions found: 2
 
 Where `x(0)` means `x(0)` must be FALSE and `x(1)+1` means `x(1)` must be TRUE.
 
-To convert `myfile.anf` to `myfile.cnf` with all the simplifications:
-
 ## Counting solutions of an ANF
 
-Sometimes, there are too many solutions to an ANF to list them all (e.g.
-2**40). You can count the number of solutions of an ANF in `test.anf` by using
-the standard translation and taking advantage of the projection written inside
-the CNF. This projection set is written as `c p show var1 var2 ... varn 0`. Many
-counters, such as [ApproxMC](https://github.com/meelgroup/approxmc) are able to
-use this format to count the solutions in the CNF. Here is how to do it with
-ApproxMC:
+When there are too many solutions to list (say 2**40), count them on the
+CNF: a projection set in the ANF (`c p show x1 x2 ... END`) is written into
+the CNF as `c p show var1 var2 ... varn 0`, which counters such as
+[ApproxMC](https://github.com/meelgroup/approxmc) understand:
 
 ```
-./bosphorus --anfread test.anf --cnfwrite out.cnf
+./bosphorus test.anf --cnfwrite out.cnf
 ./approxmc out.cnf
 [...]
 c [appmc] Number of solutions is: 256*2**6
@@ -211,7 +199,7 @@ If the number of solutions is low (say, less than 1000) you can also use
 CryptoMiniSat to do the counting:
 
 ```
-./bosphorus --anfread test.anf --cnfwrite out.cnf
+./bosphorus test.anf --cnfwrite out.cnf
 ./cryptominisat --maxsol 100000 out.cnf
 [...]
 c Number of solutions found until now:    16384
@@ -220,13 +208,9 @@ s UNSATISFIABLE
 
 ## CNF simplification
 
-This usage of the tool is **EXPERIMENTAL**. Do not, under any circumstances,
-rely on its correctness or veracity. In general `--cnfread` is not
-well-supported. If you are still interested, then Bosphorus can simplify and
-solve CNF problems. When simplifying or solving CNF problems, the CNF is
-(extremely) naively translated to ANF, then simplifications are applied, and a
-sophisticated system then translates the ANF back to CNF. This CNF can then be
-optinally solved.
+This is **EXPERIMENTAL**: do not rely on its correctness. A CNF input is
+naively translated to ANF, simplified, and translated back to CNF (or
+solved).
 
 Let's say you have the CNF:
 
@@ -242,7 +226,7 @@ $ cat test.cnf
 
 Let's simplify and get the ANF:
 ```
-$ ./bosphorus --cnfread test.cnf --anfwrite out2.anf
+$ ./bosphorus test.cnf --anfwrite out2.anf
 $ cat out2.anf
 x(1)*x(2)*x(3) + x(1)*x(2) + x(1)*x(3) + x(1)
 x(1)*x(2)*x(3) + x(1)*x(2) + x(2)*x(3) + x(2)
@@ -256,12 +240,9 @@ x(4) + x(0) + 1
 
 ```
 
-The system recovered XOR `x(1) + x(2) + x(3)` using ElimLin from the top 4
-equations that encode the CNF's first 4 clauses. This resoution is in fact
-non-trivial, and can lead to interesting facts that can then be re-injected
-back into the CNF. Note that the first 4 clauses encode an XOR because the 2nd
-clause can be extended to the weaker clause `2 -3 4 0`, giving the trivial
-encoding of `x(1) + x(2) + x(3)` in CNF.
+ElimLin recovered the XOR `x(1) + x(2) + x(3)` from the four equations that
+encode the first four clauses (the second clause weakens to `2 -3 4 0`, and
+the four clauses then encode that XOR).
 
 ## Mapping solutions from CNF to ANF
 
@@ -273,10 +254,10 @@ x(1) + x2 + x3
 x1*x2 + x2*x3 + 1
 ```
 
-Let's simplify and it to CNF:
+Simplify it into CNF with a solution map:
 
 ```
-./bosphorus --anfread test.anf  --cnfwrite test.cnf --solmap solution_map
+./bosphorus test.anf --cnfwrite test.cnf --solmap solution_map
 ```
 
 Let's solve with any SAT solver:
