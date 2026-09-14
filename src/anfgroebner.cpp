@@ -157,6 +157,10 @@ size_t ANF::groebner_windows()
             }
             BoolePolyRing& cring = rit->second;
             GroebnerStrategy cstrat(cring);
+            // BRiAl's recursive "implication" bases for split generators
+            // dominate the time on small cones (57% of a run) and help
+            // little there: off unless asked for
+            cstrat.optAllowRecursion = config.gbRecursion;
             for (const size_t j : window) {
                 BoolePolynomial q(cring);
                 for (const BooleMonomial& m : eq(j)) {
