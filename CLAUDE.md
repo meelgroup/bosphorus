@@ -70,6 +70,10 @@ PolyBoRi/CUDD tend to dominate; check which rule calls them.
   and always verify the model against the original ANF (with `--projshow 1`
   CMS prints only the projected variables; complete the rest by unit
   propagation over the CNF).
+- Random MQ systems: `utils/mqgen.py n m seed`; Fukuoka challenge files in
+  `/home/soos/development/sat_solvers/mq-challenge/` (`utils/mq2anf.py`).
+  The whole-system Groebner basis (gb-cone, automatic up to `--gbwholevars`
+  active variables) solves n <= 28 alone; n >= 55 is out of reach.
 - The ascon family (`.../xorricane-bench/ascon/`, named variables, 50
   instances, raw-CNF CMS results in `*.cnf.out-cms`) is the second reference
   family; the four-round instances (tmp3g3f82vv, tmpgmh2blh0, ...) are the

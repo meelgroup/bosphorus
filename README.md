@@ -298,6 +298,27 @@ Geometric mean of the medians: 14.4 s for the benchmark CNF, 12.8 s for
 Bosphorus's output, 12.1 s with the cluster encoding. The instances that
 time out with the benchmark CNF time out with Bosphorus's output too.
 
+### Example: multivariate quadratic (MQ) systems
+
+Post-quantum multivariate schemes reduce to random-looking quadratic
+systems over GF(2); the [Fukuoka MQ challenge](https://www.mqchallenge.org/)
+posts such systems (Type I: m = 2n equations, n >= 55 variables; the
+records, n = 83 in 2023, took 805,000 CPU hours). `utils/mq2anf.py`
+converts a challenge file to ANF, `utils/mqgen.py n m seed` writes a
+random system of the same shape with a planted solution. The smallest
+posted instance (n = 55) is far beyond a single core with any method, but
+the scaling on generated instances shows what the Gröbner-basis rule buys:
+
+| n (m = 2n) | CryptoMiniSat on Bosphorus's CNF | Bosphorus with the whole-system basis |
+|---|---|---|
+| 16 | 0.7 s | 0.3 s |
+| 20 | 1.4 s | 1.1 s |
+| 24 | timeout (200 s) | 16 s |
+| 28 | timeout | 196 s (390 MB) |
+
+The basis is computed automatically when the system has at most
+`--gbwholevars` (24) active variables; raise it for larger systems.
+
 ## List all solutions of an ANF
 
 To find all solutions to `myfile.anf`:
