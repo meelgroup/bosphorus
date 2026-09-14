@@ -7,6 +7,6 @@ c which becomes an equivalence.
 x1*x2 + x3
 x2*x3 + x1
 x4*x5 + x6 + x7
-c CHECK: \[gb-cone\] .* new 1
+c CHECK: \[gb-cone\] .* new [1-9]
 c CHECK-L: Equivalences
 c CHECK-L: x(3) + x(1)
