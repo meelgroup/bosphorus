@@ -364,16 +364,17 @@ inline void ANF::removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx)
 ANF::SubstResult ANF::substituted_factors(size_t idx, vector<Lineral>& out)
 {
     out.clear();
-    vector<Lineral>& f = factors[idx];
-    if (f.empty()) {
-        // a polynomial that still is a clean product? factor it now,
-        // before it is changed
-        if (!factor_into_linerals(eqs[idx], f) || f.size() < 2) {
-            f.clear();
+    if (factors[idx].empty()) {
+        // a polynomial that still is a clean product? factor it now, before
+        // it is changed. Not into factors[idx]: the equation is keyed in
+        // eqs_hash until updateEquations() erases that key
+        if (!factor_into_linerals(eqs[idx], out) || out.size() < 2) {
+            out.clear();
             return subst_unknown;
         }
+    } else {
+        out = factors[idx];
     }
-    out = f;
     // apply what the replacer knows to every factor (the variable set is a
     // plain sorted vector: building a ZDD monomial of 150 variables one
     // variable at a time was a quarter of the run on the bivium family)
