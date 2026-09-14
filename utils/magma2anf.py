@@ -8,15 +8,21 @@ import re, sys
 def main(path, out):
     txt = open(path).read()
     txt = re.sub(r'/\*.*?\*/', '', txt, flags=re.S)
+    # named polynomials "P1:=...;" (the field equations F1:=x1*x1-x1; drop out
+    # below because x*x = x) and the list "B := [ ... ];" that may cite them
+    defs = {}
+    for mm in re.finditer(r'\b([A-Za-z]\w*)\s*:=\s*([^;]*?);', txt, flags=re.S):
+        if not mm.group(2).lstrip().startswith('['): defs[mm.group(1)] = mm.group(2)
     m = re.search(r'\bB\s*:=\s*\[(.*?)\];', txt, flags=re.S)
     if not m: sys.exit('no "B := [ ... ];" list found')
     polys = [p.strip() for p in m.group(1).replace('\n', '').split(',') if p.strip()]
+    polys = [defs.get(p, p) for p in polys]
     n_out = 0
     with open(out, 'w') as o:
         o.write('c converted from %s\n' % path)
         for p in polys:
             terms = {}
-            for t in p.split('+'):
+            for t in p.replace('-', '+').replace('\n', '').split('+'):
                 t = t.strip()
                 if not t: continue
                 if t == '1': key = ()

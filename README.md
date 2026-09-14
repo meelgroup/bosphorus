@@ -322,6 +322,30 @@ the scaling on generated instances shows what the Gröbner-basis rule buys:
 The basis is computed automatically when the system has at most
 `--gbwholevars` (24) active variables; raise it for larger systems.
 
+### Post-quantum benchmark families
+
+Besides the MQ challenge, two other families of GF(2) polynomial systems
+from post-quantum cryptanalysis are available through converters in
+`utils/`:
+
+- **HFE** (Patarin's Hidden Field Equations): the systems with 25, 30 and
+  35 variables and secret degree 96 from Allan Steel's Magma page
+  (`magma.maths.usyd.edu.au/users/allan/gb/magma/HFE<n>_96`, converted with
+  `utils/magma2anf.py`). Their structure keeps the degree of regularity
+  low, which is what Gröbner bases exploit: the whole-system basis solves
+  HFE25 in 166 s (`--gbwholevars 50`), with the same solution Magma found in
+  2004 (37 s then, on a 750 MHz machine, with a much stronger F4).
+- **LowMC** (the block cipher of the Picnic signature scheme; the LowMC
+  cryptanalysis challenge at `lowmcchallenge.github.io`):
+  `utils/lowmc2anf.py` turns the challenge's `matrices_and_constants_*.dat`
+  files into round-reduced key-recovery instances with a planted key (one
+  plaintext/ciphertext pair; variables for the key and for every S-box's
+  inputs and outputs, so all equations are linear or the three quadratic
+  S-box equations). Two rounds of the full-layer 129-bit instance are
+  already beyond plain rewriting plus CryptoMiniSat (the challenge's own
+  solutions for 2-4 rounds combine linearization, guessing and
+  meet-in-the-middle).
+
 ## List all solutions of an ANF
 
 To find all solutions to `myfile.anf`:
