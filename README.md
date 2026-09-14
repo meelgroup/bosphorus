@@ -246,45 +246,18 @@ the four clauses then encode that XOR).
 
 ## Mapping solutions from CNF to ANF
 
-Let's take a simple ANF:
-
-```
-$ cat test.anf
-x(1) + x2 + x3
-x1*x2 + x2*x3 + 1
-```
-
-Simplify it into CNF with a solution map:
+Write the CNF together with a solution map, solve the CNF with any SAT
+solver, and map the model back to the ANF's variables:
 
 ```
 ./bosphorus test.anf --cnfwrite test.cnf --solmap solution_map
-```
-
-Let's solve with any SAT solver:
-
-```
-lingeling test.cnf > cnf_solution
-```
-
-Let's map the CNF solution back to ANF using the python script under `utils/map_solution.py`:
-
-```
-./map_solution.py solution_map cnf_solution
-c solution below, with variables starting at 0, as per ANF convention.
+./cryptominisat5 test.cnf > cnf_solution
+./utils/map_solution.py solution_map cnf_solution
 s ANF-SATISFIABLE
 v x(0) 1+x(1) 1+x(2) x(3)
 ```
 
-This means that `x(0)=FALSE`, `x(1)=TRUE`, `x(2)=TRUE`, and `x(3)=FALSE`.
-
-If you want all solutions:
-
-```
-./cryptominisat x --maxsol 10000000 > cnf_solutions
-```
-
-Then take the solutions from `cnf_solutions` individually, put them in a file,
-and call `map_solution` on it, as before.
+`x(0)` means `x(0)` is FALSE and `1+x(1)` means `x(1)` is TRUE.
 
 ## Building from source
 
