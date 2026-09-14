@@ -90,6 +90,7 @@ struct ConfigData {
     int gbFull = 2;            // 0: degree-bounded lex loop per cone; 1: complete dp_asc basis per cone; 2: both for cones, complete basis for a whole small system
     uint32_t gbWholeVars = 24; // with gbFull: a system with at most this many free variables is one cone
     int gbRecursion = 2;       // BRiAl's optAllowRecursion: 0 never, 1 always, 2 only for the whole-system basis
+    int gbEngine = 1;          // complete bases: 0 = BRiAl symmGB_F2, 1 = Bosphorus's matrix F4 (boolf4.cpp)
     uint32_t gbFactDeg = 2;    // GB members of at most this degree ...
     uint32_t gbFactLen = 8;    // ... and this many terms are added as facts
     int keepFactor = 2;           // never rewrite a product of linear factors into a non-product: 0 off, 1 on, 2 auto (when most nonlinear eqs are such products)

@@ -38,6 +38,7 @@ SOFTWARE.
 #include <limits>
 
 #include "anf.hpp"
+#include "boolf4.hpp"
 #include "time_mem.h"
 
 using std::cout;
@@ -138,6 +139,56 @@ size_t ANF::groebner_windows()
         }
         windows++;
 
+        if (config.gbEngine == 1 && (config.gbFull == 1 || (config.gbFull == 2 && whole)) && cvars.size() <= 64) {
+            // Bosphorus's own matrix-F4 engine over the Boolean ring
+            // (boolf4.cpp): dense GF(2) linear algebra with M4RI on the
+            // critical pairs of one degree at a time
+            if (steps_left < window.size()) { timeout = true; break; }
+            steps_left -= window.size();
+            std::sort(cvars.begin(), cvars.end());
+            std::unordered_map<uint32_t, uint32_t> local;
+            for (uint32_t k = 0; k < cvars.size(); k++) local[cvars[k]] = k;
+            BoolF4::Options fopt;
+            fopt.maxDeg = whole ? 64 : config.gbDeg;
+            fopt.maxRows = config.gbSteps;
+            fopt.verbosity = config.verbosity;
+            BoolF4 f4(cvars.size(), fopt);
+            for (const size_t j : window) {
+                BoolF4::Poly q;
+                for (const BooleMonomial& m : eq(j)) {
+                    BoolF4::Mon mask = 0;
+                    for (const uint32_t v : m) mask |= (BoolF4::Mon)1 << local[v];
+                    q.push_back(mask);
+                }
+                f4.add(q);
+            }
+            const vector<BoolF4::Poly> basis = f4.run();
+            spolys += f4.stats().rows;
+            if (f4.stats().budget_exhausted) timeout = true;
+            if (config.verbosity >= 1 && whole) {
+                cout << "c [f4] whole system: steps " << f4.stats().steps << " rows " << f4.stats().rows
+                     << " max cols " << f4.stats().cols_max << " max degree " << f4.stats().max_deg
+                     << " basis " << basis.size() << (f4.stats().budget_exhausted ? " (budget exhausted)" : "") << endl;
+            }
+            for (const BoolF4::Poly& cg : basis) {
+                if (cg.size() == 1 && cg[0] == 0) { facts.push_back(BoolePolynomial(true, *ring)); break; }
+                uint32_t d = 0;
+                for (const BoolF4::Mon m : cg) d = std::max<uint32_t>(d, BoolF4::deg(m));
+                if (d > config.gbFactDeg || cg.size() > config.gbFactLen) continue;
+                cand_facts++;
+                BoolePolynomial g(*ring);
+                for (const BoolF4::Mon m : cg) {
+                    BooleMonomial gm(*ring);
+                    for (uint32_t k = 0; k < cvars.size(); k++) {
+                        if ((m >> k) & 1) gm *= ring->variable(cvars[k]);
+                    }
+                    g += gm;
+                }
+                if (eqs_hash.find(g.hash()) == eqs_hash.end()) facts.push_back(g);
+            }
+            if (timeout) break;
+            continue;
+        }
         if (config.gbFull == 1 || (config.gbFull == 2 && whole)) {
             // BRiAl's complete algorithm (the engine behind Sage's
             // groebner_basis for Boolean rings, with its F4-style dense

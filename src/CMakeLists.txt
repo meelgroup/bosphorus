@@ -27,6 +27,7 @@ set(bosph_lib_files
     anfstats.cpp
     anfrewrite.cpp
     anfgroebner.cpp
+    boolf4.cpp
     linfactor.cpp
     cnf.cpp
     anfcnfutils.cpp
