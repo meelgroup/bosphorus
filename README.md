@@ -229,33 +229,12 @@ v x(0) 1+x(1) 1+x(2) x(3)
 
 ## Building from source
 
-The build uses CMake and automatically fetches and compiles CryptoMiniSat (and
-in turn its own dependencies), so the only C++ dependencies you need to provide
-are zlib, GMP, m4ri and BRiAl (whose headers need Boost). Install the system
-packages:
-
-```bash
-# Debian/Ubuntu
-sudo apt-get install build-essential cmake pkg-config git zlib1g-dev libgmp-dev \
-                     libboost-dev
-
-# macOS (brew)
-brew install cmake pkg-config automake libtool boost gmp
-```
-
-Neither [m4ri](https://github.com/malb/m4ri) nor
-[BRiAl](https://github.com/BRiAl/BRiAl) is packaged on current Ubuntu or in
-Homebrew, so install them from their release tarballs. Then build Bosphorus:
-```bash
-git clone --recurse-submodules https://github.com/meelgroup/bosphorus
-cd bosphorus
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build .
-```
-
-If the above is complicated, please use the release binaries, or Nix, as
-described above.
+Use the [release binaries](https://github.com/meelgroup/bosphorus/releases)
+or Nix (see above). Advanced users who want to build from source should
+follow the steps of the [GitHub Actions build
+workflow](https://github.com/meelgroup/bosphorus/blob/master/.github/workflows/build.yml):
+it installs the dependencies (zlib, GMP, Boost, m4ri, BRiAl) and runs the
+CMake build that fetches CryptoMiniSat itself.
 
 ## Fuzzing
 `utils/fuzz.py` generates random small ANF and CNF inputs with random option
