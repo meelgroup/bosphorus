@@ -342,7 +342,14 @@ inline std::ostream& operator<<(std::ostream& os, const ANF& anf)
 {
     // Dump comments
     for (const string& comment : anf.comments) {
+        if (comment.compare(0, 9, "c p show ") == 0) continue; // rewritten below
         os << comment << endl;
+    }
+    // the projection set of the input, so that the written ANF keeps its meaning
+    if (anf.proj_given) {
+        os << "c p show";
+        for (const size_t v : anf.proj_set) os << " " << BooleVariable(v, *anf.ring);
+        os << " END" << endl;
     }
 
     // Print equations
