@@ -183,12 +183,7 @@ same solutions:
 |---|---|---|---|
 | HFE25 | 37 s | 166 s | 2.4 s (150 MB) |
 | HFE30 | 114 s | 1329 s | 12 s (433 MB) |
-| HFE35 | 543 s | no answer in 2 h | 175 s (1.3 GB, split 3 deep), 167 s (3.9 GB) with `--gbmaxcells 12e9` |
-
-The HFE times fell from 52 s and 131 s when the engine learnt to stop as
-soon as its linear members fix every variable (and to check that
-assignment against the generators): the steps after the solving one only
-reduced pairs to zero.
+| HFE35 | 543 s | no answer in 2 h | 167 s (3.9 GB) |
 
 ## List all solutions of an ANF
 
