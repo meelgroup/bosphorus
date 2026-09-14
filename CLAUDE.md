@@ -17,7 +17,11 @@ perf report -i /tmp/perf.data --children --percent-limit 2 --stdio | head -120  
 ```
 
 `--no-children` shows where time is actually spent (leaf symbols); `--children`
-shows which of our functions (rules) sit above the hot leaves. Big ANFs (the
+shows which of our functions (rules) sit above the hot leaves. libbrial (the
+ZDD library) is built without frame pointers, so with `--call-graph=fp` its
+time ends up under "[unknown]" and is not attributed to our functions: when
+ZDD symbols dominate, record with `--call-graph=dwarf,16384` instead (slower
+to record, but the chains through libbrial are complete). Big ANFs (the
 bivium family) have polynomials with thousands of terms, so ZDD operations of
 PolyBoRi/CUDD tend to dominate; check which rule calls them.
 
