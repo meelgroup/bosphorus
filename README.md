@@ -212,44 +212,6 @@ c Number of solutions found until now:    16384
 s UNSATISFIABLE
 ```
 
-## CNF simplification
-
-This is **EXPERIMENTAL**: do not rely on its correctness. A CNF input is
-naively translated to ANF, simplified, and translated back to CNF (or
-solved).
-
-Let's say you have the CNF:
-
-```
-$ cat test.cnf
--2  3  4 0
- 2 -3 0
- 2  3 -4 0
--2 -3 -4 0
- 1  5 0
--1 -5 0
-```
-
-Let's simplify and get the ANF:
-```
-$ ./bosphorus test.cnf --anfwrite out2.anf
-$ cat out2.anf
-x(1)*x(2)*x(3) + x(1)*x(2) + x(1)*x(3) + x(1)
-x(1)*x(2)*x(3) + x(1)*x(2) + x(2)*x(3) + x(2)
-x(1)*x(2) + x(1) + x(2) + 1
-x(1)*x(2)*x(3)
-x(1) + x(2) + x(3)
-c -------------
-c Equivalences
-c -------------
-x(4) + x(0) + 1
-
-```
-
-ElimLin recovered the XOR `x(1) + x(2) + x(3)` from the four equations that
-encode the first four clauses (the second clause weakens to `2 -3 4 0`, and
-the four clauses then encode that XOR).
-
 ## Mapping solutions from CNF to ANF
 
 Write the CNF together with a solution map, solve the CNF with any SAT
