@@ -15,7 +15,7 @@ import argparse, itertools, os, random, re, subprocess, sys, shutil
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'tests', 'utils'))
-from verify_anf import Parser, brute_force, parse_solution_lines, NAMES, is_declaration  # noqa: E402
+from verify_anf import Parser, brute_force, parse_solution_lines, NAMES, NAME_RE, var_index, is_declaration  # noqa: E402
 
 
 def rand_anf(rng):
@@ -138,9 +138,12 @@ def check_anf(binary, rng, seed, tmpdir):
         if not line.startswith('v '): continue
         assign = {}
         for tok in line[2:].split():
-            m = re.fullmatch(r'(1\+)?x\((\d+)\)(\+1)?', tok)
+            m = re.fullmatch(r'(1\+)?(x\(\d+\)|' + NAME_RE.pattern + r')(\+1)?', tok)
             if not m: return 'cannot parse solution token %r' % tok, cmd, out
-            assign[int(m.group(2))] = 1 if (m.group(1) or m.group(3)) else 0
+            try:
+                assign[var_index(m.group(2))] = 1 if (m.group(1) or m.group(3)) else 0
+            except ValueError as e:
+                return 'solution token: %s' % e, cmd, out
         if not assign or sorted(assign) != list(range(max(assign) + 1)):
             return 'solution covers vars %s' % sorted(assign), cmd, out
         reported.append(tuple(assign[i] for i in range(max(assign) + 1)))

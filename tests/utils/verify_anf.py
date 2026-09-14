@@ -315,6 +315,9 @@ def max_var_in_file(path):
                 continue
             for v in re.findall(r'x\(?(\d+)', line):
                 m = max(m, int(v))
+    scan_names(path)
+    for idx in NAMES.values():
+        m = max(m, idx)
     return m
 
 

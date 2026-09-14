@@ -68,13 +68,24 @@ void tokenize(const string& line, std::vector<Tok>& out)
     out.clear();
     size_t i = 0;
     const size_t n = line.size();
+    // Brackets may enclose a single term, as in "(x3) + x1" or "(x1*x2)";
+    // "(x1 + x2)*x3" is a factorised expression, not ANF, and rejected.
+    int depth = 0;
     while (i < n) {
         const char c = line[i];
         if (c == ' ' || c == '\t' || c == '\r') { i++; continue; }
-        // stray brackets around a monomial, as in "(x3) + x1", are ignored
-        // (x(N) is handled below as part of the variable)
-        if (c == '(' || c == ')') { i++; continue; }
-        if (c == '+') { out.push_back({T_PLUS}); i++; continue; }
+        if (c == '(') {
+            if (depth > 0) parse_error("nested brackets", line);
+            depth++; i++; continue;
+        }
+        if (c == ')') {
+            if (depth == 0) parse_error("close bracket without an open one", line);
+            depth--; i++; continue;
+        }
+        if (c == '+') {
+            if (depth > 0) parse_error("'+' inside brackets: factorised expressions are not ANF", line);
+            out.push_back({T_PLUS}); i++; continue;
+        }
         if (c == '*') { out.push_back({T_STAR}); i++; continue; }
         if (c == ',') { out.push_back({T_COMMA}); i++; continue; }
         if (std::isdigit((unsigned char)c)) {
@@ -129,6 +140,7 @@ void tokenize(const string& line, std::vector<Tok>& out)
         }
         parse_error(string("unknown character '") + c + "'", line);
     }
+    if (depth != 0) parse_error("unclosed bracket", line);
 }
 
 bool is_var(const Tok& t) { return t.t == T_VAR_NUM || t.t == T_VAR_NAME; }
