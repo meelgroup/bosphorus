@@ -81,7 +81,7 @@ struct ConfigData {
     int doFacRes = false;         // resolution between products sharing a factor
     uint32_t facResMaxFactors = 2; // resolvents with more factors than this are not added
     // cones of small equations, degree-bounded Groebner bases (rule gb-cone)
-    int doGB = false;
+    int doGB = 2;              // gb-cone: 0 off, 1 cones on every system, 2 whole-system basis for small systems only
     uint32_t gbDeg = 3;        // S-polynomials above this degree are dropped
     uint32_t gbWindow = 24;    // equations per window
     size_t gbMaxLen = 32;      // only equations with at most this many terms take part

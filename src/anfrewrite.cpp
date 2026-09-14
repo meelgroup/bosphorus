@@ -1009,9 +1009,9 @@ size_t ANF::rewrite_inplace()
         // gb-cone: on request, or automatically on a small system (few
         // free variables), whose complete Groebner basis is cheap and often
         // solves it outright (random MQ systems up to ~28 variables)
-        const bool gb_auto = config.gbFull && config.gbWholeVars > 0 &&
+        const bool gb_auto = config.doGB == 2 && config.gbFull && config.gbWholeVars > 0 &&
                              numActiveVars() <= config.gbWholeVars;
-        if (config.doGB || gb_auto) {
+        if (config.doGB == 1 || gb_auto) {
             // expensive: only when the system changed since the last run
             // (same equations, same replacer state); new facts change the
             // cones of the next round, so the rule runs to a fixed point
