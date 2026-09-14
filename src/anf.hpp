@@ -226,6 +226,8 @@ class ANF
     // gb-cone bookkeeping: the system's stats after its last run
     ANFStats gb_last;
     bool gb_ran = false;
+    std::unordered_set<uint64_t> gb_seen;               // cones (by their equations) already processed
+    std::map<size_t, polybori::BoolePolyRing> gb_rings; // cone rings by number of variables
 
     //State. An equation is either a polynomial (poly_valid) or a product
     //of linear factors (factors non-empty) whose polynomial is only built

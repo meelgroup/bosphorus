@@ -35,6 +35,7 @@ SOFTWARE.
 #include <iomanip>
 #include <polybori/groebner/GroebnerStrategy.h>
 #include <unordered_map>
+#include <limits>
 
 #include "anf.hpp"
 #include "time_mem.h"
@@ -51,12 +52,22 @@ size_t ANF::groebner_windows()
     // a deterministic work budget: runs are reproducible, unlike time limits
     uint64_t steps_left = config.gbSteps;
 
+    // A small system (few free variables) is one cone: its complete
+    // Groebner basis in a degree ordering solves e.g. random MQ systems
+    // with up to ~28 variables outright, where SAT solvers time out.
+    size_t max_vars = config.gbMaxVars, max_len = config.gbMaxLen, max_window = config.gbWindow;
+    if (config.gbFull && replacer->getNumUnknownVars() <= config.gbWholeVars) {
+        max_vars = std::max<size_t>(max_vars, config.gbWholeVars);
+        max_len = std::numeric_limits<size_t>::max();
+        max_window = std::numeric_limits<size_t>::max();
+    }
+
     // the small equations and, per variable, which of them contain it
     vector<size_t> small;
     vector<vector<size_t> > by_var(ring->nVariables());
     for (size_t i = 0; i < eqs.size(); i++) {
-        if (eq_len[i] == 0 || eq_len[i] > config.gbMaxLen) continue;
-        if (nVarsOf(i) > config.gbMaxVars) continue;
+        if (eq_len[i] == 0 || eq_len[i] > max_len) continue;
+        if (nVarsOf(i) > max_vars) continue;
         small.push_back(i);
         forEachVar(i, [&](uint32_t v) {
             if (by_var[v].empty() || by_var[v].back() != i) by_var[v].push_back(i);
@@ -84,7 +95,7 @@ size_t ANF::groebner_windows()
         for (const uint32_t v : cvars) in_cone[v] = stamp;
         vector<char> in_window(eqs.size(), 0); // could be a stamp too, sizes are small
         in_window[seed] = 1;
-        while (window.size() < config.gbWindow) {
+        while (window.size() < max_window) {
             size_t best = eqs.size(), best_shared = 0, best_new = 0;
             for (const uint32_t v : cvars) {
                 for (const size_t j : by_var[v]) {
@@ -92,7 +103,7 @@ size_t ANF::groebner_windows()
                     size_t shared = 0, fresh = 0;
                     VarVec jv = varsVecOf(j);
                     for (const uint32_t w : jv) (in_cone[w] == stamp ? shared : fresh)++;
-                    if (cvars.size() + fresh > config.gbMaxVars) continue;
+                    if (cvars.size() + fresh > max_vars) continue;
                     if (shared > best_shared || (shared == best_shared && best != eqs.size() && fresh < best_new)) {
                         best = j; best_shared = shared; best_new = fresh;
                     }
@@ -107,6 +118,22 @@ size_t ANF::groebner_windows()
         }
         for (const size_t j : window) covered[j] = 1;
         if (window.size() < 2) continue; // nothing to combine
+        {
+            // Gaussian elimination (lin-gauss) already handles a cone of
+            // linear equations; and a cone made of exactly the equations of
+            // an earlier run cannot yield anything new
+            bool nonlinear = false;
+            uint64_t sig = 1469598103934665603ULL;
+            vector<uint64_t> hs;
+            for (const size_t j : window) {
+                if (degOf(j) > 1) nonlinear = true;
+                hs.push_back(eq(j).stableHash());
+            }
+            if (!nonlinear) continue;
+            std::sort(hs.begin(), hs.end());
+            for (const uint64_t h : hs) sig ^= h + 0x9e3779b97f4a7c15ULL + (sig << 6) + (sig >> 2);
+            if (!gb_seen.insert(sig).second) continue;
+        }
         windows++;
 
         if (config.gbFull) {
@@ -123,7 +150,12 @@ size_t ANF::groebner_windows()
             std::sort(cvars.begin(), cvars.end());
             std::unordered_map<uint32_t, uint32_t> local; // main var -> cone var
             for (uint32_t k = 0; k < cvars.size(); k++) local[cvars[k]] = k;
-            BoolePolyRing cring(cvars.size(), COrderEnums::dp_asc);
+            // one ring (one ZDD manager) per cone size, reused across cones
+            auto rit = gb_rings.find(cvars.size());
+            if (rit == gb_rings.end()) {
+                rit = gb_rings.emplace(cvars.size(), BoolePolyRing(cvars.size(), COrderEnums::dp_asc)).first;
+            }
+            BoolePolyRing& cring = rit->second;
             GroebnerStrategy cstrat(cring);
             for (const size_t j : window) {
                 BoolePolynomial q(cring);

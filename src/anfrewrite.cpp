@@ -1006,7 +1006,12 @@ size_t ANF::rewrite_inplace()
         if (!getOK()) break;
         if (config.doFacRes) changes += resolve_factors();
         if (!getOK()) break;
-        if (config.doGB && round == 0) {
+        // gb-cone: on request, or automatically on a small system (few
+        // free variables), whose complete Groebner basis is cheap and often
+        // solves it outright (random MQ systems up to ~28 variables)
+        const bool gb_auto = config.gbFull && config.gbWholeVars > 0 &&
+                             replacer->getNumUnknownVars() <= config.gbWholeVars;
+        if ((config.doGB || gb_auto) && round == 0) {
             // expensive: once per pass, and only when the system changed
             // since the last run (same equations, same replacer state)
             const BLib::ANFStats now = get_stats();

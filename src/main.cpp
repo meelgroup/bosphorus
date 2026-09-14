@@ -243,6 +243,7 @@ void parseOptions(int argc, char* argv[])
     add_arg("--gbdeg", config.gbDeg, fc_integral<uint32_t>, "gb-cone: with --gbfull 0, drop S-polynomials above this degree. Default: 3");
     add_arg("--gbwindow", config.gbWindow, fc_integral<uint32_t>, "gb-cone: at most this many equations per cone. Default: 24");
     add_arg("--gbmaxvars", config.gbMaxVars, fc_integral<uint32_t>, "gb-cone: a cone grows while its equations use at most this many variables. Default: 16");
+    add_arg("--gbwholevars", config.gbWholeVars, fc_integral<uint32_t>, "gb-cone with --gbfull 1: a system with at most this many free variables is taken as one cone and its complete Groebner basis computed, even with --gb 0 (solves random MQ systems up to ~28 variables outright); 0 = never. Default: 24");
     add_arg("--gbmaxlen", config.gbMaxLen, fc_integral<size_t>, "gb-cone: only equations with at most this many terms take part. Default: 32");
     add_arg("--gbsteps", config.gbSteps, fc_integral<uint64_t>, "gb-cone: S-polynomials reduced per call, a deterministic work budget. Default: 100000");
     add_arg("--gbfactdeg", config.gbFactDeg, fc_integral<uint32_t>, "gb-cone: add basis members of at most this degree. Default: 2");
