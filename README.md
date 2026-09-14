@@ -155,14 +155,17 @@ limit for the SAT solver:
 | 24 | timeout | 15 s | 2.8 s | 1.1 s |
 | 28 | timeout | 196 s | 187 s | |
 
-HFE systems (secret degree 96) from Allan Steel's Magma page, with the
-solutions Magma found in 2004:
+HFE systems (secret degree 96) from Allan Steel's Magma page. Magma's F4
+solved them in 2004 on hardware of that time (a 750 MHz UltraSPARC class
+machine, roughly 20-30x slower than a current core), so its times are
+what a far better engine achieved two decades ago; Bosphorus finds the
+same solutions:
 
-| system | BRiAl `symmGB_F2` | Bosphorus F4 |
-|---|---|---|
-| HFE25 | 166 s | 52 s |
-| HFE30 | 1329 s | 131 s |
-| HFE35 | no answer in 2 h | 167 s (3.9 GB) |
+| system | Magma F4 (2004) | BRiAl `symmGB_F2` | Bosphorus F4 |
+|---|---|---|---|
+| HFE25 | 37 s | 166 s | 52 s |
+| HFE30 | 114 s | 1329 s | 131 s |
+| HFE35 | 543 s | no answer in 2 h | 167 s (3.9 GB) |
 
 ## List all solutions of an ANF
 
