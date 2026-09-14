@@ -316,17 +316,6 @@ cmake --build .
 If the above is complicated, please use the release binaries, or Nix, as
 described above.
 
-### Testing
-The test suite is driven by [lit](https://pypi.org/project/lit/) and checks
-Bosphorus end-to-end: solutions and written CNFs are verified against a
-brute-forced ground truth computed independently of Bosphorus.
-```shell
-pip install lit
-cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=ON ..
-cmake --build .
-ctest --verbose
-```
-
 ## Fuzzing
 `utils/fuzz.py` generates random small ANF and CNF inputs with random option
 settings and checks every answer against brute force (all solutions for ANF
