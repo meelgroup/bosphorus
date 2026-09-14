@@ -228,8 +228,16 @@ void BoolF4::reduce_step(vector<Pair>& selected)
     std::unordered_set<Mon> old_leads;
     for (const Poly& r : rows) if (!r.empty()) old_leads.insert(r[0]);
     vector<Mon> columns;
-    const uint64_t cells = (uint64_t)rows.size() * seen.size();
-    if (cells > opt.maxCells) { st.budget_exhausted = true; return; }
+    const size_t nrows = rows.size();
+    const uint64_t cells = (uint64_t)nrows * seen.size();
+    if (cells > opt.maxCells) {
+        if (opt.verbosity >= 1) {
+            std::cout << "c [f4] degree " << selected[0].degree << ": " << nrows << " rows x "
+                      << seen.size() << " columns exceed the cell budget" << std::endl;
+        }
+        st.budget_exhausted = true;
+        return;
+    }
     vector<Poly> red = echelon(rows, columns);
     st.steps++;
     size_t added = 0;
@@ -242,7 +250,7 @@ void BoolF4::reduce_step(vector<Pair>& selected)
     st.zero_reductions += selected.size() - std::min(added, selected.size());
     if (opt.verbosity >= 2) {
         std::cout << "c [f4] degree " << selected[0].degree << " pairs " << selected.size()
-                  << " rows " << rows.size() << " cols " << columns.size() << " new " << added
+                  << " rows " << nrows << " cols " << columns.size() << " new " << added
                   << " basis " << G.size() << std::endl;
     }
 }
