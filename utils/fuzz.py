@@ -214,6 +214,7 @@ def rand_opts(rng):
     if rng.random() < 0.3: o += ['--simplify', str(rng.randint(0, 1))]
     if rng.random() < 0.3: o += ['--gbdeg', str(rng.randint(1, 4))]
     if rng.random() < 0.3: o += ['--gbmaxvars', str(rng.randint(2, 12))]
+    if rng.random() < 0.3: o += ['--gbfull', str(rng.randint(0, 1))]
     if rng.random() < 0.3: o += ['--gbfactdeg', str(rng.randint(1, 3))]
     if rng.random() < 0.3: o += ['--gbfactlen', str(rng.randint(1, 12))]
     return o

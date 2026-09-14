@@ -34,6 +34,7 @@ SOFTWARE.
 
 #include <iomanip>
 #include <polybori/groebner/GroebnerStrategy.h>
+#include <unordered_map>
 
 #include "anf.hpp"
 #include "time_mem.h"
@@ -108,20 +109,67 @@ size_t ANF::groebner_windows()
         if (window.size() < 2) continue; // nothing to combine
         windows++;
 
+        if (config.gbFull) {
+            // BRiAl's complete algorithm (the engine behind Sage's
+            // groebner_basis for Boolean rings, with its F4-style dense
+            // reduction steps): exact, no degree bound; the cones are small
+            // (at most gbMaxVars variables) so the work is bounded by size.
+            // It runs in a ring of its own over the cone's variables with a
+            // degree ordering (the main ring is lexicographic, which makes
+            // Groebner bases far more expensive), and the results are
+            // mapped back. The step budget is charged one unit per generator.
+            if (steps_left < window.size()) { timeout = true; break; }
+            steps_left -= window.size();
+            std::sort(cvars.begin(), cvars.end());
+            std::unordered_map<uint32_t, uint32_t> local; // main var -> cone var
+            for (uint32_t k = 0; k < cvars.size(); k++) local[cvars[k]] = k;
+            BoolePolyRing cring(cvars.size(), COrderEnums::dp_asc);
+            GroebnerStrategy cstrat(cring);
+            for (const size_t j : window) {
+                BoolePolynomial q(cring);
+                for (const BooleMonomial& m : eq(j)) {
+                    BooleMonomial cm(cring);
+                    for (const uint32_t v : m) cm *= cring.variable(local[v]);
+                    q += cm;
+                }
+                cstrat.addAsYouWish(q);
+            }
+            cstrat.symmGB_F2();
+            spolys += cstrat.generators.size();
+            if (cstrat.containsOne()) {
+                facts.push_back(BoolePolynomial(true, *ring));
+                break;
+            }
+            for (const BoolePolynomial& cg : cstrat.minimalizeAndTailReduce()) {
+                if (cg.isConstant()) { if (cg.isOne()) facts.push_back(BoolePolynomial(true, *ring)); continue; }
+                if ((uint32_t)cg.deg() > config.gbFactDeg || cg.length() > config.gbFactLen) continue;
+                cand_facts++;
+                BoolePolynomial g(*ring);
+                for (const BooleMonomial& m : cg) {
+                    BooleMonomial gm(*ring);
+                    for (const uint32_t v : m) gm *= ring->variable(cvars[v]);
+                    g += gm;
+                }
+                if (eqs_hash.find(g.hash()) == eqs_hash.end()) facts.push_back(g);
+            }
+            continue;
+        }
         GroebnerStrategy strat(*ring);
         strat.optLazy = false;
         for (const size_t j : window) strat.addAsYouWish(eq(j));
-        // Buchberger with a degree bound
-        while (!strat.pairs.pairSetEmpty()) {
-            if (steps_left == 0) { timeout = true; break; }
-            steps_left--;
-            BoolePolynomial p = strat.nextSpoly();
-            p = strat.nf(p);
-            spolys++;
-            if (p.isZero()) continue;
-            if (p.isOne()) { facts.push_back(p); break; }
-            if ((uint32_t)p.deg() > config.gbDeg) continue;
-            strat.addAsYouWish(p);
+        {
+            // Buchberger with a degree bound
+            while (!strat.pairs.pairSetEmpty()) {
+                if (steps_left == 0) { timeout = true; break; }
+                steps_left--;
+                BoolePolynomial p = strat.nextSpoly();
+                p = strat.nf(p);
+                spolys++;
+                if (p.isZero()) continue;
+                if (p.isOne()) { facts.push_back(p); break; }
+                if ((uint32_t)p.deg() > config.gbDeg) continue;
+                strat.addAsYouWish(p);
+            }
         }
         if (strat.containsOne()) {
             facts.push_back(BoolePolynomial(true, *ring));

@@ -87,6 +87,7 @@ struct ConfigData {
     size_t gbMaxLen = 32;      // only equations with at most this many terms take part
     uint64_t gbSteps = 100000; // S-polynomials reduced per call (deterministic budget)
     uint32_t gbMaxVars = 16;   // a cone grows while its equations use at most this many variables
+    int gbFull = true;         // BRiAl's complete symmGB_F2 per cone instead of the degree-bounded Buchberger loop
     uint32_t gbFactDeg = 2;    // GB members of at most this degree ...
     uint32_t gbFactLen = 8;    // ... and this many terms are added as facts
     int keepFactor = 2;           // never rewrite a product of linear factors into a non-product: 0 off, 1 on, 2 auto (when most nonlinear eqs are such products)
