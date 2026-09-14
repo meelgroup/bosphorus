@@ -98,19 +98,19 @@ Explanation of simplifications performed:
 ## ANF rewrite rules and statistics
 
 
-| rule | what it does | switch |
-|---|---|---|
-| `anf-prop` | propagates units, (anti-)equivalences and `m+1` (all variables of `m` true) | always on |
-| `lin-gauss` | Gaussian elimination among the linear equations: drops redundant ones, shortens others, feeds units and equivalences to `anf-prop` | `--lingauss` |
-| `binom-red` | reduces every equation modulo the monomial and binomial equations (`x*y = 0`, `x*y + x = 0`, definitions `x*y + z = 0`); degrees never grow | `--binomred`, `--binomredlen` |
-| `poly-shorten` | replaces `p` by `p + f` when that is shorter (shortens XORs, re-uses definitions) | `--shorten` |
-| `lit-probe` | partial evaluation of small equations: forced literals, equivalences, binary implications and their SCCs | `--probe`, `--probevars` |
-| `fac-canon` | canonical linear factors of products modulo the linear span (off) | `--faccanon` |
-| `fac-res` | resolution between products sharing a linear factor (off) | `--facres`, `--facresmax` |
-| `gb-cone` | Gröbner bases of cones of small equations; short basis members are added. Off for large systems, always on for systems of at most `--gbwholevars` variables | `--gb`, `--gbwholevars`, `--gbengine`, `--gb*` |
-| `xl` | eXtended Linearization on equations of at most `--xlmaxlen` terms | `--xl`, `--xldeg`, `--xlsample`, `--xlmaxlen` |
-| `elimlin` | ElimLin: elimination and substitution of linear equations, iterated | `--el`, `--elsample` |
-| `sat-simp` | bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds | `--sat`, `--satinc`, `--satlim` |
+| rule | what it does |
+|---|---|
+| `anf-prop` | propagates units, (anti-)equivalences and `m+1` (all variables of `m` true) |
+| `lin-gauss` | Gaussian elimination among the linear equations: drops redundant ones, shortens others, feeds units and equivalences to `anf-prop` |
+| `binom-red` | reduces every equation modulo the monomial and binomial equations (`x*y = 0`, `x*y + x = 0`, definitions `x*y + z = 0`); degrees never grow |
+| `poly-shorten` | replaces `p` by `p + f` when that is shorter (shortens XORs, re-uses definitions) |
+| `lit-probe` | partial evaluation of small equations: forced literals, equivalences, binary implications and their SCCs |
+| `fac-canon` | canonical linear factors of products modulo the linear span (off) |
+| `fac-res` | resolution between products sharing a linear factor (off) |
+| `gb-cone` | Gröbner bases of cones of small equations; short basis members are added. Off for large systems, always on for systems of at most `--gbwholevars` variables |
+| `xl` | eXtended Linearization on equations of at most `--xlmaxlen` terms |
+| `elimlin` | ElimLin: elimination and substitution of linear equations, iterated |
+| `sat-simp` | bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds |
 
 
 #### The Gröbner engines
