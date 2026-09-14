@@ -165,14 +165,24 @@ vector<BoolF4::Poly> BoolF4::echelon(vector<Poly>& rows, vector<Mon>& columns)
     mzd_t* M = mzd_init(rows.size(), columns.size());
     for (size_t r = 0; r < rows.size(); r++) {
         for (const Mon m : rows[r]) mzd_write_bit(M, r, col_of[m], 1);
+        Poly().swap(rows[r]); // the matrix holds it now: free the memory before the elimination
     }
+    vector<Poly>().swap(rows);
+    col_of.clear();
     const rci_t rank = mzd_echelonize_m4ri(M, 1, 0);
     vector<Poly> out;
     out.reserve(rank);
+    const size_t words = (columns.size() + 63) / 64;
     for (rci_t r = 0; r < rank; r++) {
         Poly p;
-        for (size_t c = 0; c < columns.size(); c++) {
-            if (mzd_read_bit(M, r, c)) p.push_back(columns[c]);
+        const word* row = mzd_row(M, r);
+        for (size_t w = 0; w < words; w++) {
+            word x = row[w];
+            while (x) {
+                const size_t c = w * 64 + __builtin_ctzll(x);
+                x &= x - 1;
+                if (c < columns.size()) p.push_back(columns[c]);
+            }
         }
         if (!p.empty()) out.push_back(p);
     }

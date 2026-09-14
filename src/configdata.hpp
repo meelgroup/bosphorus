@@ -91,7 +91,7 @@ struct ConfigData {
     uint32_t gbWholeVars = 24; // with gbFull: a system with at most this many free variables is one cone
     int gbRecursion = 2;       // BRiAl's optAllowRecursion: 0 never, 1 always, 2 only for the whole-system basis
     int gbEngine = 1;          // complete bases: 0 = BRiAl symmGB_F2, 1 = Bosphorus's matrix F4 (boolf4.cpp)
-    uint64_t gbMaxCells = 16000000000ULL; // F4: largest matrix (rows*columns) that is built, ~2 GB of bits
+    uint64_t gbMaxCells = 12000000000ULL; // F4: largest matrix (rows*columns) that is built, ~1.5 GB of bits
     int gbTailReduce = false;  // F4: interreduce the basis tails after every degree step (no gain measured)
     uint32_t gbFactDeg = 2;    // GB members of at most this degree ...
     uint32_t gbFactLen = 8;    // ... and this many terms are added as facts
