@@ -695,6 +695,7 @@ size_t ANF::add_linearly_new_facts(const vector<BoolePolynomial>& facts, bool co
                 continue;
             }
             num_in_span++;
+            if (!config.spanFilter) num_added += addBoolePolynomial(p); // kept as a redundant XOR
             continue;
         }
         basis.insert(r);

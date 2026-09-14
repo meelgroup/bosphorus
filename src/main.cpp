@@ -221,6 +221,8 @@ void parseOptions(int argc, char* argv[])
         "Turn on/off all in-place ANF rewrite rules. Default: ON");
     add_arg("--lingauss", config.doLinGauss, fc_integral<int>,
         "Rewrite rule lin-gauss: Gaussian elimination among the linear equations, shortest first; deletes the redundant ones, shortens the others and finds units and equivalences. Default: ON");
+    add_arg("--spanfilter", config.spanFilter, fc_integral<int>,
+        "Drop facts learnt by XL/ElimLin/SAT that are linear combinations of the linear equations already in the system (they add nothing but XORs to the CNF). Default: ON");
     add_arg("--binomred", config.doBinomRed, fc_integral<int>,
         "Rewrite rule binom-red: reduce all equations modulo monomial and binomial equations (x*y+x=0 turns x*y*z into x*z). Default: ON");
     add_arg("--binomredlen", config.binomRedLen, fc_integral<uint32_t>,

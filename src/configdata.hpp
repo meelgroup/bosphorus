@@ -68,6 +68,7 @@ struct ConfigData {
     // In-place ANF rewrite rules
     int doRewrite = true;         // master switch
     int doLinGauss = true;        // Gaussian elimination among the linear equations
+    int spanFilter = true;        // drop learnt linear facts that are combinations of existing linear equations
     int doBinomRed = true;        // reduction modulo monomial/binomial eqs
     uint32_t binomRedLen = 2;     // max terms of an equation used as a rule
     int doShorten = true;         // p -> p + f when that has fewer terms
