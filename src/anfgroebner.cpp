@@ -151,6 +151,7 @@ size_t ANF::groebner_windows()
             BoolF4::Options fopt;
             fopt.maxDeg = whole ? 64 : config.gbDeg;
             fopt.maxRows = config.gbSteps;
+            fopt.maxCells = config.gbMaxCells;
             fopt.verbosity = config.verbosity;
             BoolF4 f4(cvars.size(), fopt);
             for (const size_t j : window) {

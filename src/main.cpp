@@ -244,6 +244,7 @@ void parseOptions(int argc, char* argv[])
     add_arg("--gbwindow", config.gbWindow, fc_integral<uint32_t>, "gb-cone: at most this many equations per cone. Default: 24");
     add_arg("--gbmaxvars", config.gbMaxVars, fc_integral<uint32_t>, "gb-cone: a cone grows while its equations use at most this many variables. Default: 16");
     add_arg("--gbengine", config.gbEngine, fc_integral<int>, "gb-cone: engine for the complete bases: 0 = BRiAl's symmGB_F2, 1 = Bosphorus's matrix F4 over the Boolean ring (M4RI, up to 64 variables per cone). Default: 1");
+    add_arg("--gbmaxcells", config.gbMaxCells, fc_integral<uint64_t>, "gb-cone with the F4 engine: largest matrix (rows times columns) that is built; a step needing more stops the basis (partial result). Default: 16e9, about 2 GB");
     add_arg("--gbrecursion", config.gbRecursion, fc_integral<int>, "gb-cone with --gbfull 1: BRiAl's recursive implication bases for split generators (optAllowRecursion): 0 never, 1 always, 2 only for the whole-system basis of a small system (they cost 3-4x on small cones and are essential on MQ-like systems). Default: 2");
     add_arg("--gbwholevars", config.gbWholeVars, fc_integral<uint32_t>, "gb-cone with --gbfull 1: a system with at most this many free variables is taken as one cone and its complete Groebner basis computed, even with --gb 0 (solves random MQ systems up to ~28 variables outright); 0 = never. Default: 24");
     add_arg("--gbmaxlen", config.gbMaxLen, fc_integral<size_t>, "gb-cone: only equations with at most this many terms take part. Default: 32");

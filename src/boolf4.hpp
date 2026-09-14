@@ -45,7 +45,7 @@ class BoolF4 {
     struct Options {
         uint32_t maxDeg = 64;        // pairs of higher degree are dropped (basis stays partial)
         uint64_t maxRows = 20000000; // total matrix rows over the run
-        uint64_t maxCells = 4000000000ULL; // rows*cols of any single matrix
+        uint64_t maxCells = 16000000000ULL; // rows*cols of any single matrix (2 GB of bits)
         int verbosity = 0;
     };
 
