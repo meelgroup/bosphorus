@@ -514,7 +514,10 @@ bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars,
 {
     //Recursively update polynomials, while there is something to update
     bool timeout = (cpuTime() > config.maxTime);
+    vector<uint32_t> eq_stamp(eqs.size(), 0); // equations already listed in this cycle
+    uint32_t stamp_now = 1;
     while (!updatedVars.empty() && !timeout) {
+        if (eq_stamp.size() < eqs.size()) eq_stamp.resize(eqs.size(), 0);
         if (config.verbosity >= 4) {
             cout << "c  "
                  << "number of variables to update: " << updatedVars.size()
@@ -524,25 +527,30 @@ bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars,
         unordered_set<uint32_t> updatedVars_snapshot;
         updatedVars.swap(updatedVars_snapshot);
 
-        for (unordered_set<uint32_t>::const_iterator pvar_idx =
-                 updatedVars_snapshot.begin();
-             pvar_idx != updatedVars_snapshot.end() && !timeout; ++pvar_idx) {
-            const uint32_t& var_idx = *pvar_idx;
+        // Every equation containing an updated variable is rewritten once
+        // per cycle (the substitution consults the replacer for all of its
+        // variables), not once per updated variable it contains: a long
+        // product of linerals with ten updated variables used to be
+        // rebuilt ten times.
+        vector<size_t> touched_eqs;
+        for (const uint32_t var_idx : updatedVars_snapshot) {
             assert(occur.size() > var_idx);
-            // We will remove and add stuff to occur, so iterate over a snapshot
-            const vector<size_t> occur_snapshot = occur[var_idx];
-            if (config.verbosity >= 5) {
-                cout << "c Updating variable " << var_idx << ' '
-                     << occur_snapshot.size() << endl;
-            }
-            for (const size_t& eq_idx : occur_snapshot) {
-                assert(eqs.size() > eq_idx);
-                if (config.verbosity >= 5) {
-                    cout << "c equation stats: " << eq_len[eq_idx] << ' '
-                         << eq_idx << '/' << occur_snapshot.size() << ' '
-                         << var_idx << '/' << updatedVars_snapshot.size()
-                         << ' ' << cpuTime() << endl;
+            for (const size_t eq_idx : occur[var_idx]) {
+                if (eq_stamp[eq_idx] != stamp_now) {
+                    eq_stamp[eq_idx] = stamp_now;
+                    touched_eqs.push_back(eq_idx);
                 }
+            }
+        }
+        stamp_now++;
+        if (config.verbosity >= 5) {
+            cout << "c Updating " << updatedVars_snapshot.size() << " variables in "
+                 << touched_eqs.size() << " equations" << endl;
+        }
+        {
+            for (const size_t& eq_idx : touched_eqs) {
+                assert(eqs.size() > eq_idx);
+                if (eq_len[eq_idx] == 0 && !poly_valid[eq_idx]) continue; // already removed
 
                 // does the replacer know anything about this equation's variables?
                 {
@@ -589,7 +597,7 @@ bool ANF::propagate_iteratively(unordered_set<uint32_t>& updatedVars,
                 }
             } // for eq_idx
             timeout = (cpuTime() > config.maxTime);
-        } //for var
+        }
         if (config.verbosity >= 4) {
             cout << "c  ..."
                  << "equations removed: " << empty_equations.size()

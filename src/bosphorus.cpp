@@ -516,7 +516,17 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
     size_t countdowns[S_NUM];
     unsigned zero_streak[S_NUM]; // consecutive runs that learnt nothing
     bool retired[S_NUM];         // learnt nothing twice in a row: not run again
+    // the system's stats after a run that learnt nothing: running the same
+    // strategy again on an unchanged system cannot learn anything either
+    BLib::ANFStats zero_stats[S_NUM];
+    bool zero_stats_valid[S_NUM];
+    auto same_stats = [](const BLib::ANFStats& a, const BLib::ANFStats& b) {
+        return a.eqs == b.eqs && a.monoms == b.monoms && a.lin_eqs == b.lin_eqs &&
+               a.nonlin_eqs == b.nonlin_eqs && a.set_vars == b.set_vars &&
+               a.repl_vars == b.repl_vars && a.free_vars == b.free_vars;
+    };
     for (unsigned i = 0; i < S_NUM; i++) {
+        zero_stats_valid[i] = false;
         changes[i] = true;
         waits[i] = 0;
         countdowns[i] = 0;
@@ -565,6 +575,16 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
             stats_scope.reset(new BLib::SimpStatsScope(*anf, rule_str[subiter]));
         }
 
+        if (!retired[subiter] && countdowns[subiter] == 0 && subiter != S_REWRITE &&
+            *enabled[subiter] && zero_stats_valid[subiter] &&
+            same_stats(zero_stats[subiter], anf->get_stats())) {
+            retired[subiter] = true;
+            stats_scope.reset();
+            if (dat->config.verbosity >= 1) {
+                cout << "c [" << strategy_str[subiter]
+                     << "] learnt nothing and the system has not changed since, not running it again" << endl;
+            }
+        }
         if (retired[subiter]) {
             // nothing to do
         } else if (countdowns[subiter] > 0) {
@@ -672,6 +692,10 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                      << (cpuTime() - startTime) << " seconds." << endl;
             }
             if (sub_iter_performed && subiter != S_REWRITE) {
+                if (num_learnt == 0) {
+                    zero_stats[subiter] = anf->get_stats();
+                    zero_stats_valid[subiter] = true;
+                }
                 zero_streak[subiter] = (num_learnt > 0) ? 0 : zero_streak[subiter] + 1;
                 if (zero_streak[subiter] >= 2) {
                     retired[subiter] = true;
