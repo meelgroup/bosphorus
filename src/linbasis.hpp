@@ -93,14 +93,23 @@ class LinBasis {
 
     polybori::BoolePolynomial poly_of(const Row& r, const polybori::BoolePolyRing& ring) const
     {
-        polybori::BoolePolynomial p(r[words], ring);
+        // summed pairwise: adding variables one at a time is quadratic
+        std::vector<polybori::BoolePolynomial> level;
         for (size_t w = 0; w < words; w++) {
             uint64_t x = r[w];
             while (x) {
-                p += polybori::BooleVariable(w * 64 + __builtin_ctzll(x), ring);
+                level.push_back(polybori::BoolePolynomial(polybori::BooleVariable(w * 64 + __builtin_ctzll(x), ring)));
                 x &= x - 1;
             }
         }
+        while (level.size() > 1) {
+            std::vector<polybori::BoolePolynomial> next;
+            for (size_t k = 0; k + 1 < level.size(); k += 2) next.push_back(level[k] + level[k + 1]);
+            if (level.size() % 2) next.push_back(level.back());
+            level.swap(next);
+        }
+        polybori::BoolePolynomial p(r[words], ring);
+        if (!level.empty()) p += level.front();
         return p;
     }
 

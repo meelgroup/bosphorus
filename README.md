@@ -219,7 +219,9 @@ once written as ANF. With Bosphorus's output (`bosphorus X.anf --el 0
 --minmatrixrows 1`, 200 s, one seed, models checked against the original
 ANF) solves 18 of the 21 instances against 13 for the benchmark's own CNF,
 and is 2-3x faster on the ones both solve; with three solver seeds every
-instance is solved. Simplifying a 531-step instance takes about 8 seconds.
+instance is solved. Simplifying a 531-step instance takes about 3 seconds
+(it took 127 seconds before the factored representation and the reader,
+propagation and scheduling work described in the commit history).
 Solver times vary 2-3x between seeds, so compare several.
 
 | instance | steps | known bits | benchmark CNF | Bosphorus output |

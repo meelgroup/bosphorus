@@ -254,11 +254,11 @@ bool ANF::addProduct(const vector<Lineral>& f_in)
     }
     const VarVec key = product_key(f);
     if (!prod_keys.insert(key).second) return false;
-    BooleMonomial used(*ring);
-    for (const Lineral& l : f) {
-        for (const uint32_t v : l.vars) used *= ring->variable(v);
-    }
-    addPolyToOccur(used, eqs.size());
+    VarVec used;
+    for (const Lineral& l : f) used.insert(used.end(), l.vars.begin(), l.vars.end());
+    std::sort(used.begin(), used.end());
+    used.erase(std::unique(used.begin(), used.end()), used.end());
+    for (const uint32_t v : used) occur[v].push_back(eqs.size());
     eqs.push_back(BoolePolynomial(*ring));
     poly_valid.push_back(0);
     factors.push_back(f);
