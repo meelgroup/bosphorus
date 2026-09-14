@@ -30,6 +30,7 @@ set(bosph_lib_files
     boolf4.cpp
     boolf5.cpp
     boolsplit.cpp
+    anfcnfprobe.cpp
     linfactor.cpp
     cnf.cpp
     anfcnfutils.cpp

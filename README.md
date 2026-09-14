@@ -95,6 +95,7 @@ This means x0 is `false`, x1 is `true`, x2 is `true` and x3 is `false`.
 | `mono-gauss` | Gaussian elimination with one column per monomial (linearisation): deletes equations that are combinations of others and replaces an equation by a lower-degree combination (a linear consequence of nonlinear equations); replacing by shorter combinations of the same degree is optional (11% smaller CNFs on the bivium family, slower CryptoMiniSat on ascon) |
 | `lit-probe` | partial evaluation of small equations: forced literals, equivalences, binary implications and their SCCs |
 | `var-probe` | failed-literal probing with propagation through the whole system: `x = 0` and `x = 1` are each propagated (units, `m+1`, products with one factor left), a failed branch forces `x`, agreeing branches set a variable, disagreeing ones make it equivalent to `x` (default: off) |
+| `cnf-probe` | CryptoMiniSat's inprocessing on the CNF of the system, as Arjun runs it: equivalent-literal SCCs, probing of every variable, in-tree probing (no elimination); the fixed and the equivalent literals come back as equations |
 | `fac-canon` | canonical linear factors of products modulo the linear span (default: off) |
 | `fac-res` | resolution between products sharing a linear factor (default: off) |
 | `gb-cone` | Gröbner bases of cones of small equations; short basis members are added (default: off for large systems, on for systems with few variables) |

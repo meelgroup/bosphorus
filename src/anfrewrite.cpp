@@ -1367,6 +1367,21 @@ size_t ANF::rewrite_inplace()
                 gb_ran = true;
             }
         }
+        // cnf-probe (CryptoMiniSat's inprocessing on the CNF of the
+        // system) costs a CNF conversion: only once the cheap rules have
+        // reached a fixed point, and only on a system that changed since
+        // its last run
+        if (changes == 0 && config.doCnfProbe && getOK()) {
+            const BLib::ANFStats now = get_stats();
+            const bool same = cp_ran && now.eqs == cp_last.eqs && now.monoms == cp_last.monoms &&
+                              now.set_vars == cp_last.set_vars && now.repl_vars == cp_last.repl_vars &&
+                              now.lin_eqs == cp_last.lin_eqs;
+            if (!same) {
+                changes += cnf_probe();
+                cp_last = get_stats();
+                cp_ran = true;
+            }
+        }
         total += changes;
         if (changes == 0) break;
         if (cpuTime() > config.maxTime) break;

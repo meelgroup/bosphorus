@@ -185,6 +185,7 @@ class ANF
     size_t shorten_polys();          // "poly-shorten"
     size_t probe_small_polys();      // "lit-probe" (+ "impl-scc")
     size_t probe_vars();             // "var-probe"
+    size_t cnf_probe();              // "cnf-probe" (anfcnfprobe.cpp)
     size_t gauss_linear();           // "lin-gauss"
     size_t gauss_monomials();        // "mono-gauss"
     size_t split_products();         // "prod-split"
@@ -246,6 +247,8 @@ class ANF
     // gb-cone bookkeeping: the system's stats after its last run
     ANFStats gb_last;
     bool gb_ran = false;
+    ANFStats cp_last; // cnf-probe: the system's stats after its last run
+    bool cp_ran = false;
     std::unordered_set<uint64_t> gb_seen;               // cones (by their equations) already processed
     std::map<size_t, polybori::BoolePolyRing> gb_rings; // cone rings by number of variables
 

@@ -79,6 +79,8 @@ struct ConfigData {
     size_t monoGaussCols = 100000; // mono-gauss: skipped when the equations have more distinct monomials than this
     int monoGaussShorten = 0;     // mono-gauss: replace an equation by a shorter combination of the same degree: 0 never (deletions and degree falls only), 1 linear equations only, 2 all degrees. 1 gives 11% smaller CNFs on bivium but 2x slower CryptoMiniSat on ascon
     int doProdSplit = true;       // p = 0 with 1+p a product of linerals becomes one linear equation per factor (prod-split)
+    int doCnfProbe = true;        // cnf-probe: CryptoMiniSat's SCC, probe_all and in-tree probing on the CNF of the system, units and equivalences back into the ANF
+    size_t cnfProbeVars = 200000; // cnf-probe: at most this many ANF variables are probed (most incident first)
     int doProbe = true;           // forced literals/equivalences/implications
     uint32_t probeVars = 8;       // only probe eqs with at most this many vars
     int doVarProbe = false;       // var-probe (off: unit-only propagation finds nothing on the crypto families and costs 0.3 s per call on bivium): assume x = 0 / x = 1, propagate through the equations, learn what both branches imply

@@ -41,6 +41,15 @@ PolyBoRi/CUDD tend to dominate; check which rule calls them.
   smaller and CMS faster (tmp_ifs1zce 112 s -> 73 s median), ascon CMS 2x
   slower on tmpgmh2blh0 and tmpborqf5jg (3 seeds each). Off by default; the
   deletions and degree falls (linear consequences) are always on.
+- cnf-probe (src/anfcnfprobe.cpp) runs CryptoMiniSat's inprocessing on
+  the CNF of the system the way Arjun's puura/Minimize::simplify does
+  (`clean-cls, must-scc-vrepl`, `probe_all` on the ANF variables by
+  incidence, `must-scc-vrepl, intree-probe, must-scc-vrepl, sub-impl`,
+  no BVE, no renumbering) and maps units and binary XORs back through the
+  CNF variable meanings. The meaning of an XOR-cut variable is only built
+  with `writecomments` on: the probe's CNF sets it, and a variable whose
+  meaning is constant is never used (an early version turned cut
+  variables into wrong equivalences; the fuzzer with assertions found it).
 - The Groebner engines compile with `-mpopcnt` (CMake checks the flag):
   without it `__builtin_popcountll` is a libgcc call and was 29% of a run.
 - **No wall-clock or CPU-time budgets inside algorithms.** Limit work with

@@ -248,7 +248,7 @@ def rand_cnf(rng):
 # cutoff must be added here. All are always passed: switches with a random
 # value in 0..max, cutoffs with the extremes or the default.
 SWITCHES = [('--simplify', 1), ('--rewrite', 1), ('--lingauss', 1), ('--spanfilter', 1), ('--binomred', 1),
-            ('--shorten', 1), ('--monogauss', 1), ('--prodsplit', 1), ('--probe', 1), ('--varprobe', 1),
+            ('--shorten', 1), ('--monogauss', 1), ('--prodsplit', 1), ('--probe', 1), ('--varprobe', 1), ('--cnfprobe', 1),
             ('--faccanon', 1), ('--facres', 1), ('--gb', 2), ('--gbfull', 2), ('--gbengine', 2),
             ('--gbrecursion', 2), ('--gbtailreduce', 1), ('--keepfactor', 2), ('--xl', 1), ('--el', 1),
             ('--sat', 1), ('--factor', 1), ('--partner', 1), ('--xorcls', 1), ('--projshow', 2)]
@@ -265,7 +265,7 @@ CUTOFFS = [  # (flag, default, choices other than the extremes; None: the extrem
     ('--monogausscols', 100000, None), ('--varprobebudget', 2000000, None), ('--varprobelen', 64, None),
     ('--probevars', 8, None), ('--facresmax', 2, None), ('--gbdeg', 3, None), ('--gbwindow', 24, None),
     ('--gbmaxvars', 16, None), ('--gbmaxcells', 2000000000, [50, 500, 5000]), ('--gbsplit', 8, None),
-    ('--gbsplitrows', 20000000, None), ('--gbf5groups', 8, None), ('--gbwholevars', 40, None),
+    ('--cnfprobevars', 200000, None), ('--gbsplitrows', 20000000, None), ('--gbf5groups', 8, None), ('--gbwholevars', 40, None),
     ('--gbmaxlen', 32, None), ('--gbsteps', 100000, None), ('--gbfactdeg', 2, None), ('--gbfactlen', 8, None),
     ('--satinc', 10000, None), ('--satlim', 100000, None),
 ]

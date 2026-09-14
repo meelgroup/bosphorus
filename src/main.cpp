@@ -236,6 +236,10 @@ void parseOptions(int argc, char* argv[])
         "Rewrite rule prod-split: an equation p = 0 where 1 + p is a product of linear factors (l1+c1)*(l2+c2)*... becomes the linear equations l1+c1+1 = 0, l2+c2+1 = 0, ... (every factor must be 1); generalises 'x*y*z + 1 = 0 sets x, y, z'. Default: ON");
     add_arg("--probe", config.doProbe, fc_integral<int>,
         "Rewrite rule lit-probe: forced literals, equivalences and implication-graph SCCs from small equations. Default: ON");
+    add_arg("--cnfprobe", config.doCnfProbe, fc_integral<int>,
+        "Rewrite rule cnf-probe: the system is converted to CNF and CryptoMiniSat's inprocessing runs on it as Arjun does (equivalent-literal SCCs, probing of every ANF variable, in-tree probing, no variable elimination); the literals fixed at level 0 and the equivalent literals come back as equations (a CNF variable stands for a monomial, an XOR cut or a lineral). Runs when the other rules have reached a fixed point. Default: ON");
+    add_arg("--cnfprobevars", config.cnfProbeVars, fc_integral<size_t>,
+        "cnf-probe: probe at most this many ANF variables, the most incident first. Default: 200000");
     add_arg("--varprobe", config.doVarProbe, fc_integral<int>,
         "Rewrite rule var-probe: failed-literal probing with propagation, as CNF preprocessors do it: x = 0 and x = 1 are each propagated through the equations (units, m+1, products with one factor left); a branch that runs into 1 = 0 forces x, a variable set the same way in both branches is set, one set opposite ways is equivalent to x. Only units propagate, so it finds nothing on the S-box and stream-cipher families. Default: OFF");
     add_arg("--varprobebudget", config.varProbeBudget, fc_integral<uint64_t>,
