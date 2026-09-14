@@ -21,17 +21,17 @@ University of Singapore (NUS). If you use Bosphorus, please cite our
 2019. Some of the code was generously donated by [Security Research Labs,
 Berlin](https://srlabs.de/).
 
-
-## Compiling
-Use of the [release
-binaries](https://github.com/meelgroup/bosphorus/releases) is _strongly_
-encouraged. The second best thing to use is Nix. Simply [install
-nix](https://nixos.org/download/) and then:
+## Obtaining the Binary
+Please use the [release binaries](https://github.com/meelgroup/bosphorus/releases)
+or Nix: [install nix](https://nixos.org/download/) and then:
 ```shell
 nix shell github:meelgroup/bosphorus
 ```
-
 Then you will have the `bosphorus` binary available and ready to use.
+
+Advanced users who want to build from source should
+follow the steps of the [GitHub Actions build
+workflow](https://github.com/meelgroup/bosphorus/blob/master/.github/workflows/build.yml):
 
 ## ANF simplification and solving
 Suppose we have a system of two equations:
@@ -62,13 +62,7 @@ $ ./bosphorus test.anf --anfwrite out.anf --cnfwrite out.cnf --solvewrite soluti
 The simplified ANF is in `out.anf`:
 ```
 $ cat out.anf
-c -------------
-c Fixed values
-c -------------
 x(2) + 1
-c -------------
-c Equivalences
-c -------------
 x(3) + x(1) + 1
 c UNSAT : false
 ```
@@ -82,7 +76,6 @@ The simplified CNF is in `out.cnf`:
 This CNF represents all the solutions to the ANF, i.e. it's equivalent to the
 ANF.
 
-
 A solution to the problem is in `solution`:
 ```
 $ cat solution
@@ -90,13 +83,7 @@ v -0 1 2 -3
 ```
 This means x0 is `false`, x1 is `true`, x2 is `true` and x3 is `false`.
 
-Explanation of simplifications performed:
-* The first linear polynomial rearranged to `x1 = x2 + x3` to eliminate x1 from the other equations
-* The second polynomial becomes `(x2 + x3) * x2 + x2 * x3 + 1 = 0`, which simplifies to `x2 + 1 = 0`
-* Substituting `x2 + 1 = 0` yields `x1 + x3 + 1 = 0`
-
 ## ANF rewrite rules and statistics
-
 
 | rule | what it does |
 |---|---|
@@ -113,16 +100,14 @@ Explanation of simplifications performed:
 | `sat-simp` | bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds |
 
 
-#### The Gröbner engines
-
+## The Gröbner Engines
 Complete bases come from Bosphorus's own matrix-F4 engine (`--gbengine 1`,
 M4RI over squarefree 64-bit monomials, deterministic budgets `--gbsteps`
 and `--gbmaxcells`); `--gbengine 0` uses BRiAl's `symmGB_F2` and
 `--gbengine 2` a Matrix-F5 variant that is faster on random quadratic
 systems and slower on structured ones.
 
-### ANF-to-CNF conversion strategies
-
+## ANF-to-CNF conversion strategies
 Small polynomials are converted directly (Brickenstein's algorithm), and
 small equations that share variables, such as the equations of one S-box,
 are encoded jointly over the union of their variables. Larger ones are
@@ -135,8 +120,7 @@ into short pieces, or written as CryptoMiniSat's native xor clauses. A
 projection set in the ANF becomes a `c p show` line over the same
 variables in the CNF, so solution counts over it agree.
 
-### Multivariate quadratic (MQ) and HFE systems
-
+## Multivariate quadratic (MQ) and HFE systems
 Post-quantum multivariate schemes reduce to quadratic systems over GF(2).
 Bosphorus reads [Fukuoka MQ challenge](https://www.mqchallenge.org/) files
 and Magma polynomial lists such as the HFE systems of
@@ -186,7 +170,6 @@ This enumerates one solution per SAT call and does not scale beyond some
 10000 solutions; count larger solution sets with ApproxMC as below.
 
 ## Counting solutions of an ANF
-
 When there are too many solutions to list (say 2**40), count them on the
 CNF: a projection set in the ANF (`c p show x1 x2 ... END`) is written into
 the CNF as `c p show var1 var2 ... varn 0`, which
@@ -211,7 +194,6 @@ s UNSATISFIABLE
 ```
 
 ## Mapping solutions from CNF to ANF
-
 Write the CNF together with a solution map, solve the CNF with any SAT
 solver, and map the model back to the ANF's variables:
 
@@ -224,15 +206,6 @@ v x(0) 1+x(1) 1+x(2) x(3)
 ```
 
 `x(0)` means `x(0)` is FALSE and `1+x(1)` means `x(1)` is TRUE.
-
-## Building from source
-
-Use the [release binaries](https://github.com/meelgroup/bosphorus/releases)
-or Nix (see above). Advanced users who want to build from source should
-follow the steps of the [GitHub Actions build
-workflow](https://github.com/meelgroup/bosphorus/blob/master/.github/workflows/build.yml):
-it installs the dependencies (zlib, GMP, Boost, m4ri, BRiAl) and runs the
-CMake build that fetches CryptoMiniSat itself.
 
 ## Known issues
 - PolyBoRi cannot handle ring of sizes over approx 1 million (1048574). Do not
