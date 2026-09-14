@@ -181,11 +181,12 @@ size_t ANF::groebner_windows()
             }
             for (const BoolePolynomial& cg : cstrat.minimalizeAndTailReduce()) {
                 if (cg.isConstant()) { if (cg.isOne()) facts.push_back(BoolePolynomial(true, *ring)); continue; }
-                // linear members are consequences that lin-gauss and the
-                // span filter handle whatever their length; the length
-                // bound is for nonlinear ones
-                if ((uint32_t)cg.deg() > config.gbFactDeg) continue;
-                if (cg.deg() > 1 && cg.length() > config.gbFactLen) continue;
+                // short members only, linear ones included: long linear
+                // consequences join later cones (they are short enough for
+                // gbMaxLen) and crowd out the structure the cones should
+                // capture; with the length bound the three-round ascon
+                // instances are solved by the cones alone
+                if ((uint32_t)cg.deg() > config.gbFactDeg || cg.length() > config.gbFactLen) continue;
                 cand_facts++;
                 BoolePolynomial g(*ring);
                 for (const BooleMonomial& m : cg) {
@@ -223,7 +224,7 @@ size_t ANF::groebner_windows()
             // short consequences only: units, equivalences, short XORs and
             // small nonlinear relations (e.g. the implicit quadratic
             // relations of an S-box); long ones only bloat the system
-            if ((uint32_t)g.deg() <= config.gbFactDeg && (g.deg() <= 1 || g.length() <= config.gbFactLen)) {
+            if ((uint32_t)g.deg() <= config.gbFactDeg && g.length() <= config.gbFactLen) {
                 cand_facts++;
                 if (eqs_hash.find(g.hash()) == eqs_hash.end()) facts.push_back(g);
             }
