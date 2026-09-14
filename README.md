@@ -156,8 +156,8 @@ the work is bounded by deterministic budgets (`--gbsteps` matrix rows,
 `--gbmaxcells` cells of one matrix, `--gbdeg` for cones). It is several
 times faster than BRiAl's `symmGB_F2` (`--gbengine 0`, the engine behind
 Sage) on the dense systems that matter here: a random MQ system with
-n = 24, m = 48 in 2.8 s against 15 s, HFE25 in 52 s against 166 s, with the
-same solutions. Its limit is memory: a degree-5 step for 30-35 variables
+n = 24, m = 48 in 2.8 s against 15 s, HFE25 in 52 s against 166 s, HFE30 in
+131 s against 1329 s, with the same solutions. Its limit is memory: a degree-5 step for 30-35 variables
 has 100k-400k columns.
 
 ### ANF-to-CNF conversion strategies
@@ -359,10 +359,12 @@ from post-quantum cryptanalysis are available through converters in
   (`magma.maths.usyd.edu.au/users/allan/gb/magma/HFE<n>_96`, converted with
   `utils/magma2anf.py`). Their structure keeps the degree of regularity
   low, which is what Gröbner bases exploit: the whole-system basis solves
-  HFE25 in 166 s and HFE30 in 1329 s (844 MB; `--gbwholevars 50`), with the
-  solutions Magma found in 2004 (37 s for HFE25 then, on a 750 MHz machine,
-  with a much stronger F4). Patarin's HFE challenge 1 (n = 80) is only
-  available as Magma's output log, not as an input system.
+  HFE25 in 52 s and HFE30 in 131 s (1.6 GB; `--gbwholevars 50`) with
+  Bosphorus's F4 engine (166 s and 1329 s with BRiAl), with the solutions
+  Magma found in 2004 (37 s for HFE25 then, on a 750 MHz machine). HFE35
+  ran out of the 2-hour limit with BRiAl at 3.5 GB. Patarin's HFE
+  challenge 1 (n = 80) is only available as Magma's output log, not as an
+  input system.
 - **LowMC** (the block cipher of the Picnic signature scheme; the LowMC
   cryptanalysis challenge at `lowmcchallenge.github.io`):
   `utils/lowmc2anf.py` turns the challenge's `matrices_and_constants_*.dat`
