@@ -171,19 +171,30 @@ bool ANF::addTerms(vector<VarVec>& terms)
         t.erase(std::unique(t.begin(), t.end()), t.end());
     }
     {
-        std::unordered_map<VarVec, size_t, VarVecHash> first; // term -> first position
-        first.reserve(terms.size() * 2);
+        // sort 64-bit hashes of the terms (cheap, no allocation) and compare
+        // the terms themselves only inside a group of equal hashes
+        vector<std::pair<uint64_t, uint32_t> > hs;
+        hs.reserve(terms.size());
+        for (uint32_t i = 0; i < terms.size(); i++) hs.emplace_back(VarVecHash()(terms[i]), i);
+        std::sort(hs.begin(), hs.end());
         vector<char> alive(terms.size(), 1);
         bool dup = false;
-        for (size_t i = 0; i < terms.size(); i++) {
-            const auto it = first.find(terms[i]);
-            if (it == first.end()) {
-                first.emplace(terms[i], i);
-            } else {
-                alive[it->second] ^= 1;
-                alive[i] = 0;
-                dup = true;
+        for (size_t a = 0; a < hs.size();) {
+            size_t b = a + 1;
+            while (b < hs.size() && hs[b].first == hs[a].first) b++;
+            for (size_t x = a; x < b; x++) {
+                if (!alive[hs[x].second]) continue;
+                for (size_t y = x + 1; y < b; y++) {
+                    if (alive[hs[y].second] && terms[hs[x].second] == terms[hs[y].second]) {
+                        // a pair of equal terms cancels
+                        alive[hs[x].second] = 0;
+                        alive[hs[y].second] = 0;
+                        dup = true;
+                        break;
+                    }
+                }
             }
+            a = b;
         }
         if (dup) {
             size_t w = 0;
