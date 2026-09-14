@@ -170,6 +170,18 @@ how many monomial, chunk (partner) and XOR-cut variables were introduced;
 with `--comments 1` every auxiliary variable's meaning is written into the
 CNF as a comment.
 
+With `--karncluster N` small nonlinear equations that share variables (the
+five output equations of an S-box, say) are encoded jointly: the forbidden
+assignments of all equations of a cluster are covered by one clause set
+(Brickenstein's algorithm) over the union of their variables, as long as
+that union has at most `N` variables, so the clauses propagate across the
+equations of the cluster. Off by default.
+
+The CNF has no `c p show` line unless `--projshow 1` is given: CryptoMiniSat
+treats the listed variables as a sampling set (it never eliminates them and
+changes its Gauss-Jordan heuristics), which can make solving many times
+slower.
+
 #### Products of linear factors and native XOR clauses
 
 Before any of the above, a polynomial that is a product of linear factors,
