@@ -190,11 +190,13 @@ void parseOptions(int argc, char* argv[])
     // checks
     add_arg("--comments", config.writecomments, fc_bool,
         "Do not write comments to output files");
-    add_arg("--projshow", config.projShow, fc_bool,
-        "Write a 'c p show' line naming the original variables into the CNF. "
-        "Solvers that honour it (CryptoMiniSat, model counters) then treat the "
-        "original variables as a sampling set, which keeps them out of variable "
-        "elimination and can slow solving down a lot. Default: 0");
+    add_arg("--projshow", config.projShow, fc_integral<int>,
+        "Write a 'c p show' line naming the original variables into the CNF: 0 never, 1 always, "
+        "2 only when the CNF has at least as many XOR-cut variables as original variables. "
+        "CryptoMiniSat treats the listed variables as a sampling set: it does not eliminate them, "
+        "and skips Gauss-Jordan on matrices with few of them, which is what makes the big cut-XOR "
+        "systems of the bivium family solvable (7 s instead of a timeout) but slows the ascon family "
+        "down 2-3x. Default: 2");
 
     // CNF conversion
     add_arg("--cutnum", config.cutNum, fc_integral<uint32_t>,

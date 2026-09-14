@@ -36,7 +36,7 @@ struct ConfigData {
     // Input/Output
     string executedArgs = "";
     bool writecomments = false;
-    bool projShow = false; // write the 'c p show' projection line into the CNF
+    int projShow = 2; // 'c p show' projection line in the CNF: 0 never, 1 always, 2 when the XOR system is large (see output_cnf)
     bool printProcessedANF = false;
     uint32_t verbosity = 2;
     int color = 2; // 0 = never, 1 = always, 2 = auto (tty && !NO_COLOR)

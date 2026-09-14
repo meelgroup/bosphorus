@@ -117,9 +117,11 @@ void BrickensteinCover(const BoolePolyRing& ring, const BooleSet& O,
                     c.push_back(Lit(vidx[j], false));
             }
         }
-        if (!c.empty()) { // this two lines are indented wrongly in the thesis
-            setofClauses.push_back(c);
-        }
+        // c is empty when the cube grew to the whole space, i.e. every
+        // assignment is forbidden: that is the empty clause (a single
+        // non-constant polynomial never gets here, a cluster of equations
+        // without a common solution does)
+        setofClauses.push_back(c);
         T = T.diff(H);
     }
 }

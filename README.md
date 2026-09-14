@@ -177,10 +177,14 @@ assignments of all equations of a cluster are covered by one clause set
 that union has at most `N` variables, so the clauses propagate across the
 equations of the cluster. Off by default.
 
-The CNF has no `c p show` line unless `--projshow 1` is given: CryptoMiniSat
-treats the listed variables as a sampling set (it never eliminates them and
-changes its Gauss-Jordan heuristics), which can make solving many times
-slower.
+The `c p show` line naming the original variables is written only when the
+CNF has at least as many XOR-cut variables as original variables
+(`--projshow 2`, the default; `1` always, `0` never). CryptoMiniSat treats
+the listed variables as a sampling set: it never eliminates them and skips
+Gauss-Jordan on matrices that contain few of them. On the bivium family,
+whose long XORs are cut into thousands of pieces, that skipped Gauss-Jordan
+is the difference between 7 seconds and a timeout; on the ascon family,
+whose XORs are short, the line makes solving 2-3x slower.
 
 #### Products of linear factors and native XOR clauses
 

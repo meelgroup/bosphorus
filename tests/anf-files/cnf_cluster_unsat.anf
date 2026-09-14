@@ -1,0 +1,12 @@
+c RUN: %solver --anfread %s --solve --allsol --verb 0 --simplify 0 --karncluster 12 | %verify allsol %s
+c RUN: %solver --anfread %s --cnfwrite %t.cnf --verb 0 --simplify 0 --karncluster 12 && %verify cnf %s %t.cnf
+c
+c Found by the fuzzer: the equations of one cluster have no common
+c solution, so the union of their forbidden assignments is the whole
+c space and the joint encoding must contain the empty clause.
+x1*x2 + x2 + 1
+x1 + x2*x3 + 1
+x1 + x1*x2 + x2*x3 + 1
+x2 + x3 + x1*x3 + x2*x3
+x1 + x1*x2 + x2 + x2*x3
+x1*x2*x3 + x1 + x1*x3

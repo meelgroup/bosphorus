@@ -85,6 +85,7 @@ class CNF
     typedef pair<vector<uint32_t>, bool> XorClause;
     const vector<XorClause>& getXorClauses() const { return xor_clauses; }
     uint32_t getNumVars() const;
+    size_t getNumCutVars() const { return numCutVars; }
     uint64_t getNumAllLits() const;
     uint64_t getNumAllClauses() const;
 

@@ -91,7 +91,7 @@ def rand_opts(rng):
     if rng.random() < 0.5: o += ['--cutnum', str(rng.randint(3, 6))]
     if rng.random() < 0.5: o += ['--karn', str(rng.randint(0, 10))]
     if rng.random() < 0.4: o += ['--karncluster', str(rng.randint(0, 12))]
-    if rng.random() < 0.5: o += ['--projshow', '1']
+    if rng.random() < 0.5: o += ['--projshow', str(rng.randint(0, 2))]
     if rng.random() < 0.3: o += ['--xormaxlen', str(rng.randint(0, 5))]
     if rng.random() < 0.3: o += ['--maxiters', str(rng.randint(0, 4))]
     if rng.random() < 0.3: o += ['--probevars', str(rng.randint(2, 10))]

@@ -136,7 +136,14 @@ void output_cnf(
         ofs << "c Executed arguments: " << dat->config.executedArgs << endl;
     }
     ofs << *cnf;
-    if (dat->config.projShow) cnf->write_projection_set(&ofs, proj);
+    // The projection line changes how CryptoMiniSat treats the variables (no
+    // elimination, Gauss-Jordan skipped on matrices with few sampling
+    // variables). Systems whose XORs had to be cut into many pieces are
+    // exactly the ones on which its Gauss-Jordan is slow, so the line is
+    // written for them by default.
+    const bool show = dat->config.projShow == 1 ||
+        (dat->config.projShow == 2 && cnf->getNumCutVars() >= anf->getRing().nVariables());
+    if (show) cnf->write_projection_set(&ofs, proj);
 
     ofs << "c Learnt " << dat->learnt.size() << " fact(s), not all of which have been dumped\n";
     if (dat->config.writecomments) {
