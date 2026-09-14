@@ -141,13 +141,13 @@ variables in the CNF, so solution counts over it agree.
 
 ### Multivariate quadratic (MQ) and HFE systems
 
-`utils/mq2anf.py` converts [Fukuoka MQ challenge](https://www.mqchallenge.org/)
-files, `utils/mqgen.py` generates random MQ systems with a planted
-solution, and `utils/magma2anf.py` converts Magma polynomial lists such as
-the HFE systems of `magma.maths.usyd.edu.au/users/allan/gb`. Systems of
-up to `--gbwholevars` variables are solved by the Gröbner engine alone;
-`utils/gbhybrid.py` (guess k variables, solve the rest) only estimates
-what more compute would reach.
+Post-quantum multivariate schemes reduce to quadratic systems over GF(2).
+Bosphorus reads [Fukuoka MQ challenge](https://www.mqchallenge.org/) files
+and Magma polynomial lists such as the HFE systems of
+`magma.maths.usyd.edu.au/users/allan/gb` through converters in `utils/`,
+and can generate random MQ systems with a planted solution. A system with
+few enough variables is solved by its Gröbner basis alone, without any
+SAT solving.
 
 Random MQ systems with m = 2n and a planted solution, one core, 200 s
 limit for the SAT solver:
