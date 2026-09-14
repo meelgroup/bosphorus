@@ -350,7 +350,8 @@ from post-quantum cryptanalysis are available through converters in
   plaintext/ciphertext pair; variables for the key and for every S-box's
   inputs and outputs, so all equations are linear or the three quadratic
   S-box equations). Two rounds of the full-layer 129-bit instance are
-  already beyond plain rewriting plus CryptoMiniSat (the challenge's own
+  already beyond plain rewriting plus CryptoMiniSat (30 minutes without an
+  answer; the challenge's own
   solutions for 2-4 rounds combine linearization, guessing and
   meet-in-the-middle).
 
