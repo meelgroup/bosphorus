@@ -223,6 +223,9 @@ class ANF
     // Independent variables
     set<size_t> proj_set;
     bool proj_given = false;
+    // gb-cone bookkeeping: the system's stats after its last run
+    ANFStats gb_last;
+    bool gb_ran = false;
 
     //State. An equation is either a polynomial (poly_valid) or a product
     //of linear factors (factors non-empty) whose polynomial is only built

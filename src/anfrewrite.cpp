@@ -695,7 +695,10 @@ size_t ANF::add_linearly_new_facts(const vector<BoolePolynomial>& facts, bool co
                 continue;
             }
             num_in_span++;
-            if (!config.spanFilter) num_added += addBoolePolynomial(p); // kept as a redundant XOR
+            // a unit or an equivalence is absorbed by the replacer (no XOR
+            // is left behind) and propagates: always worth adding, even if
+            // Gaussian elimination could in principle derive it
+            if (!config.spanFilter || p.nUsedVariables() <= 2) num_added += addBoolePolynomial(p);
             continue;
         }
         basis.insert(r);
@@ -1003,7 +1006,19 @@ size_t ANF::rewrite_inplace()
         if (!getOK()) break;
         if (config.doFacRes) changes += resolve_factors();
         if (!getOK()) break;
-        if (config.doGB && round == 0) changes += groebner_windows(); // expensive: once per pass
+        if (config.doGB && round == 0) {
+            // expensive: once per pass, and only when the system changed
+            // since the last run (same equations, same replacer state)
+            const BLib::ANFStats now = get_stats();
+            const bool same = gb_ran && now.eqs == gb_last.eqs && now.monoms == gb_last.monoms &&
+                              now.set_vars == gb_last.set_vars && now.repl_vars == gb_last.repl_vars &&
+                              now.lin_eqs == gb_last.lin_eqs;
+            if (!same) {
+                changes += groebner_windows();
+                gb_last = get_stats();
+                gb_ran = true;
+            }
+        }
         total += changes;
         if (changes == 0) break;
         if (cpuTime() > config.maxTime) break;

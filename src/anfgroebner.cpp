@@ -140,8 +140,10 @@ size_t ANF::groebner_windows()
         if (timeout) break;
     }
 
-    size_t added = 0;
-    for (const BoolePolynomial& f : facts) added += addBoolePolynomial(f);
+    // linear facts that are combinations of the linear equations already in
+    // the system are dropped (lin-gauss would delete them again next round
+    // and the cone would find them again: churn)
+    const size_t added = add_linearly_new_facts(facts, false);
     if (added > 0) {
         if (!propagate()) setNOTOK();
     }
