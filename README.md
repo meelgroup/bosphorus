@@ -130,7 +130,11 @@ few enough variables is solved by its Gröbner basis alone, without any
 SAT solving.
 
 Random MQ systems with m = 2n and a planted solution, one core, 200 s
-limit for the SAT solver:
+limit for the SAT solver. To reproduce a row:
+```
+python3 utils/mqgen.py 24 48 1 > mq24.anf   # n=24, m=48, seed 1
+./build/bosphorus mq24.anf --solve
+```
 
 | n | CryptoMiniSat on Bosphorus's CNF | BRiAl `symmGB_F2` | Bosphorus F4 | Bosphorus F5 |
 |---|---|---|---|---|
