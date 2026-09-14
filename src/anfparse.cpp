@@ -37,6 +37,7 @@ SOFTWARE.
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <unordered_set>
 
@@ -53,8 +54,9 @@ enum TokType { T_VAR_NUM, T_VAR_NAME, T_PLUS, T_STAR, T_COMMA, T_CONST0, T_CONST
 
 struct Tok {
     TokType t;
-    uint32_t num = 0;
-    string name;
+    uint32_t num = 0;   // T_VAR_NUM: the index
+    uint32_t start = 0; // T_VAR_NAME: the name is line.substr(start, len)
+    uint32_t len = 0;
 };
 
 [[noreturn]] void parse_error(const string& msg, const string& line)
@@ -99,8 +101,29 @@ void tokenize(const string& line, std::vector<Tok>& out)
             continue;
         }
         if (std::isalpha((unsigned char)c) || c == '_') {
+            // fast path for x<N>, by far the most common token in big files:
+            // no string is built
+            if ((c == 'x' || c == 'X') && i + 1 < n && std::isdigit((unsigned char)line[i + 1])) {
+                size_t j = i + 1;
+                uint64_t num = 0;
+                while (j < n && std::isdigit((unsigned char)line[j])) {
+                    num = num * 10 + (line[j] - '0');
+                    if (num > std::numeric_limits<uint32_t>::max()) parse_error("variable index too large", line);
+                    j++;
+                }
+                if (j == n || !(std::isalnum((unsigned char)line[j]) || line[j] == '_' || line[j] == '[')) {
+                    Tok t;
+                    t.t = T_VAR_NUM;
+                    t.num = num;
+                    out.push_back(std::move(t));
+                    i = j;
+                    continue;
+                }
+                // x12ab or x1[..]: a named variable, handled below
+            }
             size_t j = i;
             while (j < n && (std::isalnum((unsigned char)line[j]) || line[j] == '_')) j++;
+            const size_t name_start = i;
             string name = line.substr(i, j - i);
             i = j;
             // x(N): the old bracket form of a numbered variable
@@ -134,7 +157,8 @@ void tokenize(const string& line, std::vector<Tok>& out)
             if (name == "x" || name == "X") parse_error("x is not followed by a number", line);
             Tok t;
             t.t = T_VAR_NAME;
-            t.name = name;
+            t.start = name_start;
+            t.len = i - name_start;
             out.push_back(t);
             continue;
         }
@@ -176,7 +200,10 @@ ANF::Names ANF::scanFile(const string& filename)
         tokenize(line, toks);
         for (const Tok& t : toks) {
             if (t.t == T_VAR_NUM) max_num = std::max<long>(max_num, t.num);
-            else if (t.t == T_VAR_NAME && seen.insert(t.name).second) order.push_back(t.name);
+            else if (t.t == T_VAR_NAME) {
+                const string name = line.substr(t.start, t.len);
+                if (seen.insert(name).second) order.push_back(name);
+            }
         }
     }
     // x<N> variables keep their index; names follow after the highest one
@@ -205,14 +232,16 @@ size_t ANF::readFile(const string& filename, const Names* names)
     }
     auto var_index = [&](const Tok& t, const string& line) -> uint32_t {
         if (t.t == T_VAR_NUM) return t.num;
-        auto it = names->index.find(t.name);
-        if (it == names->index.end()) parse_error("unknown variable " + t.name, line);
+        const string name = line.substr(t.start, t.len);
+        auto it = names->index.find(name);
+        if (it == names->index.end()) parse_error("unknown variable " + name, line);
         return it->second;
     };
 
     size_t maxVar = 0;
     bool proj_set_found = false;
     std::vector<Tok> toks;
+    std::vector<VarVec> terms; // reused from line to line
     string line;
     while (std::getline(ifs, line)) {
         if (line.empty()) continue;
@@ -268,15 +297,22 @@ size_t ANF::readFile(const string& filename, const Names* names)
             if (toks[i].t == T_COMMA) { len = i; break; }
         }
 
-        // terms separated by '+'
-        std::vector<VarVec> terms;
+        // terms separated by '+'; the term vectors are reused from line to
+        // line (big files have thousands of terms per equation)
+        size_t nterms = 0;
+        auto new_term = [&]() -> VarVec& {
+            if (nterms == terms.size()) terms.emplace_back();
+            VarVec& t = terms[nterms++];
+            t.clear();
+            return t;
+        };
         size_t i = 0;
         while (i < len) {
             if (toks[i].t == T_CONST0 || toks[i].t == T_CONST1) {
-                if (toks[i].t == T_CONST1) terms.push_back(VarVec());
+                if (toks[i].t == T_CONST1) new_term();
                 i++;
             } else if (is_var(toks[i])) {
-                VarVec term;
+                VarVec& term = new_term();
                 term.push_back(var_index(toks[i], line));
                 i++;
                 while (i < len && toks[i].t == T_STAR) {
@@ -285,7 +321,6 @@ size_t ANF::readFile(const string& filename, const Names* names)
                     i += 2;
                 }
                 for (const uint32_t v : term) maxVar = std::max<size_t>(maxVar, v);
-                terms.push_back(term);
             } else {
                 parse_error("a term must start with a variable, 0 or 1", line);
             }
@@ -295,6 +330,7 @@ size_t ANF::readFile(const string& filename, const Names* names)
                 if (i >= len) parse_error("'+' at the end of the line", line);
             }
         }
+        terms.resize(nterms);
         addTerms(terms);
     }
 

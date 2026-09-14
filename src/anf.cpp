@@ -164,20 +164,35 @@ bool ANF::addBoolePolynomial(const BoolePolynomial& poly)
 
 bool ANF::addTerms(vector<VarVec>& terms)
 {
-    // x*x = x, then x + x = 0: drop pairs of equal terms (in place)
+    // x*x = x, then x + x = 0: a term that occurs an even number of times
+    // is dropped (hashing keeps this linear; the file order is kept)
     for (VarVec& t : terms) {
         std::sort(t.begin(), t.end());
         t.erase(std::unique(t.begin(), t.end()), t.end());
     }
-    std::sort(terms.begin(), terms.end());
-    size_t w = 0;
-    for (size_t i = 0; i < terms.size();) {
-        size_t j = i;
-        while (j < terms.size() && terms[j] == terms[i]) j++;
-        if ((j - i) % 2) terms[w++].swap(terms[i]);
-        i = j;
+    {
+        std::unordered_map<VarVec, size_t, VarVecHash> first; // term -> first position
+        first.reserve(terms.size() * 2);
+        vector<char> alive(terms.size(), 1);
+        bool dup = false;
+        for (size_t i = 0; i < terms.size(); i++) {
+            const auto it = first.find(terms[i]);
+            if (it == first.end()) {
+                first.emplace(terms[i], i);
+            } else {
+                alive[it->second] ^= 1;
+                alive[i] = 0;
+                dup = true;
+            }
+        }
+        if (dup) {
+            size_t w = 0;
+            for (size_t i = 0; i < terms.size(); i++) {
+                if (alive[i]) terms[w++].swap(terms[i]);
+            }
+            terms.resize(w);
+        }
     }
-    terms.resize(w);
 
     vector<Lineral> f;
     if (terms.size() >= 4 && factor_terms(terms, f) && f.size() >= 2) {

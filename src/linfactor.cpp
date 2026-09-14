@@ -181,20 +181,31 @@ bool BLib::factor_terms(const vector<VarVec>& terms, vector<Lineral>& factors)
 {
     factors.clear();
     if (terms.empty()) return false;
-    // terms are sorted (addTerms sorts them): membership by binary search
+    // membership is asked a handful of times (the constant term and one
+    // probe per factor): a linear scan is cheaper than sorting the terms
     auto has_term = [&](const VarVec& t) {
-        return std::binary_search(terms.begin(), terms.end(), t);
+        return std::find(terms.begin(), terms.end(), t) != terms.end();
     };
     size_t deg = 0;
     for (const VarVec& t : terms) deg = std::max(deg, t.size());
     if (deg == 0) return false;
 
+    // the variables, sorted, and a direct var -> position table (the
+    // variables of one equation are few, the table is sized by the largest)
+    uint32_t max_var = 0;
+    for (const VarVec& t : terms) for (const uint32_t v : t) max_var = std::max(max_var, v);
+    vector<uint32_t> idx(max_var + 1, std::numeric_limits<uint32_t>::max());
     vector<uint32_t> vars;
-    for (const VarVec& t : terms) vars.insert(vars.end(), t.begin(), t.end());
+    for (const VarVec& t : terms) {
+        for (const uint32_t v : t) {
+            if (idx[v] == std::numeric_limits<uint32_t>::max()) {
+                idx[v] = 0;
+                vars.push_back(v);
+            }
+        }
+    }
     std::sort(vars.begin(), vars.end());
-    vars.erase(std::unique(vars.begin(), vars.end()), vars.end());
     const size_t n = vars.size();
-    std::unordered_map<uint32_t, uint32_t> idx;
     for (size_t i = 0; i < n; i++) idx[vars[i]] = i;
 
     if (deg == 1) {
@@ -250,7 +261,7 @@ bool BLib::factor_terms(const vector<VarVec>& terms, vector<Lineral>& factors)
         factors.clear();
         return false;
     }
-    std::unordered_map<uint32_t, uint32_t> part_of;
+    vector<uint32_t>& part_of = idx; // reuse the table: var -> factor
     for (size_t i = 0; i < factors.size(); i++) {
         for (const uint32_t v : factors[i].vars) part_of[v] = i;
     }
