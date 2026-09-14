@@ -257,12 +257,15 @@ CryptoMiniSat's Gauss-Jordan: the harness flags force it on, the cut XORs
 of both encodings form matrices of 5000-10000 rows, and with those in use
 CryptoMiniSat needs more than 200 s on tmp_ifs1zce with either CNF. With
 Gauss-Jordan off (`--maxmatrixrows 0`) the Bosphorus CNF solves in 9 s.
-The `c p show` line that Bosphorus writes for such CNFs (see `--projshow`)
-lists the original variables as a sampling set, and CryptoMiniSat only uses
-a matrix when at least 60% of the sampling variables occur in it, which is
-what skipped the matrices in the runs of the table (58.8% of them did). The
+A `c p show` line listing the original variables (`--projshow 1`; the
+default writes one only when the ANF input carries a projection set) makes
+CryptoMiniSat treat them as a sampling set, and it then uses a matrix only
+when at least 60% of the sampling variables occur in it, which is what
+skipped the matrices in the runs of the table (58.8% of them did). The
 margin is thin: a slightly different encoding of the same instance lands at
-61% and times out.
+61% and times out. The table was measured with that line; without it every
+bivium instance but the easiest ones times out until CryptoMiniSat's
+Gauss-Jordan heuristics change.
 
 ### Example: the ascon key-recovery instances
 
