@@ -61,7 +61,6 @@ bool readCNF;
 bool writeANF;
 bool writeCNF;
 bool solve_with_cms;
-bool solve_xnf;
 bool all_solutions;
 int only_new_cnf_clauses = 0;
 uint32_t maxiters = 100;
@@ -175,9 +174,7 @@ void parseOptions(int argc, char* argv[])
     add_arg("--simplify", config.simplify, fc_integral<int>, "Simplify ANF");
     add_arg("--color", config.color, fc_integral<int>,
         "Colour the [simp-stats] lines: 0 = never, 1 = always, 2 = auto (terminal and NO_COLOR unset)");
-    add_flag("--solve", solve_with_cms, "Solve the resulting ANF");
-    add_flag("--solve-xnf", solve_xnf,
-        "Solve the resulting ANF, tuning the SAT solver for XOR-heavy (XNF) problems");
+    add_flag("--solve", solve_with_cms, "Solve the resulting ANF (built-in CryptoMiniSat with Gauss-Jordan and XOR recovery on)");
     add_str_arg("--solvewrite", solution_output_file,
         "Solve the resulting ANF and print the solution to this file");
     add_flag("--allsol", all_solutions, "Enumerate all solutions with the built-in solver, one SAT call per solution: fine up to some 10000 solutions, use ApproxMC on the written CNF beyond that");
@@ -343,10 +340,6 @@ void parseOptions(int argc, char* argv[])
     writeCNF = program.is_used("--cnfwrite");
 
     if (program.is_used("--solvewrite")) {
-        solve_with_cms = true;
-    }
-
-    if (solve_xnf) {
         solve_with_cms = true;
     }
 
@@ -567,18 +560,17 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
     vector<Clause> cls = mylib->get_clauses(cnf);
     CMSat::SATSolver solver;
     solver.set_num_threads(config.numThreads);
-    // The settings that work best on XOR-heavy systems (the same as
-    // "cryptominisat5 --sls 0 --autodisablegauss 0 --presimp 1"): Gauss-Jordan
-    // elimination is never disabled automatically. --solve-xnf additionally
-    // recovers XORs from the clauses and keeps every matrix, however small.
+    // The settings for XOR-heavy systems (like "cryptominisat5 --sls 0
+    // --autodisablegauss 0 --presimp 1 --maxnummatrices 1000000
+    // --minmatrixrows 1"): Gauss-Jordan elimination is never disabled
+    // automatically, XORs are recovered from the clauses and every matrix
+    // is kept, however small.
     solver.set_sls(0);
     solver.set_allow_otf_gauss();
     solver.set_simplify_at_startup(1);
-    if (solve_xnf) {
-        solver.set_find_xors(true);
-        solver.set_max_num_matrices(1000000);
-        solver.set_min_matrix_rows(1);
-    }
+    solver.set_find_xors(true);
+    solver.set_max_num_matrices(1000000);
+    solver.set_min_matrix_rows(1);
     solver.new_vars(mylib->get_max_var(cnf));
     for(const Bosph::Clause& c: cls) {
         const Bosph::Clause* cc = &c;
