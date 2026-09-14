@@ -184,11 +184,18 @@ Where `x(0)` means `x(0)` must be FALSE and `x(1)+1` means `x(1)` must be TRUE.
 
 When there are too many solutions to list (say 2**40), count them on the
 CNF: a projection set in the ANF (`c p show x1 x2 ... END`) is written into
-the CNF as `c p show var1 var2 ... varn 0`, which counters such as
-[ApproxMC](https://github.com/meelgroup/approxmc) understand:
+the CNF as `c p show var1 var2 ... varn 0`, which model counters such as
+[Ganak](https://github.com/meelgroup/ganak) (exact) and
+[ApproxMC](https://github.com/meelgroup/approxmc) (approximate) understand:
 
 ```
 ./bosphorus test.anf --cnfwrite out.cnf
+./ganak out.cnf
+[...]
+s mc 16384
+```
+
+```
 ./approxmc out.cnf
 [...]
 c [appmc] Number of solutions is: 256*2**6
@@ -199,8 +206,7 @@ If the number of solutions is low (say, less than 1000) you can also use
 CryptoMiniSat to do the counting:
 
 ```
-./bosphorus test.anf --cnfwrite out.cnf
-./cryptominisat --maxsol 100000 out.cnf
+./cryptominisat5 --maxsol 100000 out.cnf
 [...]
 c Number of solutions found until now:    16384
 s UNSATISFIABLE
