@@ -148,19 +148,68 @@ def _planted_polys(rng, nvars, neqs):
     return polys
 
 
+def _expand_product(factors):
+    terms = {frozenset()}
+    for pick, c in factors:
+        nt = set()
+        for t in terms:
+            if c: nt ^= {t}
+            for v in pick: nt ^= {t | {v}}
+        terms = nt
+    return sorted(terms, key=lambda t: sorted(t))
+
+
+def _subst_product_polys(rng, nvars):
+    """short products of linerals (x*y, x*y + x, x*y + x*z: stored as
+    polynomials, not as products) and 4+-term ones, then units and
+    equivalences over their variables so that propagation substitutes into
+    them: factors merge, become equal or constant, and two equations become
+    duplicates"""
+    polys = []
+    prods = []
+    for _ in range(rng.randint(1, 5)):
+        factors = []
+        for _ in range(rng.randint(2, 3)):
+            pick = rng.sample(range(1, nvars + 1), min(rng.choice([1, 1, 1, 2, 2, 3]), nvars))
+            factors.append((pick, rng.random() < 0.4))
+        prods.append(factors)
+        mons = _expand_product(factors)
+        if mons: polys.append(mons)
+    if prods and rng.random() < 0.5:
+        # the same product again with one variable renamed to an equivalent one
+        factors = rng.choice(prods)
+        a = rng.choice(factors[0][0])
+        b = rng.randint(1, nvars)
+        renamed = [([b if v == a else v for v in pick], c) for pick, c in factors]
+        renamed = [(sorted(set(pick)), c) for pick, c in renamed]
+        mons = _expand_product(renamed)
+        if mons: polys.append(mons)
+        if a != b: polys.append([frozenset({a}), frozenset({b})])
+    for _ in range(rng.randint(1, 4)):
+        a, b = rng.sample(range(1, nvars + 1), 2) if nvars >= 2 else (1, 1)
+        r = rng.random()
+        if r < 0.5: polys.append([frozenset({a}), frozenset({b})] + ([frozenset()] if rng.random() < 0.5 else []))
+        elif r < 0.8: polys.append([frozenset({a})] + ([frozenset()] if rng.random() < 0.5 else []))
+        else:
+            c = rng.randint(1, nvars)
+            polys.append([frozenset({a}), frozenset({b}), frozenset({c})])
+    return [p for p in polys if p]
+
+
 def rand_anf(rng):
     # mostly small, sometimes up to 12 variables so that the linearisation
     # paths for polynomials with more than 10 variables are exercised
     nvars = rng.randint(2, 8) if rng.random() < 0.7 else rng.randint(9, 12)
     style = rng.random()
     vname = lambda v: _vname(style, v)
-    kind = rng.choice(['random', 'random', 'circuit', 'sbox', 'planted', 'mixed'])
+    kind = rng.choice(['random', 'random', 'circuit', 'sbox', 'planted', 'subst', 'subst', 'mixed'])
     if kind == 'random': polys = _random_polys(rng, nvars, rng.randint(1, 9))
     elif kind == 'circuit': polys = _circuit_polys(rng, nvars)
     elif kind == 'sbox': polys = _sbox_polys(rng, nvars)
     elif kind == 'planted': polys = _planted_polys(rng, nvars, rng.randint(1, 8))
+    elif kind == 'subst': polys = _subst_product_polys(rng, nvars)
     else:
-        polys = _circuit_polys(rng, nvars)[:3] + _random_polys(rng, nvars, 3) + _sbox_polys(rng, nvars)[:2]
+        polys = _circuit_polys(rng, nvars)[:3] + _random_polys(rng, nvars, 3) + _sbox_polys(rng, nvars)[:2] + _subst_product_polys(rng, nvars)[:3]
     rng.shuffle(polys)
     lines = [_mons_txt(m, vname) for m in polys if m]
     if not lines: lines = ['1 + ' + vname(1)]
@@ -195,38 +244,40 @@ def rand_cnf(rng):
     return txt, nvars, cls
 
 
+# Every option is listed by hand (never derived from --help): a new rule or
+# cutoff must be added here. All are always passed: switches with a random
+# value in 0..max, cutoffs with the extremes or the default.
+SWITCHES = [('--simplify', 1), ('--rewrite', 1), ('--lingauss', 1), ('--spanfilter', 1), ('--binomred', 1),
+            ('--shorten', 1), ('--monogauss', 1), ('--prodsplit', 1), ('--probe', 1), ('--varprobe', 1),
+            ('--faccanon', 1), ('--facres', 1), ('--gb', 2), ('--gbfull', 2), ('--gbengine', 2),
+            ('--gbrecursion', 2), ('--gbtailreduce', 1), ('--keepfactor', 2), ('--xl', 1), ('--el', 1),
+            ('--sat', 1), ('--factor', 1), ('--partner', 1), ('--xorcls', 1), ('--projshow', 2)]
+EXTREME = [0, 1, 2, 3, 10, 100000, 10000000]
+CUTOFFS = [  # (flag, default, choices other than the extremes; None: the extremes)
+    ('--cutnum', 5, [3, 4, 6, 10]),
+    ('--karn', 10, [0, 1, 2, 3, 20]),
+    ('--xldeg', 1, [0, 2, 3]),
+    ('--xlsample', 30, [0, 1, 2, 10, 40]),
+    ('--xlsamplex', 4, [0, 1, 10]),
+    ('--elsample', 30, [0, 1, 2, 10, 40]),
+    ('--karncluster', 10, None), ('--xormaxlen', 0, None), ('--maxiters', 100, None),
+    ('--rewriterounds', 10, None), ('--binomredlen', 2, None), ('--monogausslen', 64, None),
+    ('--monogausscols', 100000, None), ('--varprobebudget', 2000000, None), ('--varprobelen', 64, None),
+    ('--probevars', 8, None), ('--facresmax', 2, None), ('--gbdeg', 3, None), ('--gbwindow', 24, None),
+    ('--gbmaxvars', 16, None), ('--gbmaxcells', 2000000000, [50, 500, 5000]), ('--gbsplit', 8, None),
+    ('--gbsplitrows', 20000000, None), ('--gbf5groups', 8, None), ('--gbwholevars', 40, None),
+    ('--gbmaxlen', 32, None), ('--gbsteps', 100000, None), ('--gbfactdeg', 2, None), ('--gbfactlen', 8, None),
+    ('--satinc', 10000, None), ('--satlim', 100000, None),
+]
+
+
 def rand_opts(rng):
     o = []
-    for flag in ['--xl', '--el', '--sat', '--rewrite', '--lingauss', '--spanfilter', '--binomred', '--shorten', '--probe',
-                 '--faccanon', '--facres', '--partner', '--factor', '--xorcls', '--monogauss', '--prodsplit', '--varprobe']:
-        if rng.random() < 0.5:
-            o += [flag, str(rng.randint(0, 1))]
-    if rng.random() < 0.5: o += ['--cutnum', str(rng.randint(3, 6))]
-    if rng.random() < 0.5: o += ['--karn', str(rng.randint(0, 10))]
-    if rng.random() < 0.4: o += ['--karncluster', str(rng.randint(0, 12))]
-    if rng.random() < 0.5: o += ['--projshow', str(rng.randint(0, 2))]
-    if rng.random() < 0.3: o += ['--xormaxlen', str(rng.randint(0, 5))]
-    if rng.random() < 0.3: o += ['--maxiters', str(rng.randint(0, 4))]
-    if rng.random() < 0.3: o += ['--probevars', str(rng.randint(2, 10))]
-    if rng.random() < 0.3: o += ['--binomredlen', str(rng.randint(1, 4))]
-    if rng.random() < 0.3: o += ['--keepfactor', str(rng.randint(0, 2))]
-    if rng.random() < 0.3: o += ['--xldeg', str(rng.randint(0, 2))]
-    if rng.random() < 0.3: o += ['--simplify', str(rng.randint(0, 1))]
-    if rng.random() < 0.3: o += ['--gbdeg', str(rng.randint(1, 4))]
-    if rng.random() < 0.5: o += ['--gb', str(rng.randint(0, 2))]
-    if rng.random() < 0.3: o += ['--gbmaxvars', str(rng.randint(2, 12))]
-    if rng.random() < 0.3: o += ['--gbfull', str(rng.randint(0, 2))]
-    if rng.random() < 0.3: o += ['--gbwholevars', str(rng.randint(0, 14))]
-    if rng.random() < 0.3: o += ['--gbrecursion', str(rng.randint(0, 2))]
-    if rng.random() < 0.3: o += ['--gbengine', str(rng.randint(0, 2))]
-    if rng.random() < 0.3: o += ['--gbtailreduce', str(rng.randint(0, 1))]
-    if rng.random() < 0.3: o += ['--gbfactdeg', str(rng.randint(1, 3))]
-    if rng.random() < 0.3: o += ['--gbfactlen', str(rng.randint(1, 12))]
-    if rng.random() < 0.3: o += ['--gbsplit', str(rng.randint(0, 4))]
-    if rng.random() < 0.3: o += ['--gbmaxcells', str(rng.choice([50, 500, 5000, 100000]))]
-    if rng.random() < 0.3: o += ['--gbsplitrows', str(rng.choice([10, 1000, 100000]))]
-    if rng.random() < 0.3: o += ['--monogausslen', str(rng.randint(1, 10))]
-    if rng.random() < 0.2: o += ['--varprobebudget', str(rng.choice([0, 5, 100]))]
+    for flag, mx in SWITCHES:
+        o += [flag, str(rng.randint(0, mx))]
+    for flag, default, choices in CUTOFFS:
+        v = default if rng.random() < 0.3 else rng.choice(EXTREME if choices is None else choices)
+        o += [flag, str(v)]
     return o
 
 

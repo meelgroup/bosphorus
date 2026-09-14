@@ -47,6 +47,14 @@ PolyBoRi/CUDD tend to dominate; check which rule calls them.
   generates random small ANF and CNF inputs with random option settings and
   checks Bosphorus's solutions/CNF against brute force. Commit only when it
   reports no failures; a failing case is saved under `fuzz-fail-*` for replay.
+  Fuzz with an assertions-on build (`ENABLE_ASSERTIONS`): a broken invariant
+  often gives correct answers and shows only as an assert.
+- **Every rule and cutoff is an option, and every option is in the fuzzer.**
+  Each rewrite rule / simplifier / solver step must be switchable on and off
+  from the command line and each cutoff or budget settable from outside. When
+  adding one, add it by hand to `SWITCHES` or `CUTOFFS` in `utils/fuzz.py`
+  (never auto-detect options from `--help`): switches get a random value in
+  0..max, cutoffs the extremes (0, 1, 10, 100000, 10000000) or the default.
 
 ## Testing
 - `cd build && ctest` runs the lit suite (`tests/anf-files`); `lit -v build/tests/anf-files --filter NAME` for one test.
