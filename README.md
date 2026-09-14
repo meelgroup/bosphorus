@@ -240,6 +240,18 @@ Solver times vary 2-3x between seeds, so compare several.
 | tmp9_e6244z | 531 | 46 | 10 s | 4 s |
 | easy ones (40-50 known) | | | 3-12 s | 3-5 s |
 
+What makes the difference on this family is not the clause set but
+CryptoMiniSat's Gauss-Jordan: the harness flags force it on, the cut XORs
+of both encodings form matrices of 5000-10000 rows, and with those in use
+CryptoMiniSat needs more than 200 s on tmp_ifs1zce with either CNF. With
+Gauss-Jordan off (`--maxmatrixrows 0`) the Bosphorus CNF solves in 9 s.
+The `c p show` line that Bosphorus writes for such CNFs (see `--projshow`)
+lists the original variables as a sampling set, and CryptoMiniSat only uses
+a matrix when at least 60% of the sampling variables occur in it, which is
+what skipped the matrices in the runs of the table (58.8% of them did). The
+margin is thin: a slightly different encoding of the same instance lands at
+61% and times out.
+
 ## List all solutions of an ANF
 
 To find all solutions to `myfile.anf`:
