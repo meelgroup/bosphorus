@@ -339,8 +339,10 @@ from post-quantum cryptanalysis are available through converters in
   (`magma.maths.usyd.edu.au/users/allan/gb/magma/HFE<n>_96`, converted with
   `utils/magma2anf.py`). Their structure keeps the degree of regularity
   low, which is what Gröbner bases exploit: the whole-system basis solves
-  HFE25 in 166 s (`--gbwholevars 50`), with the same solution Magma found in
-  2004 (37 s then, on a 750 MHz machine, with a much stronger F4).
+  HFE25 in 166 s and HFE30 in 1329 s (844 MB; `--gbwholevars 50`), with the
+  solutions Magma found in 2004 (37 s for HFE25 then, on a 750 MHz machine,
+  with a much stronger F4). Patarin's HFE challenge 1 (n = 80) is only
+  available as Magma's output log, not as an input system.
 - **LowMC** (the block cipher of the Picnic signature scheme; the LowMC
   cryptanalysis challenge at `lowmcchallenge.github.io`):
   `utils/lowmc2anf.py` turns the challenge's `matrices_and_constants_*.dat`
