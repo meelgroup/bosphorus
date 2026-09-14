@@ -236,20 +236,6 @@ workflow](https://github.com/meelgroup/bosphorus/blob/master/.github/workflows/b
 it installs the dependencies (zlib, GMP, Boost, m4ri, BRiAl) and runs the
 CMake build that fetches CryptoMiniSat itself.
 
-## Fuzzing
-`utils/fuzz.py` generates random small ANF and CNF inputs with random option
-settings and checks every answer against brute force (all solutions for ANF
-input, the SAT/UNSAT answer and the model for CNF input, and the solutions of
-the ANF written by `--anfwrite`):
-
-```
-python3 utils/fuzz.py --iters 60          # about 15 seconds
-python3 utils/fuzz.py --iters 1 --seed N  # replay one case
-```
-
-A failing input is kept as `fuzz-fail-<seed>.anf` or `.cnf` together with the
-command line that failed. Run it before committing.
-
 ## Known issues
 - PolyBoRi cannot handle ring of sizes over approx 1 million (1048574). Do not
   run `bosphorus` on instances with over a million variables.
