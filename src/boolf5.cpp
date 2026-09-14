@@ -80,8 +80,9 @@ vector<BoolF4::Poly> BoolF5::run()
     vector<size_t> group_of(m);
     for (size_t i = 0; i < m; i++) group_of[i] = i * ngroups / m;
 
-    // leads of the degree-(d) rows of the generators of groups < g, per degree
-    // prev_leads[d][g] : set of leading monomials (of exact degree d)
+    // leads_by_deg[d][g]: leading monomials of the rows of degree d of the
+    // generators of the groups before g (the F5 criterion for multipliers
+    // of degree d)
     std::unordered_map<int, vector<std::unordered_set<Mon> > > leads_by_deg;
 
     vector<Poly> basis; // all reduced rows found so far (leads distinct)
@@ -111,19 +112,25 @@ vector<BoolF4::Poly> BoolF5::run()
         for (uint32_t g = 0; g < ngroups; g++) {
             // rows of this group: m*f_i for deg(m) = d - deg(f_i), F5 criterion
             // against the leads of degree d - deg(f_i) of the groups < g
+            // the system is affine, so the degree-d matrix holds every
+            // multiple m*f_i with deg(m) <= d - deg(f_i) (a Macaulay matrix
+            // of degree d), each pruned by the leads of degree deg(m) of
+            // the earlier groups
             vector<std::pair<size_t, Mon> > desc;
             for (size_t i = 0; i < m; i++) {
                 if (group_of[i] != g) continue;
-                const int k = d - Fdeg[i];
-                if (k < 0) continue;
-                vector<Mon> mult;
-                monomials_of_degree(n, k, mult);
-                const std::unordered_set<Mon>* crit = nullptr;
-                auto it = leads_by_deg.find(k);
-                if (it != leads_by_deg.end() && g < it->second.size()) crit = &it->second[g];
-                for (const Mon u : mult) {
-                    if (crit && crit->count(u)) { st.rows_pruned++; continue; }
-                    desc.push_back(std::make_pair(i, u));
+                const int kmax = d - Fdeg[i];
+                if (kmax < 0) continue;
+                for (int k = 0; k <= kmax; k++) {
+                    vector<Mon> mult;
+                    monomials_of_degree(n, k, mult);
+                    const std::unordered_set<Mon>* crit = nullptr;
+                    auto it = leads_by_deg.find(k);
+                    if (it != leads_by_deg.end() && g < it->second.size()) crit = &it->second[g];
+                    for (const Mon u : mult) {
+                        if (crit && crit->count(u)) { st.rows_pruned++; continue; }
+                        desc.push_back(std::make_pair(i, u));
+                    }
                 }
             }
             if (desc.empty()) { leads_d[g + 1] = leads_d[g]; continue; }
@@ -147,7 +154,8 @@ vector<BoolF4::Poly> BoolF5::run()
             st.rows += desc.size();
             const rci_t rank = mzd_echelonize_m4ri(M, 1, 0);
             st.zero_rows += (erows + desc.size()) - rank;
-            // read the rows back, record leads
+            // read the rows back, record leads (the rows of the last group
+            // are the complete reduced matrix of this degree)
             const size_t words = (columns.size() + 63) / 64;
             leads_d[g + 1] = leads_d[g];
             degree_rows.clear();
@@ -163,7 +171,7 @@ vector<BoolF4::Poly> BoolF5::run()
                     }
                 }
                 if (p.empty()) continue;
-                if (BoolF4::deg(p[0]) == d) leads_d[g + 1].insert(p[0]);
+                leads_d[g + 1].insert(p[0]);
                 degree_rows.push_back(p);
             }
             E = mzd_init(rank, columns.size());
