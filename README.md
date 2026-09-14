@@ -279,24 +279,27 @@ filter of learnt facts now stop. CryptoMiniSat times with three seeds
 (min/median/max, 200 s limit, models checked) on the four-round instances
 the benchmark's CNF solves within the limit:
 
-| instance | benchmark CNF | Bosphorus output | `--karncluster 10` |
+| instance | benchmark CNF | Bosphorus output (run time) | with `--gb 1 --gbfactdeg 1` (run time) |
 |---|---|---|---|
-| tmp3g3f82vv | 12.4/13.7/26.6 | 12.2/16.4/24.4 | 9.0/13.7/23.0 |
-| tmpgmh2blh0 | 47.2/66.2/89.5 | 20.4/38.0/90.4 | 16.7/36.5/123.4 |
-| tmpn1uaqlcc | 7.0/8.0/8.1 | 1.6/1.9/2.1 | 0.5/2.3/4.0 |
-| tmpdchqvtq0 | 8.9/15.7/40.3 | 8.8/9.0/24.4 | 5.0/9.6/10.1 |
-| tmppdzw6ahj | 11.6/13.5/14.5 | 6.5/6.9/12.5 | 5.1/6.4/9.5 |
-| tmpv1bh0ebt | 11.9/12.3/12.9 | 11.5/26.1/48.4 | 19.8/24.0/24.9 |
-| tmpp4b0ewm7 | 9.3/11.5/14.6 | 5.0/6.8/7.1 | 3.8/6.1/7.9 |
-| tmpborqf5jg | 17.1/79.1/117.8 | 36.9/47.1/84.8 | 27.6/45.8/96.0 |
-| tmpt2t5c67b (3 rounds) | 6.5/6.8/7.3 | 4.0/5.1/8.0 | 0.8/0.9/0.9 |
-| tmpvxk1t18u (3 rounds) | 8.1/8.6/9.7 | 9.7/15.3/33.8 | 14.6/23.5/27.2 |
-| tmpwchcc7lm (3 rounds) | 7.5/8.8/9.5 | 14.6/26.8/43.7 | 5.6/34.5/69.0 |
-| tmp94o0gmwt (3 rounds) | 8.7/9.0/10.4 | 14.8/15.6/19.8 | 27.6/30.7/43.0 |
+| tmp3g3f82vv | 12.4/13.7/26.6 | 6.2/9.1/14.8 (2.0 s) | 8.3/11.9/12.0 (11.1 s) |
+| tmpgmh2blh0 | 47.2/66.2/89.5 | 4.5/6.9/10.2 (3.4 s) | 5.8/16.6/63.5 (13.3 s) |
+| tmpn1uaqlcc | 7.0/8.0/8.1 | 0.8/0.9/1.7 (3.4 s) | 0.4/0.6/0.9 (15.3 s) |
+| tmpdchqvtq0 | 8.9/15.7/40.3 | 3.5/3.9/7.6 (2.2 s) | 4.0/13.5/15.0 (7.0 s) |
+| tmppdzw6ahj | 11.6/13.5/14.5 | 1.8/2.7/6.7 (2.0 s) | 3.4/4.1/4.4 (9.4 s) |
+| tmpv1bh0ebt | 11.9/12.3/12.9 | 6.8/11.0/16.3 (2.4 s) | 2.4/3.3/5.6 (10.1 s) |
+| tmpp4b0ewm7 | 9.3/11.5/14.6 | 1.1/1.2/2.8 (2.0 s) | 0.6/1.0/1.8 (8.1 s) |
+| tmpborqf5jg | 17.1/79.1/117.8 | 7.6/11.7/40.8 (2.1 s) | 11.5/33.8/72.7 (8.8 s) |
+| tmpt2t5c67b (3 rounds) | 6.5/6.8/7.3 | 0.9/0.9/1.3 (2.7 s) | 0.4/0.5/0.5 (10.2 s) |
+| tmpvxk1t18u (3 rounds) | 8.1/8.6/9.7 | 26.0/28.7/31.2 (3.1 s) | 0.0/0.0/0.0 (13.6 s) |
+| tmpwchcc7lm (3 rounds) | 7.5/8.8/9.5 | 15.1/70.7/81.9 (3.4 s) | 0.5/1.0/1.1 (10.6 s) |
+| tmp94o0gmwt (3 rounds) | 8.7/9.0/10.4 | 27.4/37.0/46.1 (2.2 s) | 58.2/122.3/timeout (8.1 s) |
 
-Geometric mean of the medians: 14.4 s for the benchmark CNF, 12.8 s for
-Bosphorus's output, 12.1 s with the cluster encoding. The instances that
-time out with the benchmark CNF time out with Bosphorus's output too.
+Geometric mean of the medians: 14.4 s for the benchmark CNF, 6.6 s for
+Bosphorus's output (defaults: joint S-box encoding, lin-gauss, span
+filter), 3.0 s with the Gröbner cones on, which solve two of the four
+three-round instances outright but cost 8 s of run time and lose on
+others (tmp94o0gmwt, tmpgmh2blh0). The instances that time out with the
+benchmark CNF time out with Bosphorus's output too.
 
 ### Example: multivariate quadratic (MQ) systems
 
