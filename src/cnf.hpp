@@ -106,6 +106,7 @@ class CNF
                       vector<vector<VarVec> >& chunks,
                       vector<BooleMonomial>& singles) const;
     uint32_t newVar(VarKind kind, const BoolePolynomial& meaning);
+    void addClusters();
 
     //XOR of CNF variables == rhs: a native xor clause, or cut into pieces
     //of at most cutNum

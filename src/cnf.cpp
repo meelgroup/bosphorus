@@ -39,6 +39,7 @@ CNF::CNF(const ANF& _anf, const ConfigData& _config)
 {
     init();
     addTrivialEquations();
+    if (config.karnCluster > 0) addClusters();
 
     // Add regular equations
     for (size_t i = 0; i < anf.size(); i++) {
@@ -141,6 +142,105 @@ void CNF::addTrivialEquations()
     if (config.verbosity >= 1) {
         std::cout << "c [CNF-gen] Number of value assignments = " << nv
                   << "\nc Number of equiv assigments = " << nr << std::endl;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Joint encoding of small nonlinear equations that share variables
+// (e.g. the five output equations of an S-box): the forbidden assignments
+// of all equations of a cluster together are covered by one clause set over
+// the union of their variables, instead of one clause set per equation.
+// The clauses then propagate across the equations of the cluster.
+///////////////////////////////////////////////////////////////////////////////
+
+void CNF::addClusters()
+{
+    const uint32_t max_vars = config.karnCluster;
+    vector<size_t> cand; // equations that would be encoded by Brickenstein
+    vector<vector<uint32_t> > vars_of;
+    vector<Lineral> f;
+    for (size_t i = 0; i < anf.size(); i++) {
+        if (anf.isProduct(i) || anf.degOf(i) < 2) continue;
+        const BoolePolynomial& p = anf.eq(i);
+        if (p.nUsedVariables() > config.brickestein_algo_cutoff || p.nUsedVariables() > max_vars) continue;
+        if (config.doFactor && factor_into_linerals(p, f) && f.size() >= 2) continue;
+        cand.push_back(i);
+        vector<uint32_t> vs;
+        for (const uint32_t v : p.usedVariables()) vs.push_back(v);
+        vars_of.push_back(vs);
+    }
+    if (cand.size() < 2) return;
+
+    vector<vector<size_t> > occ(anf.getRing().nVariables()); // var -> candidate positions
+    for (size_t c = 0; c < cand.size(); c++) {
+        for (const uint32_t v : vars_of[c]) occ[v].push_back(c);
+    }
+
+    vector<char> taken(cand.size(), 0);
+    vector<uint32_t> in_cluster(anf.getRing().nVariables(), 0); // var -> cluster stamp
+    uint32_t stamp = 0;
+    size_t num_clusters = 0, num_members = 0;
+    for (size_t c0 = 0; c0 < cand.size(); c0++) {
+        if (taken[c0]) continue;
+        stamp++;
+        vector<size_t> members(1, c0);
+        vector<uint32_t> cvars = vars_of[c0];
+        for (const uint32_t v : cvars) in_cluster[v] = stamp;
+        taken[c0] = 1;
+        while (true) {
+            // the untaken candidate sharing the most variables with the cluster
+            size_t best = cand.size();
+            size_t best_shared = 1; // at least 2 shared variables
+            size_t best_new = 0;
+            for (const uint32_t v : cvars) {
+                for (const size_t c : occ[v]) {
+                    if (taken[c]) continue;
+                    size_t shared = 0;
+                    for (const uint32_t w : vars_of[c]) shared += (in_cluster[w] == stamp);
+                    const size_t fresh = vars_of[c].size() - shared;
+                    if (cvars.size() + fresh > max_vars) continue;
+                    if (shared > best_shared || (shared == best_shared && best != cand.size() && fresh < best_new)) {
+                        best = c;
+                        best_shared = shared;
+                        best_new = fresh;
+                    }
+                }
+            }
+            if (best == cand.size()) break;
+            taken[best] = 1;
+            members.push_back(best);
+            for (const uint32_t w : vars_of[best]) {
+                if (in_cluster[w] != stamp) {
+                    in_cluster[w] = stamp;
+                    cvars.push_back(w);
+                }
+            }
+        }
+        if (members.size() < 2) {
+            taken[c0] = 0; // encoded on its own later
+            continue;
+        }
+
+        std::sort(cvars.begin(), cvars.end());
+        const vector<polybori::CCuddNavigator::value_type> vidx(cvars.begin(), cvars.end());
+        BooleSet ones(anf.getRing());
+        BoolePolynomial all_zero(true, anf.getRing()); // prod (1 + p_i)
+        for (const size_t c : members) {
+            const BoolePolynomial& p = anf.eq(cand[c]);
+            in_clauses.insert(p.hash());
+            ones = ones.unite(BrickensteinOnes(p, vidx));
+            all_zero *= p + BooleConstant(true);
+        }
+        vector<Clause> setOfClauses;
+        BrickensteinCover(anf.getRing(), ones, vidx, setOfClauses);
+        clauses.push_back(make_pair(setOfClauses, all_zero + BooleConstant(true)));
+        addedAsCNF += members.size();
+        num_clusters++;
+        num_members += members.size();
+    }
+    if (config.verbosity >= 1) {
+        cout << "c [karn-cluster] " << num_members << " equations in " << num_clusters
+             << " clusters of at most " << max_vars << " variables" << endl;
     }
 }
 

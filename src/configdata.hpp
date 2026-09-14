@@ -45,6 +45,7 @@ struct ConfigData {
     // CNF conversion
     uint32_t cutNum = 5;
     uint32_t brickestein_algo_cutoff = 10;
+    uint32_t karnCluster = 0; // jointly encode small nonlinear eqs sharing variables, up to this many vars (0 = off)
     int doPartner = true; // Jovanovic-Kreuzer partner strategies (LPS/DPS/QPS/CPS)
     int doFactor = true;   // encode polynomials that are products of linear factors as one clause over the factors
     int xorClauses = false; // emit XORs as native CryptoMiniSat xor clauses instead of cutting them

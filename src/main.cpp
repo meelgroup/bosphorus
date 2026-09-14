@@ -209,6 +209,8 @@ void parseOptions(int argc, char* argv[])
         "ANF-to-CNF partner strategies (Jovanovic & Kreuzer): fold x*y+x, x*y+x+y+1, x*y+x*z, x*y*z+x*y*w and their generalisations into one CNF variable each. Default: ON");
     add_arg("--karn", config.brickestein_algo_cutoff, fc_integral<uint32_t>,
         "Uses this cutoff for doing Brickenstein's algorithm for translation of complex ANFs");
+    add_arg("--karncluster", config.karnCluster, fc_integral<uint32_t>,
+        "Encode small nonlinear equations that share variables jointly (one clause set over the union of their variables, e.g. all equations of an S-box) when the union has at most this many variables. 0 = off. Default: 0");
     add_arg("--onlynewcnfcls", only_new_cnf_clauses, fc_integral<int>,
         "Only output to CNF the newly discovered CNF clauses. Must have CNF as input.");
 

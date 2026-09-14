@@ -29,3 +29,12 @@ SOFTWARE.
 bool BrickesteinAlgo32(const polybori::BoolePolynomial &poly,
                        std::vector<Bosph::Clause> &setofClauses);
 
+// the assignments of the variables vidx (sorted, a superset of the
+// polynomial's variables) on which poly = 1, as a ZDD
+polybori::BooleSet BrickensteinOnes(const polybori::BoolePolynomial& poly,
+                                    const std::vector<polybori::CCuddNavigator::value_type>& vidx);
+// a set of clauses over vidx whose forbidden assignments are exactly O
+void BrickensteinCover(const polybori::BoolePolyRing& ring, const polybori::BooleSet& O,
+                       const std::vector<polybori::CCuddNavigator::value_type>& vidx,
+                       std::vector<Bosph::Clause>& setofClauses);
+
