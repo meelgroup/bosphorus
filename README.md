@@ -200,7 +200,7 @@ solver, and map the model back to the ANF's variables:
 ```
 ./bosphorus test.anf --cnfwrite test.cnf --solmap solution_map
 ./cryptominisat5 test.cnf > cnf_solution
-./utils/map_solution.py solution_map cnf_solution
+./scripts/map_solution.py solution_map cnf_solution
 s ANF-SATISFIABLE
 v x(0) 1+x(1) 1+x(2) x(3)
 ```
