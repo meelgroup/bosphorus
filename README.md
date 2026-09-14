@@ -252,6 +252,37 @@ what skipped the matrices in the runs of the table (58.8% of them did). The
 margin is thin: a slightly different encoding of the same instance lands at
 61% and times out.
 
+### Example: the ascon key-recovery instances
+
+The ascon instances of the same benchmark set (key recovery from the state
+after 2-4 initialization rounds, named variables, 3136 variables, 1280
+quadratic S-box equations) are the opposite case: short XORs, S-box
+equations of 6 variables that Brickenstein's conversion encodes directly.
+Bosphorus's rewriting takes 3 seconds; XL used to re-learn the linear part
+of the S-box equations every iteration, which `lin-gauss` and the span
+filter of learnt facts now stop. CryptoMiniSat times with three seeds
+(min/median/max, 200 s limit, models checked) on the four-round instances
+the benchmark's CNF solves within the limit:
+
+| instance | benchmark CNF | Bosphorus output | `--karncluster 10` |
+|---|---|---|---|
+| tmp3g3f82vv | 12.4/13.7/26.6 | 12.2/16.4/24.4 | 9.0/13.7/23.0 |
+| tmpgmh2blh0 | 47.2/66.2/89.5 | 20.4/38.0/90.4 | 16.7/36.5/123.4 |
+| tmpn1uaqlcc | 7.0/8.0/8.1 | 1.6/1.9/2.1 | 0.5/2.3/4.0 |
+| tmpdchqvtq0 | 8.9/15.7/40.3 | 8.8/9.0/24.4 | 5.0/9.6/10.1 |
+| tmppdzw6ahj | 11.6/13.5/14.5 | 6.5/6.9/12.5 | 5.1/6.4/9.5 |
+| tmpv1bh0ebt | 11.9/12.3/12.9 | 11.5/26.1/48.4 | 19.8/24.0/24.9 |
+| tmpp4b0ewm7 | 9.3/11.5/14.6 | 5.0/6.8/7.1 | 3.8/6.1/7.9 |
+| tmpborqf5jg | 17.1/79.1/117.8 | 36.9/47.1/84.8 | 27.6/45.8/96.0 |
+| tmpt2t5c67b (3 rounds) | 6.5/6.8/7.3 | 4.0/5.1/8.0 | 0.8/0.9/0.9 |
+| tmpvxk1t18u (3 rounds) | 8.1/8.6/9.7 | 9.7/15.3/33.8 | 14.6/23.5/27.2 |
+| tmpwchcc7lm (3 rounds) | 7.5/8.8/9.5 | 14.6/26.8/43.7 | 5.6/34.5/69.0 |
+| tmp94o0gmwt (3 rounds) | 8.7/9.0/10.4 | 14.8/15.6/19.8 | 27.6/30.7/43.0 |
+
+Geometric mean of the medians: 14.4 s for the benchmark CNF, 12.8 s for
+Bosphorus's output, 12.1 s with the cluster encoding. The instances that
+time out with the benchmark CNF time out with Bosphorus's output too.
+
 ## List all solutions of an ANF
 
 To find all solutions to `myfile.anf`:
