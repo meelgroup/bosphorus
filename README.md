@@ -145,18 +145,12 @@ meaning into the CNF.
 
 ### Multivariate quadratic (MQ) and HFE systems
 
-`utils/mq2anf.py` converts a [Fukuoka MQ challenge](https://www.mqchallenge.org/)
-file over GF(2) to ANF, `utils/mqgen.py n m seed` writes a random system
-of the same shape with a planted solution, and `utils/magma2anf.py`
-converts Magma polynomial lists such as the HFE systems of
-`magma.maths.usyd.edu.au/users/allan/gb`. Systems with at most
-`--gbwholevars` active variables are solved by the Gröbner engine alone
-(random MQ up to about n = 28 with m = 2n, HFE up to 35 variables on an
-8 GB machine); the posted MQ challenges (n >= 55) are far beyond a single
-machine with any known method. `utils/gbhybrid.py system.anf k` fixes k
-variables to all 2^k values and runs the basis on each remaining system;
-it only estimates how far more compute would reach and is not a solving
-method.
+`utils/mq2anf.py` converts [Fukuoka MQ challenge](https://www.mqchallenge.org/)
+files, `utils/mqgen.py` generates random MQ systems with a planted
+solution, and `utils/magma2anf.py` converts Magma polynomial lists such as
+the HFE systems. Systems of up to `--gbwholevars` variables are solved by
+the Gröbner engine alone; `utils/gbhybrid.py` (guess k variables, solve
+the rest) only estimates what more compute would reach.
 
 ## List all solutions of an ANF
 
