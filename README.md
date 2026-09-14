@@ -127,21 +127,17 @@ systems and slower on structured ones.
 
 ### ANF-to-CNF conversion strategies
 
-Small polynomials are converted directly (Brickenstein, `--karn`), and with
-`--karncluster N` small equations sharing variables (an S-box, say) are
-encoded jointly. Larger ones are linearised: nonlinear parts become CNF
-variables XORed together with cutting number `--cutnum`, folding small
-combinations into one variable each (the partner strategies of Jovanovic
-and Kreuzer, 2010: `x*y + x`, `x*y + x + y + 1`, `x*y + x*z`,
-`x*y*z + x*y*w`; `--partner 0` uses one variable per monomial). Products
-of linear factors are recognised (`--factor`) and encoded as one clause
-over one XOR-defined variable per factor, which is what stream-cipher
-instances look like as ANF. `--xorcls 1` writes XORs as CryptoMiniSat's
-native xor clauses instead of cutting them. A projection set in the ANF
-(`c p show ... END`) becomes a `c p show` line over the same variables in
-the CNF (`--projshow`), so solution counts over it agree. `[cnf-stats]`
-reports the sizes and `--comments 1` writes every auxiliary variable's
-meaning into the CNF.
+Small polynomials are converted directly (Brickenstein's algorithm), and
+small equations that share variables, such as the equations of one S-box,
+are encoded jointly over the union of their variables. Larger ones are
+linearised: nonlinear parts become CNF variables that are XORed together,
+with small combinations such as `x*y + x` or `x*y + x*z` folded into one
+variable each (the partner strategies of Jovanovic and Kreuzer). A product
+of linear factors becomes one clause over one XOR-defined variable per
+factor, which is how stream-cipher instances look as ANF. XORs are cut
+into short pieces, or written as CryptoMiniSat's native xor clauses. A
+projection set in the ANF becomes a `c p show` line over the same
+variables in the CNF, so solution counts over it agree.
 
 ### Multivariate quadratic (MQ) and HFE systems
 
