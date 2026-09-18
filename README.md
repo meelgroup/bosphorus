@@ -242,7 +242,7 @@ v x(0) 1+x(1) 1+x(2) x(3)
   run `bosphorus` on instances with over a million variables.
 
 ## References
-1. J. W. Freeman, [Improvements to propositional satisfiability search algorithms](https://repository.upenn.edu/dissertations/AAI9532744/), PhD thesis, University of Pennsylvania, 1995.
+1. J. W. Freeman, [Improvements to propositional satisfiability search algorithms](https://repository.upenn.edu/items/fb5a3fa3-3107-4be6-9ed4-7dd95ba84d27), PhD thesis, University of Pennsylvania, 1995.
 2. M. Soos, K. S. Meel, [Arjun: an efficient independent support computation technique and its applications to counting and sampling](https://arxiv.org/abs/2110.09026), ICCAD 2022.
 3. J.-C. Faugère, [A new efficient algorithm for computing Gröbner bases (F4)](https://doi.org/10.1016/S0022-4049(99)00005-5), J. Pure Appl. Algebra 139, 1999.
 4. J.-C. Faugère, [A new efficient algorithm for computing Gröbner bases without reduction to zero (F5)](https://doi.org/10.1145/780506.780516), ISSAC 2002.
