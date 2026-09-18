@@ -409,7 +409,8 @@ vector<BoolF4::Poly> BoolF4::run()
     while (!pairs.empty() && !has_one) {
         int dmin = pairs[0].degree;
         for (const Pair& pr : pairs) dmin = std::min(dmin, pr.degree);
-        if ((uint32_t)dmin > opt.maxDeg || st.rows > opt.maxRows) { st.budget_exhausted = true; break; }
+        if ((uint32_t)dmin > opt.maxDeg) { st.degree_truncated = true; break; }
+        if (st.rows > opt.maxRows) { st.budget_exhausted = true; break; }
         st.max_deg = std::max<uint32_t>(st.max_deg, dmin);
         vector<Pair> selected, rest;
         for (const Pair& pr : pairs) (pr.degree == dmin ? selected : rest).push_back(pr);

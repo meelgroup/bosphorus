@@ -125,7 +125,8 @@ class BoolF4 {
     struct Stats {
         uint64_t steps = 0, rows = 0, cols_max = 0, new_polys = 0, zero_reductions = 0;
         uint32_t max_deg = 0;
-        bool budget_exhausted = false;
+        bool budget_exhausted = false; // stopped on the row or cell budget: the basis is partial
+        bool degree_truncated = false; // pairs above maxDeg were dropped (a degree-bounded run, not a budget)
     };
 
     BoolF4(uint32_t nvars, const Options& opts);
