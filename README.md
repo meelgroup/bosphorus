@@ -174,7 +174,7 @@ Memory in parentheses.
 | 20 | 1.4 s | 1.0 s | 0.2 s | 0.2 s |
 | 24 | timeout | 15 s | 0.8 s (48 MB) | 1.0 s (158 MB) |
 | 26 | timeout | | 3.7 s (103 MB) | 2.7 s (309 MB) |
-| 28 | timeout | 196 s | 16 s (205 MB), was 187 s (1.7 GB) without the split | 13 s (511 MB) |
+| 28 | timeout | 196 s | 16 s (205 MB) | 13 s (511 MB) |
 | 30 | timeout | | 52 s (488 MB) | 52 s (1.1 GB) |
 | 32 | timeout | | 119 s (945 MB) | 134 s (2.1 GB) |
 | 34 | timeout | | 603 s (1.5 GB) | 537 s (2.6 GB) |
