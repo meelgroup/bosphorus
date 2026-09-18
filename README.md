@@ -83,42 +83,32 @@ v -0 1 2 -3
 ```
 This means x0 is `false`, x1 is `true`, x2 is `true` and x3 is `false`.
 
-## ANF rewrite rules and statistics
+## ANF rewrite rules
 
 | rule | what it does |
 |---|---|
-| `anf-prop` | propagates units, (anti-)equivalences and `m+1` (all variables of `m` true) |
-| `lin-gauss` | Gaussian elimination among the linear equations: drops redundant ones, shortens others, feeds units and equivalences to `anf-prop` |
-| `binom-red` | reduces every equation modulo the monomial and binomial equations (`x*y = 0`, `x*y + x = 0`, definitions `x*y + z = 0`); degrees never grow |
-| `prod-split` | `p = 0` where `1 + p` is a product of linear factors `(l1+c1)*(l2+c2)*...` becomes one linear equation per factor (every factor must be 1) |
-| `poly-shorten` | replaces `p` by `p + f` when that is shorter (shortens XORs, re-uses definitions) |
-| `mono-gauss` | Gaussian elimination with one column per monomial (linearisation): deletes equations that are combinations of others and replaces an equation by a lower-degree combination (a linear consequence of nonlinear equations); replacing by shorter combinations of the same degree is optional (11% smaller CNFs on the bivium family, slower CryptoMiniSat on ascon) |
-| `lit-probe` | partial evaluation of small equations: forced literals, equivalences, binary implications and their SCCs |
-| `var-probe` | failed-literal probing with propagation through the whole system: `x = 0` and `x = 1` are each propagated (units, `m+1`, products with one factor left), a failed branch forces `x`, agreeing branches set a variable, disagreeing ones make it equivalent to `x` (default: off) |
-| `cnf-probe` | CryptoMiniSat's inprocessing on the CNF of the system, as Arjun runs it: equivalent-literal SCCs, probing of every variable, in-tree probing (no elimination); the fixed and the equivalent literals come back as equations, and with `--cnfprobebin` the binary clauses too (`a -> b` is the binomial `a*b + a = 0`; no effect measured on ascon, bivium or MQ, so off by default) |
-| `fac-canon` | canonical linear factors of products modulo the linear span (default: off) |
-| `fac-res` | resolution between products sharing a linear factor (default: off) |
-| `gb-cone` | Gröbner bases of cones of small equations (the matrix-F4 engine per cone, plus a degree-bounded lex loop with `--gbfull 2`); linear members are added (`--gbconefactdeg`; quadratic ones pile up). On the ascon family the cones only change the three-round instances, and chaotically: default off for large systems, on for systems with few variables |
-| `gb-split` | when the whole-system Gröbner basis needs a matrix over the cell budget, fixes a variable both ways and combines the bases of the two branches: an inconsistent branch forces the variable, members `f0`, `f1` with the same leading monomial combine to `f0 + x*(f0 + f1)`; fixing one variable of a random MQ system with n = 28 brings its degree of regularity from 5 back to 4 |
-| `xl` | eXtended Linearization on the short equations |
-| `elimlin` | ElimLin: elimination and substitution of linear equations, iterated |
-| `sat-simp` | bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds |
-
-Every rule prints the size of the system before and after it ran
-(`c [simp-stats]` lines, coloured on a terminal), and the run ends with a
-table of totals per rule: calls, calls that changed something, time,
-change in equations, monomials, linear equations, and variables set or
-replaced. The `c Density:` line of the ANF stats gives the mean number of
-terms and variables per equation, the fill (terms divided by the possible
-monomials over the equation's own variables), the number of distinct
-monomials and how often each is shared, and equations per variable.
-
+| `anf-prop` | Propagates units, (anti-)equivalences and `m+1` (a monomial that must be 1 sets all its variables). |
+| `lin-gauss` | Gaussian elimination among the linear equations; the units and equivalences it finds go to `anf-prop`. |
+| `binom-red` | Reduces every equation modulo the monomial and binomial equations (`x*y = 0`, `x*y + x = 0`, `x*y + z = 0`). |
+| `prod-split` | A product of linear factors that must be 1 becomes one linear equation per factor. |
+| `poly-shorten` | Replaces `p` by `p + f` when that is shorter. |
+| `mono-gauss` | Gaussian elimination with one column per monomial (linearisation): deletes dependent equations and replaces equations by lower-degree combinations of others. |
+| `lit-probe` | Partial evaluation of small equations: forced literals, equivalences, binary implications and their SCCs. |
+| `var-probe` | Failed-literal probing [[1]](#references) through the whole system: what both branches of `x` force is kept (default: off). |
+| `cnf-probe` | CryptoMiniSat's inprocessing on the CNF of the system, as Arjun [[2]](#references) runs it; the fixed and equivalent literals come back as equations. |
+| `fac-canon` | Canonical linear factors of products modulo the linear span (default: off). |
+| `fac-res` | Resolution between products sharing a linear factor (default: off). |
+| `gb-cone` | Gröbner bases (F4 [[3]](#references)) of cones of small equations; the linear members are added (default: on for small systems). |
+| `gb-split` | Fixes a variable both ways when the whole-system Gröbner basis would exceed the matrix budget, and combines the two bases; a fixed variable lowers the degree of regularity [[5]](#references). |
+| `xl` | eXtended Linearization [[6]](#references) on the short equations. |
+| `elimlin` | ElimLin [[7]](#references): elimination and substitution of linear equations, iterated. |
+| `sat-simp` | Bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds. |
 
 ## The Gröbner Engines
 Complete bases come from Bosphorus's own matrix-F4 engine (`--gbengine 1`,
 M4RI over squarefree 64-bit monomials, deterministic budgets `--gbsteps`
-and `--gbmaxcells`); `--gbengine 0` uses BRiAl's `symmGB_F2` and
-`--gbengine 2` a Matrix-F5 variant (with a MutantXL step: rows that fell
+and `--gbmaxcells`); `--gbengine 0` uses BRiAl's `symmGB_F2` [[8]](#references) and
+`--gbengine 2` a Matrix-F5 [[4]](#references) variant (with a MutantXL step: rows that fell
 in degree are multiplied up again before the next degree) that is faster
 on random quadratic systems and slower on structured ones. Both engines
 stop as soon as the linear basis members fix every variable. A step whose
@@ -250,3 +240,13 @@ v x(0) 1+x(1) 1+x(2) x(3)
 ## Known issues
 - PolyBoRi cannot handle ring of sizes over approx 1 million (1048574). Do not
   run `bosphorus` on instances with over a million variables.
+
+## References
+1. I. Lynce, J. Marques-Silva, [Probing-based preprocessing techniques for propositional satisfiability](https://doi.org/10.1109/TAI.2003.1250177), ICTAI 2003.
+2. M. Soos, K. S. Meel, [Arjun: an efficient independent support computation technique and its applications to counting and sampling](https://arxiv.org/abs/2110.09026), ICCAD 2022.
+3. J.-C. Faugère, [A new efficient algorithm for computing Gröbner bases (F4)](https://doi.org/10.1016/S0022-4049(99)00005-5), J. Pure Appl. Algebra 139, 1999.
+4. J.-C. Faugère, [A new efficient algorithm for computing Gröbner bases without reduction to zero (F5)](https://doi.org/10.1145/780506.780516), ISSAC 2002.
+5. M. Bardet, J.-C. Faugère, B. Salvy, [On the complexity of the F5 Gröbner basis algorithm](https://doi.org/10.1016/j.jsc.2014.09.025), J. Symb. Comput. 70, 2015.
+6. N. Courtois, A. Klimov, J. Patarin, A. Shamir, [Efficient algorithms for solving overdefined systems of multivariate polynomial equations](https://doi.org/10.1007/3-540-45539-6_27), EUROCRYPT 2000.
+7. N. Courtois, P. Sepehrdad, P. Sušil, S. Vaudenay, [ElimLin algorithm revisited](https://doi.org/10.1007/978-3-642-34047-5_18), FSE 2012.
+8. M. Brickenstein, A. Dreyer, [PolyBoRi: a framework for Gröbner-basis computations with Boolean polynomials](https://doi.org/10.1016/j.jsc.2008.02.017), J. Symb. Comput. 44, 2009.
