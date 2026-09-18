@@ -110,7 +110,8 @@ struct ConfigData {
     int gbTailReduce = false;  // F4: interreduce the basis tails after every degree step (no gain measured)
     uint32_t gbSplitDepth = 8; // gb-split: when a whole-system basis exceeds the cell budget, split on a variable, up to this depth (0 = never)
     uint64_t gbSplitRows = 20000000ULL; // gb-split: matrix rows over the whole recursion
-    uint32_t gbFactDeg = 2;    // GB members of at most this degree ...
+    uint32_t gbFactDeg = 2;    // whole-system GB members of at most this degree ...
+    uint32_t gbConeFactDeg = 1; // ... and cone GB members of at most this degree (2 piles up quadratic facts: 42k equations on ascon) ...
     uint32_t gbFactLen = 8;    // ... and this many terms are added as facts
     int keepFactor = 2;           // never rewrite a product of linear factors into a non-product: 0 off, 1 on, 2 auto (when most nonlinear eqs are such products)
 };

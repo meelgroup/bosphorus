@@ -141,7 +141,12 @@ size_t ANF::groebner_windows()
         }
         windows++;
 
-        if ((config.gbEngine == 1 || config.gbEngine == 2) && (config.gbFull == 1 || (config.gbFull == 2 && whole)) && cvars.size() <= 64) {
+        // facts: the whole-system basis replaces the system, so its short
+        // nonlinear members are wanted too; from a cone only the linear
+        // members are (quadratic ones pile up: 42k equations on ascon)
+        const uint32_t fact_deg = whole ? config.gbFactDeg : config.gbConeFactDeg;
+        bool matrix_done = false; // the cone's degree-ordered basis came from the matrix engine
+        if ((config.gbEngine == 1 || config.gbEngine == 2) && config.gbFull >= 1 && cvars.size() <= 64) {
             // Bosphorus's own matrix engines over the Boolean ring
             // (boolf4.cpp, boolf5.cpp): dense GF(2) linear algebra with
             // M4RI on the critical pairs of one degree at a time. A whole
@@ -154,7 +159,10 @@ size_t ANF::groebner_windows()
             for (uint32_t k = 0; k < cvars.size(); k++) local[cvars[k]] = k;
             BoolSplit::Options sopt;
             sopt.maxDepth = whole ? config.gbSplitDepth : 0;
-            sopt.maxDeg = whole ? 64 : config.gbDeg;
+            // complete bases for the whole system and in the "both
+            // orderings" mode (as BRiAl's dp_asc cone basis is), degree
+            // bounded otherwise
+            sopt.maxDeg = (whole || config.gbFull == 2) ? 64 : config.gbDeg;
             sopt.maxRows = whole ? config.gbSplitRows : config.gbSteps;
             sopt.maxCells = config.gbMaxCells;
             sopt.engine = config.gbEngine;
@@ -186,7 +194,7 @@ size_t ANF::groebner_windows()
                 if (cg.size() == 1 && cg[0] == 0) { facts.push_back(BoolePolynomial(true, *ring)); break; }
                 uint32_t d = 0;
                 for (const BoolF4::Mon m : cg) d = std::max<uint32_t>(d, BoolF4::deg(m));
-                if (d > config.gbFactDeg || cg.size() > config.gbFactLen) continue;
+                if (d > fact_deg || cg.size() > config.gbFactLen) continue;
                 cand_facts++;
                 BoolePolynomial g(*ring);
                 for (const BoolF4::Mon m : cg) {
@@ -199,9 +207,10 @@ size_t ANF::groebner_windows()
                 if (eqs_hash.find(g.hash()) == eqs_hash.end()) facts.push_back(g);
             }
             if (timeout) break;
-            continue;
+            if (config.gbFull == 1 || whole) continue;
+            matrix_done = true; // --gbfull 2: the lex loop below still runs
         }
-        if (config.gbFull == 1 || (config.gbFull == 2 && whole)) {
+        if (!matrix_done && (config.gbFull == 1 || (config.gbFull == 2 && whole))) {
             // BRiAl's complete algorithm (the engine behind Sage's
             // groebner_basis for Boolean rings, with its F4-style dense
             // reduction steps): exact, no degree bound; the cones are small
@@ -249,7 +258,7 @@ size_t ANF::groebner_windows()
                 // gbMaxLen) and crowd out the structure the cones should
                 // capture; with the length bound the three-round ascon
                 // instances are solved by the cones alone
-                if ((uint32_t)cg.deg() > config.gbFactDeg || cg.length() > config.gbFactLen) continue;
+                if ((uint32_t)cg.deg() > fact_deg || cg.length() > config.gbFactLen) continue;
                 cand_facts++;
                 BoolePolynomial g(*ring);
                 for (const BooleMonomial& m : cg) {
@@ -266,7 +275,7 @@ size_t ANF::groebner_windows()
         // makes the three-round ascon instances collapse) and, with
         // --gbfull 2, the complete degree-ordered basis as well: the two
         // orderings find different short consequences.
-        if (config.gbFull == 2) {
+        if (!matrix_done && config.gbFull == 2) {
             std::sort(cvars.begin(), cvars.end());
             std::unordered_map<uint32_t, uint32_t> local;
             for (uint32_t k = 0; k < cvars.size(); k++) local[cvars[k]] = k;
@@ -294,7 +303,7 @@ size_t ANF::groebner_windows()
             }
             for (const BoolePolynomial& cg : cstrat.minimalizeAndTailReduce()) {
                 if (cg.isConstant()) { if (cg.isOne()) facts.push_back(BoolePolynomial(true, *ring)); continue; }
-                if ((uint32_t)cg.deg() > config.gbFactDeg || cg.length() > config.gbFactLen) continue;
+                if ((uint32_t)cg.deg() > fact_deg || cg.length() > config.gbFactLen) continue;
                 cand_facts++;
                 BoolePolynomial g(*ring);
                 for (const BooleMonomial& m : cg) {
@@ -331,7 +340,7 @@ size_t ANF::groebner_windows()
             // short consequences only: units, equivalences, short XORs and
             // small nonlinear relations (e.g. the implicit quadratic
             // relations of an S-box); long ones only bloat the system
-            if ((uint32_t)g.deg() <= config.gbFactDeg && g.length() <= config.gbFactLen) {
+            if ((uint32_t)g.deg() <= fact_deg && g.length() <= config.gbFactLen) {
                 cand_facts++;
                 if (eqs_hash.find(g.hash()) == eqs_hash.end()) facts.push_back(g);
             }

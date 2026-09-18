@@ -279,6 +279,8 @@ void parseOptions(int argc, char* argv[])
     add_arg("--gbmaxlen", config.gbMaxLen, fc_integral<size_t>, "gb-cone: only equations with at most this many terms take part. Default: 32");
     add_arg("--gbsteps", config.gbSteps, fc_integral<uint64_t>, "gb-cone: S-polynomials reduced per call, a deterministic work budget. Default: 100000");
     add_arg("--gbfactdeg", config.gbFactDeg, fc_integral<uint32_t>, "gb-cone: add basis members of at most this degree. Default: 2");
+    add_arg("--gbconefactdeg", config.gbConeFactDeg, fc_integral<uint32_t>,
+        "gb-cone: members of a cone's basis of at most this degree are added as facts (the whole-system basis uses --gbfactdeg). 2 piles up quadratic facts (42k equations on ascon). Default: 1");
     add_arg("--gbfactlen", config.gbFactLen, fc_integral<uint32_t>, "gb-cone: add basis members with at most this many terms. Default: 8");
     add_arg("--keepfactor", config.keepFactor, fc_integral<int>,
         "Never rewrite an equation that is a product of linear factors into one that is not, so the product form survives for the CNF encoding: 0 = off, 1 = on, 2 = auto (on when most nonlinear equations are such products). Default: 2");
