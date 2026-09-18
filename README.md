@@ -138,7 +138,13 @@ of linear factors becomes one clause over one XOR-defined variable per
 factor, which is how stream-cipher instances look as ANF. XORs are cut
 into short pieces, or written as CryptoMiniSat's native xor clauses. A
 projection set in the ANF becomes a `c p show` line over the same
-variables in the CNF, so solution counts over it agree.
+variables in the CNF, so solution counts over it agree. `--quadsplit k`
+encodes a quadratic equation with at most `k` products in its Dickson
+decomposition `l1*l2 + l3*l4 + ... + linear` with one shared XOR-defined
+variable per linear form and one per product, the way the raw CNFs of
+cipher instances are written; on the ascon family this made CryptoMiniSat
+slower on three of four instances (three seeds each), so it is off by
+default.
 
 ## Multivariate quadratic (MQ) and HFE systems
 Post-quantum multivariate schemes reduce to quadratic systems over GF(2).

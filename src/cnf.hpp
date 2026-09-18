@@ -119,6 +119,10 @@ class CNF
     bool tryAddingAsProduct(const BoolePolynomial& poly, const vector<Lineral>* factors,
                         vector<Clause>& setOfClauses);
     uint32_t lineralVar(const vector<uint32_t>& vars);
+    //a quadratic polynomial as products of linear forms plus a linear form
+    bool quadSplitApplies(const BoolePolynomial& poly, vector<VarVec>& linerals, VarVec& rest, bool& c) const;
+    bool tryAddingAsQuadForm(const BoolePolynomial& poly, vector<Clause>& setOfClauses);
+    uint32_t andVar(uint32_t y1, uint32_t y2, const BoolePolynomial& meaning);
     uint32_t hammingWeight(uint64_t num) const;
     void addEveryCombination(vector<uint32_t>& vars, bool isTrue,
                              vector<Clause>& thisClauses) const;
@@ -143,6 +147,7 @@ class CNF
         chunkMap; // a partner chunk (its terms, separated by UINT32_MAX) -> inside var
     std::unordered_map<VarVec, uint32_t, VarVecHash>
         lineralMap; // a lineral (its variables) -> the inside var equal to its XOR
+    std::unordered_map<uint64_t, uint32_t> andMap; // (y1, y2) -> the inside var equal to y1 & y2
     vector<XorClause> xor_clauses;
     static VarVec chunkKey(const vector<VarVec>& cover);
     uint32_t next_cnf_var = 0; ///<CNF variable counter
@@ -158,6 +163,8 @@ class CNF
     size_t numCutVars = 0;
     size_t numLineralVars = 0;
     size_t addedAsProduct = 0;
+    size_t addedAsQuad = 0;
+    size_t numAndVars = 0;
 };
 
 inline void CNF::print_without_header(std::ostream& os) const
@@ -245,6 +252,7 @@ inline void CNF::printStats() const
          << " monom_vars " << numMonomVars << " chunk_vars " << numChunkVars
          << " chunk_terms " << numChunkTerms << " cut_vars " << numCutVars
          << " linfactor_vars " << numLineralVars << " product_cls " << addedAsProduct
+         << " and_vars " << numAndVars << " quad_eqs " << addedAsQuad
          << " xor_cls " << xor_clauses.size() << endl;
 }
 

@@ -204,6 +204,10 @@ void parseOptions(int argc, char* argv[])
         "With --xorcls 1: cut native xor clauses longer than this into a chain of native pieces of this length (0 = never cut). Default: 0");
     add_arg("--partner", config.doPartner, fc_integral<int>,
         "ANF-to-CNF partner strategies (Jovanovic & Kreuzer): fold x*y+x, x*y+x+y+1, x*y+x*z, x*y*z+x*y*w and their generalisations into one CNF variable each. Default: ON");
+    add_arg("--quadsplit", config.quadSplit, fc_integral<uint32_t>,
+        "quad-split: encode a quadratic equation as its Dickson decomposition l1*l2 + l3*l4 + ... + linear, with one shared XOR-defined CNF variable per linear form and one per product, when it has at most this many products. 0 = off. Default: 0");
+    add_arg("--quadsplitmin", config.quadSplitMin, fc_integral<uint32_t>,
+        "quad-split: only equations with at least this many quadratic monomials. Default: 2");
     add_arg("--karn", config.brickestein_algo_cutoff, fc_integral<uint32_t>,
         "Uses this cutoff for doing Brickenstein's algorithm for translation of complex ANFs");
     add_arg("--karncluster", config.karnCluster, fc_integral<uint32_t>,

@@ -48,6 +48,8 @@ struct ConfigData {
     uint32_t karnCluster = 10; // jointly encode small nonlinear eqs sharing variables, up to this many vars (0 = off)
     int doPartner = true; // Jovanovic-Kreuzer partner strategies (LPS/DPS/QPS/CPS)
     int doFactor = true;   // encode polynomials that are products of linear factors as one clause over the factors
+    uint32_t quadSplit = 0;    // quad-split: encode a quadratic equation as its Dickson decomposition l1*l2 + l3*l4 + ... + linear, one shared XOR-defined CNF variable per linear form and one per product, when it has at most this many products (0 = off)
+    uint32_t quadSplitMin = 2; // quad-split: only equations with at least this many quadratic monomials
     int xorClauses = false; // emit XORs as native CryptoMiniSat xor clauses instead of cutting them
     uint32_t xorMaxLen = 0;  // with xorClauses: cut native XORs longer than this into native pieces (0 = never)
 

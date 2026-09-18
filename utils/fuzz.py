@@ -260,7 +260,7 @@ CUTOFFS = [  # (flag, default, choices other than the extremes; None: the extrem
     ('--xlsample', 30, [0, 1, 2, 10, 40]),
     ('--xlsamplex', 4, [0, 1, 10]),
     ('--elsample', 30, [0, 1, 2, 10, 40]),
-    ('--karncluster', 10, None), ('--xormaxlen', 0, None), ('--maxiters', 100, None),
+    ('--karncluster', 10, None), ('--quadsplit', 0, None), ('--quadsplitmin', 2, None), ('--xormaxlen', 0, None), ('--maxiters', 100, None),
     ('--rewriterounds', 10, None), ('--binomredlen', 2, None), ('--monogausslen', 64, None),
     ('--monogausscols', 100000, None), ('--varprobebudget', 2000000, None), ('--varprobelen', 64, None),
     ('--probevars', 8, None), ('--facresmax', 2, None), ('--gbdeg', 3, None), ('--gbwindow', 24, None),

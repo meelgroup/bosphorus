@@ -75,6 +75,16 @@ size_t product_size(const std::vector<Lineral>& factors);
 bool factor_into_linerals(const polybori::BoolePolynomial& poly,
                           std::vector<Lineral>& factors);
 
+/// Dickson decomposition of a quadratic polynomial: writes
+///   poly = l_1 * l_2 + l_3 * l_4 + ... + rest
+/// with every l_i a linear form without constant (its sorted variables)
+/// and rest linear (variables `rest`, constant `c`). The number of
+/// products is half the rank of the alternating matrix of the quadratic
+/// part, so it does not depend on the choices made; the pivots are chosen
+/// to keep the linear forms short. Returns false unless deg(poly) == 2.
+bool quad_form_decompose(const polybori::BoolePolynomial& poly,
+                         std::vector<VarVec>& linerals, VarVec& rest, bool& c);
+
 /// The polynomial (l_1 + c_1) * ... * (l_k + c_k).
 polybori::BoolePolynomial expand_linerals(const polybori::BoolePolyRing& ring,
                                           const std::vector<Lineral>& factors);

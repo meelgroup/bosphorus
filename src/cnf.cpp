@@ -159,11 +159,15 @@ void CNF::addClusters()
     vector<size_t> cand; // equations that would be encoded by Brickenstein
     vector<vector<uint32_t> > vars_of;
     vector<Lineral> f;
+    vector<VarVec> qls;
+    VarVec qrest;
+    bool qc;
     for (size_t i = 0; i < anf.size(); i++) {
         if (anf.isProduct(i) || anf.degOf(i) < 2) continue;
         const BoolePolynomial& p = anf.eq(i);
         if (p.nUsedVariables() > config.brickestein_algo_cutoff || p.nUsedVariables() > max_vars) continue;
         if (config.doFactor && factor_into_linerals(p, f) && f.size() >= 2) continue;
+        if (config.quadSplit > 0 && quadSplitApplies(p, qls, qrest, qc)) continue;
         cand.push_back(i);
         vector<uint32_t> vs;
         for (const uint32_t v : p.usedVariables()) vs.push_back(v);
@@ -285,6 +289,8 @@ void CNF::addBoolePolynomial(const BoolePolynomial& poly,
     vector<Clause> setOfClauses;
     if (config.doFactor && poly.deg() > 1 && tryAddingAsProduct(poly, factors, setOfClauses)) {
         addedAsProduct++;
+    } else if (config.quadSplit > 0 && poly.deg() == 2 && tryAddingAsQuadForm(poly, setOfClauses)) {
+        addedAsQuad++;
     } else if (poly.deg() > 1 && poly.nUsedVariables() <= config.brickestein_algo_cutoff &&
         BrickesteinAlgo32(poly, setOfClauses)) {
         addedAsCNF++;
@@ -366,6 +372,72 @@ bool CNF::tryAddingAsProduct(const BoolePolynomial& poly, const vector<Lineral>*
         if (lits[i].var() == lits[i + 1].var()) return true; // tautology: no clause
     }
     setOfClauses.push_back(Clause(lits));
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// quad-split: a quadratic polynomial as its Dickson decomposition
+//   l_1 * l_2 + l_3 * l_4 + ... + rest = 0
+// (linfactor.cpp). Every linear form with more than one variable gets the
+// XOR-defined CNF variable that products of linear factors use, shared
+// between all equations that contain the same form; every product gets a
+// variable y = y1 & y2 (three clauses), shared as well; and the equation is
+// the XOR of the product variables and the rest. The S-box equations of a
+// cipher have one or two products each, and the raw CNFs of such systems
+// are written with exactly these auxiliary variables (one per linear form);
+// against the joint clause set of a cluster, the solver's learnt clauses can
+// then speak about the linear forms.
+///////////////////////////////////////////////////////////////////////////////
+
+bool CNF::quadSplitApplies(const BoolePolynomial& poly, vector<VarVec>& linerals,
+                           VarVec& rest, bool& c) const
+{
+    if (config.quadSplit == 0 || poly.deg() != 2) return false;
+    size_t nquad = 0;
+    for (const BooleMonomial& m : poly) nquad += (m.deg() == 2);
+    if (nquad < config.quadSplitMin) return false;
+    if (!quad_form_decompose(poly, linerals, rest, c)) return false;
+    return linerals.size() / 2 <= config.quadSplit;
+}
+
+uint32_t CNF::andVar(uint32_t y1, uint32_t y2, const BoolePolynomial& meaning)
+{
+    if (y1 > y2) std::swap(y1, y2);
+    const uint64_t key = ((uint64_t)y1 << 32) | y2;
+    const auto it = andMap.find(key);
+    if (it != andMap.end()) return it->second;
+    const uint32_t y = newVar(kind_chunk, meaning);
+    andMap[key] = y;
+    numAndVars++;
+    // y <-> y1 & y2
+    vector<Clause> setOfClauses;
+    setOfClauses.push_back(Clause(vector<Lit>{Lit(y, true), Lit(y1, false)}));
+    setOfClauses.push_back(Clause(vector<Lit>{Lit(y, true), Lit(y2, false)}));
+    setOfClauses.push_back(Clause(vector<Lit>{Lit(y, false), Lit(y1, true), Lit(y2, true)}));
+    clauses.push_back(std::make_pair(setOfClauses, meaning));
+    return y;
+}
+
+bool CNF::tryAddingAsQuadForm(const BoolePolynomial& poly, vector<Clause>& setOfClauses)
+{
+    vector<VarVec> linerals;
+    VarVec rest;
+    bool c;
+    if (!quadSplitApplies(poly, linerals, rest, c)) return false;
+    const BoolePolyRing& ring = anf.getRing();
+    auto var_of = [&](const VarVec& l) {
+        if (l.size() == 1) return monomMap.find(BooleVariable(l[0], ring).hash())->second;
+        return lineralVar(l);
+    };
+    vector<uint32_t> xor_vars;
+    for (size_t k = 0; k + 1 < linerals.size(); k += 2) {
+        BoolePolynomial f(ring), g(ring);
+        for (const uint32_t v : linerals[k]) f += BooleVariable(v, ring);
+        for (const uint32_t v : linerals[k + 1]) g += BooleVariable(v, ring);
+        xor_vars.push_back(andVar(var_of(linerals[k]), var_of(linerals[k + 1]), f * g));
+    }
+    for (const uint32_t v : rest) xor_vars.push_back(monomMap.find(BooleVariable(v, ring).hash())->second);
+    addXor(xor_vars, c, setOfClauses);
     return true;
 }
 

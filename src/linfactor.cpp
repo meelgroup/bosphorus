@@ -24,6 +24,8 @@ SOFTWARE.
 
 #include <algorithm>
 #include <map>
+#include <set>
+#include <cassert>
 #include <unordered_map>
 #include <unordered_set>
 #include <limits>
@@ -312,5 +314,102 @@ bool BLib::normalize_product(vector<Lineral>& factors)
         out.push_back(l);
     }
     factors.swap(out);
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Dickson decomposition of a quadratic form over GF(2)
+//
+// With Q = x_i*x_j + x_i*A + x_j*B + C, where A, B, C do not contain x_i or
+// x_j, Q = (x_i + B) * (x_j + A) + A*B + C: one product is peeled off and
+// the rest, A*B + C, is a quadratic form in fewer variables (a*a = a turns
+// the shared variables of A and B into linear terms). Repeating this until
+// no quadratic monomial is left gives rank/2 products. The pivot is the
+// edge x_i*x_j with the fewest fill-in monomials |A|*|B|, which also keeps
+// the two linear forms short.
+///////////////////////////////////////////////////////////////////////////////
+
+bool BLib::quad_form_decompose(const BoolePolynomial& poly, vector<VarVec>& linerals,
+                               VarVec& rest, bool& c)
+{
+    linerals.clear();
+    rest.clear();
+    c = poly.hasConstantPart();
+    if (poly.deg() != 2) return false;
+
+    std::map<uint32_t, std::set<uint32_t> > adj; // the quadratic part as a graph
+    std::set<uint32_t> lin;
+    for (const BooleMonomial& m : poly) {
+        if (m.deg() == 1) {
+            lin.insert(*m.begin());
+        } else if (m.deg() == 2) {
+            auto it = m.begin();
+            const uint32_t a = *it;
+            ++it;
+            const uint32_t b = *it;
+            adj[a].insert(b);
+            adj[b].insert(a);
+        }
+    }
+    auto toggle_edge = [&](uint32_t a, uint32_t b) {
+        if (!adj[a].insert(b).second) adj[a].erase(b);
+        if (!adj[b].insert(a).second) adj[b].erase(a);
+    };
+    while (true) {
+        // the pivot edge: least fill-in
+        uint32_t pi = 0, pj = 0;
+        size_t best = std::numeric_limits<size_t>::max();
+        for (const auto& kv : adj) {
+            if (kv.second.empty()) continue;
+            for (const uint32_t j : kv.second) {
+                if (j < kv.first) continue;
+                const size_t fill = (kv.second.size() - 1) * (adj[j].size() - 1);
+                if (fill < best) { best = fill; pi = kv.first; pj = j; }
+            }
+        }
+        if (best == std::numeric_limits<size_t>::max()) break;
+        vector<uint32_t> A(adj[pi].begin(), adj[pi].end()); // neighbours of i, j removed
+        vector<uint32_t> B(adj[pj].begin(), adj[pj].end());
+        A.erase(std::remove(A.begin(), A.end(), pj), A.end());
+        B.erase(std::remove(B.begin(), B.end(), pi), B.end());
+        // l1 = x_i + B, l2 = x_j + A
+        VarVec l1(B), l2(A);
+        l1.push_back(pi);
+        l2.push_back(pj);
+        std::sort(l1.begin(), l1.end());
+        std::sort(l2.begin(), l2.end());
+        linerals.push_back(l1);
+        linerals.push_back(l2);
+        // x_i and x_j leave the form
+        for (const uint32_t a : A) adj[a].erase(pi);
+        for (const uint32_t b : B) adj[b].erase(pj);
+        adj.erase(pi);
+        adj.erase(pj);
+        // + A*B
+        for (const uint32_t a : A) {
+            for (const uint32_t b : B) {
+                if (a == b) {
+                    if (!lin.insert(a).second) lin.erase(a);
+                } else {
+                    toggle_edge(a, b);
+                }
+            }
+        }
+    }
+    rest.assign(lin.begin(), lin.end());
+#ifndef NDEBUG
+    {
+        const BoolePolyRing& ring = poly.ring();
+        BoolePolynomial check(c, ring);
+        for (const uint32_t v : rest) check += BooleVariable(v, ring);
+        for (size_t k = 0; k + 1 < linerals.size(); k += 2) {
+            BoolePolynomial f(ring), g(ring);
+            for (const uint32_t v : linerals[k]) f += BooleVariable(v, ring);
+            for (const uint32_t v : linerals[k + 1]) g += BooleVariable(v, ring);
+            check += f * g;
+        }
+        assert(check == poly);
+    }
+#endif
     return true;
 }
