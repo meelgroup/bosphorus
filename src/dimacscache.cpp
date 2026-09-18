@@ -65,7 +65,16 @@ DIMACSCache::DIMACSCache(const char* _fname)
 
     vector<Lit> lits;
     while (std::getline(ifs, temp)) {
-        if (temp.length() == 0 || temp[0] == 'p' || temp[0] == 'c') {
+        if (temp.length() == 0 || temp[0] == 'c') {
+            continue;
+        } else if (temp[0] == 'p') {
+            // "p cnf <vars> <clauses>": a variable that occurs in no clause
+            // still exists (and must be enumerated by --allsol)
+            std::istringstream iss(temp);
+            std::string p, cnf;
+            uint32_t nvars = 0;
+            iss >> p >> cnf >> nvars;
+            maxVar = std::max<uint32_t>(maxVar, nvars);
             continue;
         } else if (temp[0] == 'x') {
             cout << "ERROR: xor clause found in CNF, we cannot deal with that"

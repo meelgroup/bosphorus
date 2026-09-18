@@ -29,10 +29,13 @@ SOFTWARE.
 #include <iostream>
 #include <map>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
+#include "anfstats.hpp"
 #include "configdata.hpp"
+#include "linfactor.hpp"
 #include "evaluator.hpp"
 #include "replacer.hpp"
 #include <polybori/polybori.h>
@@ -64,15 +67,33 @@ class ANF
     ANF(const ANF&) = delete;
     ~ANF();
 
-    size_t readFile(const string& filename);
+    /// Variable names of an ANF file. Variables written x<N> or x(N) have
+    /// index N; any other name (e.g. K[1], sbox_in[1,65], n_3) gets the next
+    /// free index in order of first appearance.
+    struct Names {
+        std::vector<std::string> names; // index -> name ("" for x<N> variables)
+        std::unordered_map<std::string, uint32_t> index; // name -> index
+        size_t ring_size = 1;
+    };
+    /// First pass over the file: the variables and the ring size.
+    static Names scanFile(const std::string& filename);
+    size_t readFile(const string& filename, const Names* names = nullptr);
     bool propagate();
     inline vector<lbool> extendSolution(const vector<lbool>& solution) const;
     void printStats() const;
+    void printRuleStats() const;    // totals per rewrite rule over the run
+    void printDensityStats() const; // how full the equations are, how much they share
+    ANFStats get_stats() const;
+    const ConfigData& get_config() const { return config; }
     void print_solution_map(std::ofstream* ofs);
     void get_solution_map(map<uint32_t, VarMap>& ret) const;
 
     // Returns true if polynomial is new and has been added
     bool addBoolePolynomial(const BoolePolynomial& poly);
+    // Adds the polynomial given as a list of monomials (the empty vector is
+    // the constant 1). If it is a product of linear factors it is stored as
+    // such and never expanded into a ZDD unless a rule needs that.
+    bool addTerms(vector<VarVec>& terms);
     bool addLearntBoolePolynomial(const BoolePolynomial& poly);
     void contextualize(vector<BoolePolynomial>& learnt) const;
 
@@ -90,7 +111,39 @@ class ANF
     //size_t numUniqueMonoms(const vector<BoolePolynomial>& equations) const;
     inline bool hasPolynomial(const BoolePolynomial& p) const;
     const BoolePolyRing& getRing() const;
+    /// All equations as polynomials. Materialises every lazily stored
+    /// product first: prefer eq(i) / isProduct(i) / getFactors(i).
     const vector<BoolePolynomial>& getEqs() const;
+    /// Equation idx as a polynomial (expanded on demand for products).
+    const BoolePolynomial& eq(size_t idx) const;
+    /// Equation idx is stored as a product of linear factors.
+    bool isProduct(size_t idx) const { return !factors[idx].empty(); }
+    /// Variables of equation idx, without expanding a product.
+    BooleMonomial varsOf(size_t idx) const;
+    /// Calls f(var) for every variable of equation idx (no ZDD work for a
+    /// product; a variable shared by two factors is visited twice).
+    template <class F> void forEachVar(size_t idx, F f) const
+    {
+        if (poly_valid[idx]) {
+            for (const uint32_t v : eqs[idx].usedVariables()) f(v);
+        } else {
+            for (const Lineral& l : factors[idx]) for (const uint32_t v : l.vars) f(v);
+        }
+    }
+    /// Number of variables of equation idx (an upper bound for a product).
+    size_t nVarsOf(size_t idx) const;
+    /// Sorted, distinct variables of equation idx (no ZDD work for a product).
+    VarVec varsVecOf(size_t idx) const;
+    /// Degree of equation idx (the number of factors for a product, an
+    /// upper bound if the factors share variables).
+    int degOf(size_t idx) const;
+    /// The lineral factorisation of equation idx if known (a product of
+    /// >= 2 linear factors), else empty. Found once with
+    /// factor_into_linerals() and then maintained through propagation, so
+    /// it stays known even when substitutions make the factors share
+    /// variables and the expanded polynomial can no longer be factored.
+    const vector<Lineral>& getFactors(size_t idx) const { return factors[idx]; }
+    size_t getEqLen(size_t idx) const { return eq_len[idx]; }
     inline const vector<lbool>& getFixedValues() const;
     inline const eqs_hash_t& getEqsHash(void) const;
     const vector<vector<size_t> >& getOccur() const;
@@ -100,8 +153,50 @@ class ANF
     inline lbool value(const uint32_t var) const;
     inline Lit getReplaced(const uint32_t var) const;
     inline ANF& operator=(const ANF& other);
-    static size_t readFileForMaxVar(const std::string& filename);
+    static size_t readFileForMaxVar(const std::string& filename)
+    {
+        return scanFile(filename).ring_size - 1;
+    }
     set<size_t> get_proj_set() const;
+    /// number of variables that occur in some equation and are not set or replaced
+    size_t numActiveVars() const
+    {
+        size_t n = 0;
+        for (size_t v = 0; v < occur.size(); v++) {
+            if (!occur[v].empty() && replacer->getValue(v) == l_Undef &&
+                replacer->getReplaced(v) == Lit(v, false)) n++;
+        }
+        return n;
+    }
+    /// the input carried a projection set ('c p show ... END')
+    bool proj_set_given() const { return proj_given; }
+    void set_proj_set_given(bool g) { proj_given = g; }
+    /// the projection ("c p show") set: variables 0..n-1
+    void set_proj_set_all(size_t n)
+    {
+        proj_set.clear();
+        for (size_t i = 0; i < n; i++) proj_set.insert(i);
+    }
+
+    // In-place rewrite rules (anfrewrite.cpp). Each returns the number of
+    // changes it made; check getOK() afterwards, they may find UNSAT.
+    size_t rewrite_inplace();        // all of the below, to a fixpoint
+    size_t reduce_by_short_polys();  // "binom-red"
+    size_t shorten_polys();          // "poly-shorten"
+    size_t probe_small_polys();      // "lit-probe" (+ "impl-scc")
+    size_t probe_vars();             // "var-probe"
+    size_t cnf_probe();              // "cnf-probe" (anfcnfprobe.cpp)
+    size_t gauss_linear();           // "lin-gauss"
+    size_t gauss_monomials();        // "mono-gauss"
+    size_t split_products();         // "prod-split"
+    // adds facts learnt by a strategy, dropping linear ones that are
+    // combinations of the linear equations already in the system
+    size_t add_linearly_new_facts(const vector<BoolePolynomial>& facts, bool contextualize);
+    size_t canon_factors();          // "fac-canon"
+    size_t resolve_factors();        // "fac-res"
+    size_t groebner_windows();       // "gb-cone" (anfgroebner.cpp)
+    /// Adds a product of >= 2 linear factors as a new equation; false if present
+    bool addProduct(const vector<Lineral>& f);
 
    private:
     bool propagate_iteratively(unordered_set<uint32_t>& updatedVars,
@@ -114,10 +209,30 @@ class ANF
     void removePolyFromOccur(const BoolePolynomial& poly, size_t eq_idx);
     void removeEquations(std::vector<size_t>& eq2r);
     bool updateEquations(size_t idx, const BoolePolynomial newpoly,
-                         vector<size_t>& empty_equations);
+                         vector<size_t>& empty_equations,
+                         const vector<Lineral>* newfactors = nullptr);
+    /// factors of eq idx after the replacer's current substitutions
+    enum SubstResult { subst_unknown, subst_product, subst_zero, subst_unsat, subst_linear };
+    SubstResult substituted_factors(size_t idx, vector<Lineral>& out);
+    bool eraseKey(size_t idx);
+    bool insertKey(size_t idx);
     void checkSimplifiedPolysContainNoSetVars() const;
     bool containsMono(const BooleMonomial& mono1,
                       const BooleMonomial& mono2) const;
+    bool rewrite_eq(size_t idx, const BoolePolynomial& newpoly,
+                    unordered_set<uint32_t>& updatedVars,
+                    vector<size_t>& empty_equations);
+    // var-probe: propagates the assumption v = val through the equations
+    // into `assign` (l_Undef = free); false on a conflict. `budget` is
+    // decremented per equation evaluated.
+    bool propagate_assumption(uint32_t v, bool val, vector<lbool>& assign,
+                              vector<uint32_t>& trail, int64_t& budget) const;
+    // product-preserving mode (config.keepFactor): true if `from` is a product of
+    // >= 2 linerals and `to` is nonlinear but not such a product
+    bool breaks_product(const BoolePolynomial& from, const BoolePolynomial& to) const;
+    int keep_factor = -1; // -1: not decided yet (config.keepFactor == 2)
+    bool finish_rewrites(unordered_set<uint32_t>& updatedVars,
+                         vector<size_t>& empty_equations);
 
     //Config
     const polybori::BoolePolyRing* ring;
@@ -128,14 +243,34 @@ class ANF
 
     // Independent variables
     set<size_t> proj_set;
+    bool proj_given = false;
+    // gb-cone bookkeeping: the system's stats after its last run
+    ANFStats gb_last;
+    bool gb_ran = false;
+    ANFStats cp_last; // cnf-probe: the system's stats after its last run
+    std::unordered_set<uint64_t> cp_bins_seen; // cnf-probe: binary clauses already imported (other rules rewrite them, so they must not come back every round)
+    bool cp_ran = false;
+    std::unordered_set<uint64_t> gb_seen;               // cones (by their equations) already processed
+    std::map<size_t, polybori::BoolePolyRing> gb_rings; // cone rings by number of variables
 
-    //State
-    vector<BoolePolynomial> eqs;
-    eqs_hash_t eqs_hash;
+    //State. An equation is either a polynomial (poly_valid) or a product
+    //of linear factors (factors non-empty) whose polynomial is only built
+    //when asked for; products of long factors have thousands of terms.
+    mutable vector<BoolePolynomial> eqs;
+    mutable vector<char> poly_valid;
+    vector<vector<Lineral> > factors; // parallel to eqs, see getFactors()
+    vector<size_t> eq_len; // parallel to eqs: number of terms (product_size() for products)
+    eqs_hash_t eqs_hash;   // hashes of the polynomial equations
+    std::unordered_set<VarVec, VarVecHash> prod_keys; // keys of the product equations
     Replacer* replacer;
     vector<vector<size_t> > occur; //occur[var] -> index of polys where the variable occurs
 
     size_t new_equations_begin = 0;
+
+    // nesting depth of the SimpStatsScope objects currently alive
+    unsigned stats_depth = 0;
+    std::map<std::string, RuleStats> rule_stats; // totals per rule, by SimpStatsScope
+    friend class SimpStatsScope;
 
     friend std::ostream& operator<<(std::ostream& os, const ANF& anf);
 };
@@ -145,7 +280,11 @@ inline ANF::ANF(const ANF& other, const anf_no_replacer_tag)
       config(other.config),
       comments(other.comments),
       eqs(other.eqs),
+      poly_valid(other.poly_valid),
+      factors(other.factors),
+      eq_len(other.eq_len),
       eqs_hash(other.eqs_hash),
+      prod_keys(other.prod_keys),
       replacer(nullptr),
       occur(other.occur),
       new_equations_begin(other.new_equations_begin)
@@ -165,9 +304,7 @@ inline const BoolePolyRing& ANF::getRing() const
 inline size_t ANF::numMonoms() const
 {
     size_t num = 0;
-    for (const BoolePolynomial& poly : eqs) {
-        num += poly.length();
-    }
+    for (const size_t l : eq_len) num += l;
     return num;
 }
 
@@ -180,15 +317,31 @@ inline bool ANF::containsMono(const BooleMonomial& mono1,
 inline size_t ANF::deg() const
 {
     int deg = 0;
-    for (const BoolePolynomial& poly : eqs) {
-        deg = std::max(deg, poly.deg());
+    for (size_t i = 0; i < eqs.size(); i++) {
+        deg = std::max(deg, degOf(i));
     }
     return deg;
 }
 
 inline const vector<BoolePolynomial>& ANF::getEqs() const
 {
+    for (size_t i = 0; i < eqs.size(); i++) eq(i);
     return eqs;
+}
+
+inline const BoolePolynomial& ANF::eq(size_t idx) const
+{
+    if (!poly_valid[idx]) {
+        eqs[idx] = expand_linerals(*ring, factors[idx]);
+        poly_valid[idx] = 1;
+    }
+    return eqs[idx];
+}
+
+inline int ANF::degOf(size_t idx) const
+{
+    if (poly_valid[idx]) return eqs[idx].deg();
+    return factors[idx].size();
 }
 
 inline const ANF::eqs_hash_t& ANF::getEqsHash(void) const
@@ -204,8 +357,8 @@ inline bool ANF::hasPolynomial(const BoolePolynomial& p) const
 inline size_t ANF::getNumSimpleXors() const
 {
     size_t num = 0;
-    for (const BoolePolynomial& poly : eqs) {
-        num += (poly.deg() == 1);
+    for (size_t i = 0; i < eqs.size(); i++) {
+        num += (degOf(i) == 1);
     }
     return num;
 }
@@ -219,12 +372,19 @@ inline std::ostream& operator<<(std::ostream& os, const ANF& anf)
 {
     // Dump comments
     for (const string& comment : anf.comments) {
+        if (comment.compare(0, 9, "c p show ") == 0) continue; // rewritten below
         os << comment << endl;
+    }
+    // the projection set of the input, so that the written ANF keeps its meaning
+    if (anf.proj_given) {
+        os << "c p show";
+        for (const size_t v : anf.proj_set) os << " " << BooleVariable(v, *anf.ring);
+        os << " END" << endl;
     }
 
     // Print equations
-    for (const BoolePolynomial& poly : anf.eqs) {
-        os << poly;
+    for (size_t i = 0; i < anf.eqs.size(); i++) {
+        os << anf.eq(i);
         os << endl;
     }
 
@@ -242,8 +402,10 @@ inline void ANF::printStats() const
          << "c Max deg in eqs: " << deg() << endl
          << "c Simple XORs: " << getNumSimpleXors() << endl
          << "c Num vars set: " << getNumSetVars() << endl
-         << "c Num vars replaced: " << getNumReplacedVars() << endl
-         << "c --------------------" << endl;
+         << "c Num vars replaced: " << getNumReplacedVars() << endl;
+    printDensityStats();
+    cout << "c --------------------" << endl;
+    printRuleStats();
 }
 
 vector<lbool> ANF::extendSolution(const vector<lbool>& solution) const
@@ -295,6 +457,10 @@ ANF& ANF::operator=(const ANF& other)
 {
     //assert(updatedVars.empty() && other.updatedVars.empty());
     eqs = other.eqs;
+    poly_valid = other.poly_valid;
+    factors = other.factors;
+    eq_len = other.eq_len;
+    prod_keys = other.prod_keys;
     *replacer = *other.replacer;
     occur = other.occur;
     return *this;

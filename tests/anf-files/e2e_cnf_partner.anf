@@ -1,0 +1,18 @@
+c RUN: %solver --anfread %s --solve --allsol --verb 0 --simplify 0 | %verify allsol %s
+c RUN: %solver --anfread %s --cnfwrite %t.cnf --simplify 0 | %OutputCheck %s
+c
+c All solutions are enumerated through the CNF and compared with the
+c brute-forced solutions of the ANF, which checks the chunk encodings.
+c
+c Polynomials with more than 10 variables, so they are linearised (not
+c converted with Brickenstein's method) and the partner strategies apply:
+c   x1*x2 + x1             linear partner    x1*(x2+1)
+c   x3*x4 + x3 + x4 + 1    double partner    (x3+1)*(x4+1)
+c   x5*x6 + x5*x7          quadratic partner x5*(x6+x7)
+c   x8*x9*x10 + x8*x9*x11  cubic partner     x8*x9*(x10+x11)
+x1*x2 + x1 + x3*x4 + x3 + x4 + 1 + x5*x6 + x5*x7 + x8*x9*x10 + x8*x9*x11 + x12 + x13
+c and their generalisations:
+c   x1*x2*x3 + x1*x2 + x1*x3 + x1   x1*(x2+1)*(x3+1)
+c   x4*x5 + x4*x6 + x4              x4*(x5+x6+1)
+x1*x2*x3 + x1*x2 + x1*x3 + x1 + x4*x5 + x4*x6 + x4 + x7 + x8 + x9 + x10 + x11 + x12 + 1
+c CHECK: \[cnf-stats\] vars 21 clauses 89 lits 417 anf_vars 14 monom_vars 0 chunk_vars 6 chunk_terms 19 cut_vars 1

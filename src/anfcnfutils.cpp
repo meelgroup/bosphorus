@@ -92,13 +92,15 @@ static inline BooleSet BrickensteinAlgo23b(const BoolePolynomial& poly,
         powerset_r(poly.ring(), vidx.begin(), vidx.end()).navigation());
 }
 
-bool BrickesteinAlgo32(const BoolePolynomial& poly,
-                       vector<Clause>& setofClauses)
+BooleSet BrickensteinOnes(const BoolePolynomial& poly, const vector<vidx_t>& vidx)
 {
-    const size_t n = poly.nUsedVariables();
-    vector<vidx_t> vidx(n);
-    std::copy_n(poly.usedVariables().begin(), n, vidx.begin());
-    BooleSet O = BrickensteinAlgo23b(poly, vidx);
+    return BrickensteinAlgo23b(poly, vidx);
+}
+
+void BrickensteinCover(const BoolePolyRing& ring, const BooleSet& O,
+                       const vector<vidx_t>& vidx, vector<Clause>& setofClauses)
+{
+    const size_t n = vidx.size();
     BooleSet T = O;
     while (T.size() > 0) {
         BooleMonomial o = T.lastLexicographicalTerm();
@@ -109,16 +111,27 @@ bool BrickesteinAlgo32(const BoolePolynomial& poly,
             if (O.contains(dH)) {
                 H = H.Xor(dH);
             } else {
-                if (o.reducibleBy(poly.ring().variable(vidx[j])))
+                if (o.reducibleBy(ring.variable(vidx[j])))
                     c.push_back(Lit(vidx[j], true));
                 else
                     c.push_back(Lit(vidx[j], false));
             }
         }
-        if (!c.empty()) { // this two lines are indented wrongly in the thesis
-            setofClauses.push_back(c);
-        }
+        // c is empty when the cube grew to the whole space, i.e. every
+        // assignment is forbidden: that is the empty clause (a single
+        // non-constant polynomial never gets here, a cluster of equations
+        // without a common solution does)
+        setofClauses.push_back(c);
         T = T.diff(H);
     }
+}
+
+bool BrickesteinAlgo32(const BoolePolynomial& poly,
+                       vector<Clause>& setofClauses)
+{
+    const size_t n = poly.nUsedVariables();
+    vector<vidx_t> vidx(n);
+    std::copy_n(poly.usedVariables().begin(), n, vidx.begin());
+    BrickensteinCover(poly.ring(), BrickensteinOnes(poly, vidx), vidx, setofClauses);
     return true;
 }

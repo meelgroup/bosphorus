@@ -1,4 +1,4 @@
-build/
+build*/
 .cache
 bosphorus.kdev4
 .venv

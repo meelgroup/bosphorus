@@ -49,7 +49,7 @@
             pkg-config
           ];
           buildInputs = [
-            boost
+            boost # BRiAl's headers include Boost headers
             zlib
             gmp
             m4ri

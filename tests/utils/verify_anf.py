@@ -29,6 +29,59 @@ def poly_mul(a, b):
     return out
 
 
+NAME_RE = re.compile(r'[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?')
+NAMES = {}  # named variable -> index, as Bosphorus assigns them (see scan_names)
+
+
+def var_index(name):
+    """x<N> and x(N) have index N; other names are looked up in NAMES."""
+    m = re.fullmatch(r'[xX]\(?(\d+)\)?', name)
+    if m:
+        return int(m.group(1))
+    if name not in NAMES:
+        raise ValueError("unknown variable %r" % name)
+    return NAMES[name]
+
+
+def scan_names(path):
+    """Assign indices to named variables like Bosphorus: after the highest
+    x<N> index, in order of first appearance (declaration lines included)."""
+    NAMES.clear()
+    max_num, order = -1, []
+    with open(path) as f:
+        for line in f:
+            if line.startswith('c'):
+                # the projection line 'c p show v1 v2 ... END' names
+                # variables too (possibly ones used in no equation)
+                m = re.match(r'c\s+p\s+show\s+(.*?)\s*END\s*$', line)
+                if not m:
+                    continue
+                line = m.group(1)
+            for m in re.finditer(r'[xX]\((\d+)\)', line):
+                max_num = max(max_num, int(m.group(1)))
+            for tok in NAME_RE.findall(line):
+                m = re.fullmatch(r'[xX](\d+)', tok)
+                if m:
+                    max_num = max(max_num, int(m.group(1)))
+                    continue
+                if tok in ('x', 'X'):
+                    continue
+                if tok not in order:
+                    order.append(tok)
+    for i, name in enumerate(order):
+        NAMES[name] = max_num + 1 + i
+
+
+VAR_RE = r'(?:[xX]\(\d+\)|' + NAME_RE.pattern + r')'
+DECL_RE = re.compile(r'\s*' + VAR_RE + r'(?:\s*,\s*' + VAR_RE + r')+\s*')
+
+
+def is_declaration(line):
+    """'v1, v2, v3': a comma separated list of variables (names may contain
+    commas inside brackets, so this is matched as a whole)."""
+    return DECL_RE.fullmatch(line.strip()) is not None
+
+
 class Parser:
     """poly := term ('+' term)* ; term := factor ('*' factor)* ;
        factor := '(' poly ')' | 'x' int | 'x(' int ')' | '0' | '1'"""
@@ -88,6 +141,10 @@ class Parser:
             return {frozenset([n])}
         if c.isdigit():
             return {ONE} if self.number() % 2 else set()
+        m = NAME_RE.match(self.s, self.i)
+        if m:
+            self.i = m.end()
+            return {frozenset([var_index(m.group(0))])}
         raise ValueError("unexpected %r at offset %d in %r" % (c, self.i, self.s))
 
     def number(self):
@@ -101,12 +158,15 @@ class Parser:
 
 
 def read_anf(path):
+    scan_names(path)
     polys = []
     with open(path) as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith('c'):
                 continue
+            if ',' in line and is_declaration(line):
+                continue  # a variable declaration line, not an equation
             polys.append(Parser(line).parse())
     return polys
 
@@ -152,10 +212,10 @@ def parse_solution_lines(text, nvars):
             continue
         assign = {}
         for tok in line[2:].split():
-            m = re.fullmatch(r'(1\+)?x\((\d+)\)(\+1)?', tok)
+            m = re.fullmatch(r'(1\+)?(x\(\d+\)|' + NAME_RE.pattern + r')(\+1)?', tok)
             if not m:
                 sys.exit("verify_anf: cannot parse solution token %r" % tok)
-            assign[int(m.group(2))] = 1 if (m.group(1) or m.group(3)) else 0
+            assign[var_index(m.group(2))] = 1 if (m.group(1) or m.group(3)) else 0
         if sorted(assign) != list(range(nvars)):
             sys.exit("verify_anf: solution covers vars %s, expected 0..%d"
                      % (sorted(assign), nvars - 1))
@@ -249,9 +309,25 @@ def read_cnf(path):
     return clauses, xors, nvars, header, projection
 
 
+def max_var_in_file(path):
+    """Highest variable index mentioned anywhere in the file (the ring
+    Bosphorus builds covers every mentioned variable, even ones that cancel
+    out of every equation or only appear in a declaration line)."""
+    m = -1
+    with open(path) as f:
+        for line in f:
+            if line.startswith('c'):
+                continue
+            for v in re.findall(r'x\(?(\d+)', line):
+                m = max(m, int(v))
+    scan_names(path)
+    for idx in NAMES.values():
+        m = max(m, idx)
+    return m
+
+
 def check_cnf(anf_path, cnf_path):
     polys = read_anf(anf_path)
-    expected, _ = brute_force(polys)
     clauses, xors, nvars, header, projection = read_cnf(cnf_path)
 
     if header != len(clauses) + len(xors):
@@ -262,7 +338,12 @@ def check_cnf(anf_path, cnf_path):
             if not 1 <= abs(lit) <= nvars:
                 sys.exit("verify_anf: literal %d out of range 1..%d" % (lit, nvars))
     if projection is None:
-        sys.exit("verify_anf: CNF has no 'c p show' projection line")
+        # no 'c p show' line (the default): CNF variables 1..ring size are
+        # the ANF's variables, everything after them is auxiliary
+        ring = max(max_var_in_file(anf_path) + 1, 1)
+        if nvars < ring:
+            sys.exit("verify_anf: CNF has %d variables, the ANF ring %d" % (nvars, ring))
+        projection = list(range(1, ring + 1))
 
     if nvars > 20:
         sys.exit("verify_anf: %d CNF variables is too many to brute force" % nvars)
@@ -276,7 +357,20 @@ def check_cnf(anf_path, cnf_path):
             continue
         models.add(tuple(val[v] for v in projection))
 
-    if len(models) != len(expected):
+    # the ANF's solutions over the whole ring, projected onto the same
+    # variables (CNF variable j is ANF variable x(j-1))
+    # Bosphorus's ring covers every mentioned variable and always x(0)
+    proj_anf = [v - 1 for v in projection]
+    n = max([max_var_in_file(anf_path) + 1, 1] + [v + 1 for v in proj_anf])
+    if n > 20:
+        sys.exit("verify_anf: %d variables is too many to brute force" % n)
+    expected = set()
+    for bits in itertools.product([0, 1], repeat=n):
+        assign = dict(enumerate(bits))
+        if all(evaluate(p, assign) == 0 for p in polys):
+            expected.add(tuple(bits[v] for v in proj_anf))
+
+    if models != expected:
         sys.exit("verify_anf: CNF has %d solutions over the projection set, "
                  "ANF has %d" % (len(models), len(expected)))
 

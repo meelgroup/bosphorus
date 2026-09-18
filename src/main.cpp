@@ -21,9 +21,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
+#include <charconv>
+#include <cctype>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <map>
+#include <stdexcept>
+#include <string>
 
 #include "bosphorus.hpp"
 #include "time_mem.h"
@@ -31,7 +36,7 @@ SOFTWARE.
 
 #include <cryptominisat5/solvertypesmini.h>
 #include <cryptominisat5/cryptominisat.h>
-#include <boost/program_options.hpp>
+#include "argparse.hpp"
 
 using std::cerr;
 using std::cout;
@@ -39,7 +44,6 @@ using std::endl;
 using std::string;
 
 using namespace Bosph;
-namespace po = boost::program_options;
 
 //inputs and outputs
 string anfInput;
@@ -57,16 +61,84 @@ bool readCNF;
 bool writeANF;
 bool writeCNF;
 bool solve_with_cms;
-bool solve_xnf;
 bool all_solutions;
 int only_new_cnf_clauses = 0;
 uint32_t maxiters = 100;
 uint32_t max_sol = 1;
 
-po::variables_map vm;
+argparse::ArgumentParser program("bosphorus", "", argparse::default_arguments::help);
 BLib::ConfigData config;
 
 void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf);
+
+// Converters for argparse: strict, whole-string parsing so that "3x" or
+// "1.5" given to an integer option is rejected instead of silently truncated.
+template<typename T>
+static T fc_integral(const std::string& s)
+{
+    T val = 0;
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
+    if (ec != std::errc{}) {
+        throw std::invalid_argument("not an integer in range: '" + s + "'");
+    }
+    if (ptr != s.data() + s.size()) {
+        throw std::invalid_argument("trailing characters in integer: '" + s + "'");
+    }
+    return val;
+}
+static double fc_double(const std::string& s)
+{
+    size_t pos = 0;
+    double val;
+    try {
+        val = std::stod(s, &pos);
+    } catch (const std::exception&) {
+        throw std::invalid_argument("not a number: '" + s + "'");
+    }
+    if (pos != s.size()) {
+        throw std::invalid_argument("trailing characters in number: '" + s + "'");
+    }
+    return val;
+}
+static bool fc_bool(const std::string& s)
+{
+    std::string l = s;
+    for (auto& c : l) c = std::tolower(c);
+    if (l == "1" || l == "true" || l == "yes" || l == "on") return true;
+    if (l == "0" || l == "false" || l == "no" || l == "off") return false;
+    throw std::invalid_argument("not a boolean (0/1/true/false): '" + s + "'");
+}
+
+template<typename T, typename F>
+static void add_arg(const char* name, T& var, F fun, const char* hhelp)
+{
+    program.add_argument(name)
+        .action([&var, fun](const auto& a) { var = fun(a); })
+        .default_value(var)
+        .help(hhelp);
+}
+template<typename T, typename F>
+static void add_arg2(const char* name1, const char* name2, T& var, F fun, const char* hhelp)
+{
+    program.add_argument(name1, name2)
+        .action([&var, fun](const auto& a) { var = fun(a); })
+        .default_value(var)
+        .help(hhelp);
+}
+// Option that takes a value but has no default, e.g. a file name.
+static void add_str_arg(const char* name, string& var, const char* hhelp)
+{
+    program.add_argument(name)
+        .action([&var](const auto& a) { var = a; })
+        .help(hhelp);
+}
+static void add_flag(const char* name, bool& var, const char* hhelp)
+{
+    program.add_argument(name)
+        .action([&var](const auto&) { var = true; })
+        .flag()
+        .help(hhelp);
+}
 
 void parseOptions(int argc, char* argv[])
 {
@@ -75,160 +147,231 @@ void parseOptions(int argc, char* argv[])
         config.executedArgs.append(string(argv[i]).append(" "));
     }
 
-    std::ostringstream maxTime_str;
-    maxTime_str << std::scientific << std::setprecision(2) << config.maxTime
-                << std::fixed;
+    program.add_description("ANF and CNF simplifier and converter");
 
     /* clang-format off */
-    // Declare the supported options.
-    po::options_description generalOptions("Main options");
-    generalOptions.add_options()
-    ("help,h", "produce help message")
-    ("version", "print version number and exit")
+    // Main options
+    program.add_argument("--version")
+        .action([&](const auto&) {
+            cout << "bosphorus " << Bosphorus::get_version_sha1() << '\n'
+                 << Bosphorus::get_version_tag() << '\n'
+                 << Bosphorus::get_compilation_env() << endl;
+            exit(0);
+        })
+        .flag()
+        .help("print version number and exit");
     // Input/Output
-    ("anfread", po::value(&anfInput), "Read ANF from this file")
-    ("cnfread", po::value(&cnfInput), "Read CNF from this file")
-    ("anfwrite", po::value(&anfOutput), "Write ANF output to file")
-    ("cnfwrite", po::value(&cnfOutput), "Write CNF output to file")
-    ("verb,v", po::value<uint32_t>(&config.verbosity)->default_value(config.verbosity),
-     "Verbosity setting: 0(slient) - 3(noisy)")
-    ("simplify", po::value<int>(&config.simplify)->default_value(config.simplify),
-     "Simplify ANF")
-    ("solve", po::bool_switch(&solve_with_cms), "Solve the resulting ANF")
-    ("solve-xnf", po::bool_switch(&solve_xnf), "Solve the resulting ANF, tuning the SAT solver for XOR-heavy (XNF) problems")
-    ("solvewrite", po::value(&solution_output_file), "Solve the resulting ANF and print the solution to this file")
-    ("allsol", po::bool_switch(&all_solutions), "Find all solutions")
-    ("maxsol", po::value(&max_sol)->default_value(max_sol), "Find at most this many solutions")
-    ("maxiters", po::value(&maxiters)->default_value(maxiters),
-     "Maximum iterations to simplify")
+    program.add_argument("input")
+        .nargs(argparse::nargs_pattern::optional)
+        .default_value(string())
+        .help("Input file. Treated as --anfread if it ends in .anf, --cnfread if it ends in .cnf");
+    add_str_arg("--anfread", anfInput, "Read ANF from this file");
+    add_str_arg("--cnfread", cnfInput, "Read CNF from this file");
+    add_str_arg("--anfwrite", anfOutput, "Write ANF output to file");
+    add_str_arg("--cnfwrite", cnfOutput, "Write CNF output to file");
+    add_arg2("-v", "--verb", config.verbosity, fc_integral<uint32_t>,
+        "Verbosity setting: 0(slient) - 3(noisy)");
+    add_arg("--simplify", config.simplify, fc_integral<int>, "Simplify ANF");
+    add_arg("--color", config.color, fc_integral<int>,
+        "Colour the [simp-stats] lines: 0 = never, 1 = always, 2 = auto (terminal and NO_COLOR unset)");
+    add_flag("--solve", solve_with_cms, "Solve the resulting ANF (built-in CryptoMiniSat with Gauss-Jordan and XOR recovery on)");
+    add_str_arg("--solvewrite", solution_output_file,
+        "Solve the resulting ANF and print the solution to this file");
+    add_flag("--allsol", all_solutions, "Enumerate all solutions with the built-in solver, one SAT call per solution: fine up to some 10000 solutions, use ApproxMC on the written CNF beyond that");
+    add_arg("--maxsol", max_sol, fc_integral<uint32_t>, "Find at most this many solutions");
+    add_arg("--maxiters", maxiters, fc_integral<uint32_t>, "Maximum iterations to simplify");
 
     // Processes
-    ("maxtime", po::value(&config.maxTime)->default_value(config.maxTime, maxTime_str.str()),
-     "Stop solving after this much time (s); Use 0 if you only want to propagate")
+    add_arg("--maxtime", config.maxTime, fc_double,
+        "Stop solving after this much time (s); Use 0 if you only want to propagate");
     // checks
-    ("comments", po::value(&config.writecomments)->default_value(config.writecomments),
-     "Do not write comments to output files")
-    ;
+    add_arg("--comments", config.writecomments, fc_bool,
+        "Do not write comments to output files");
+    add_arg("--projshow", config.projShow, fc_integral<int>,
+        "Write a 'c p show' line into the CNF: 0 never, 1 always (all original variables), "
+        "2 when the input carried a projection set ('c p show ... END' in the ANF), listing the "
+        "CNF variables of exactly those ANF variables, so that solution counts over the projection "
+        "agree between ANF and CNF. Default: 2");
 
-    po::options_description cnf_conv_options("CNF conversion");
-    cnf_conv_options.add_options()
-    ("cutnum", po::value<uint32_t>(&config.cutNum)->default_value(config.cutNum),
-     "Cutting number when not using XOR clauses")
-    ("karn", po::value(&config.brickestein_algo_cutoff)->default_value(config.brickestein_algo_cutoff),
-     "Uses this cutoff for doing Brickenstein's algorithm for translation of complex ANFs")
-    ("onlynewcnfcls", po::value(&only_new_cnf_clauses)->default_value(only_new_cnf_clauses),
-         "Only output to CNF the newly discovered CNF clauses. Must have CNF as input.")
-    ;
+    // CNF conversion
+    add_arg("--cutnum", config.cutNum, fc_integral<uint32_t>,
+        "Cutting number when not using XOR clauses");
+    add_arg("--factor", config.doFactor, fc_integral<int>,
+        "Encode a polynomial that is a product of linear factors, (l1+c1)*(l2+c2)*..., as one clause over one shared CNF variable per linear factor instead of one variable per monomial. Default: ON");
+    add_arg("--xorcls", config.xorClauses, fc_integral<int>,
+        "Write XORs as native CryptoMiniSat xor clauses ('x 1 2 3 0' lines) instead of cutting them into CNF. The output is then CNF-XOR, which only CryptoMiniSat reads; --solve always uses them. Default: OFF");
+    add_arg("--xormaxlen", config.xorMaxLen, fc_integral<uint32_t>,
+        "With --xorcls 1: cut native xor clauses longer than this into a chain of native pieces of this length (0 = never cut). Default: 0");
+    add_arg("--partner", config.doPartner, fc_integral<int>,
+        "ANF-to-CNF partner strategies (Jovanovic & Kreuzer): fold x*y+x, x*y+x+y+1, x*y+x*z, x*y*z+x*y*w and their generalisations into one CNF variable each. Default: ON");
+    add_arg("--quadsplit", config.quadSplit, fc_integral<uint32_t>,
+        "quad-split: encode a quadratic equation as its Dickson decomposition l1*l2 + l3*l4 + ... + linear, with one shared XOR-defined CNF variable per linear form and one per product, when it has at most this many products. 0 = off. Default: 0");
+    add_arg("--quadsplitmin", config.quadSplitMin, fc_integral<uint32_t>,
+        "quad-split: only equations with at least this many quadratic monomials. Default: 2");
+    add_arg("--karn", config.brickestein_algo_cutoff, fc_integral<uint32_t>,
+        "Uses this cutoff for doing Brickenstein's algorithm for translation of complex ANFs");
+    add_arg("--karncluster", config.karnCluster, fc_integral<uint32_t>,
+        "Encode small nonlinear equations that share variables jointly (one clause set over the union of their variables, e.g. all equations of an S-box) when the union has at most this many variables. 0 = off. Default: 10");
+    add_arg("--onlynewcnfcls", only_new_cnf_clauses, fc_integral<int>,
+        "Only output to CNF the newly discovered CNF clauses. Must have CNF as input.");
 
-    po::options_description xl_options("XL");
-    xl_options.add_options()
-    ("xl", po::value(&config.doXL), "Turn on/off XL-based simplification. Default: ON")
-    ("xldeg", po::value<uint32_t>(&config.xlDeg)->default_value(config.xlDeg),
-     "Expansion degree for XL algorithm. Default = 1 (0 = Just GJE. For now we only support 0 <= xldeg = 3)")
-    ("xlsample", po::value<double>(&config.XLsample)->default_value(config.XLsample),
-     "Size of matrix to sample for XL, in log2")
-    ("xlsamplex", po::value<double>(&config.XLsampleX)->default_value(config.XLsampleX),
-     "Size of matrix to sample for XL, in log2, that we can expand by")
-    ;
+    // In-place ANF rewrite rules
+    add_arg("--rewrite", config.doRewrite, fc_integral<int>,
+        "Turn on/off all in-place ANF rewrite rules. Default: ON");
+    add_arg("--lingauss", config.doLinGauss, fc_integral<int>,
+        "Rewrite rule lin-gauss: Gaussian elimination among the linear equations, shortest first; deletes the redundant ones, shortens the others and finds units and equivalences. Default: ON");
+    add_arg("--spanfilter", config.spanFilter, fc_integral<int>,
+        "Drop facts learnt by XL/ElimLin/SAT that are linear combinations of the linear equations already in the system (they add nothing but XORs to the CNF). Default: ON");
+    add_arg("--binomred", config.doBinomRed, fc_integral<int>,
+        "Rewrite rule binom-red: reduce all equations modulo monomial and binomial equations (x*y+x=0 turns x*y*z into x*z). Default: ON");
+    add_arg("--binomredlen", config.binomRedLen, fc_integral<uint32_t>,
+        "Max number of terms of an equation used as a rule by binom-red. Default: 2");
+    add_arg("--shorten", config.doShorten, fc_integral<int>,
+        "Rewrite rule poly-shorten: replace p by p+f whenever that has fewer terms. Default: ON");
+    add_arg("--monogauss", config.doMonoGauss, fc_integral<int>,
+        "Rewrite rule mono-gauss: Gaussian elimination among all equations with one column per monomial (linearisation), shortest first; deletes the equations that are combinations of others, replaces an equation by its reduced form when that is shorter or of lower degree (a linear combination of nonlinear equations that cancels every nonlinear monomial is a new linear equation). Default: ON");
+    add_arg("--monogausslen", config.monoGaussLen, fc_integral<size_t>,
+        "mono-gauss: only equations with at most this many terms take part. Default: 64");
+    add_arg("--monogausscols", config.monoGaussCols, fc_integral<size_t>,
+        "mono-gauss: not run when the participating equations have more distinct monomials than this. Default: 100000");
+    add_arg("--monogaussshorten", config.monoGaussShorten, fc_integral<int>,
+        "mono-gauss: replace an equation by a shorter combination of the same degree: 0 = never (only delete redundant equations and keep combinations of lower degree, i.e. linear consequences), 1 = linear equations only (a second XOR shortening with the monomial order as pivot order: 11% smaller CNFs and faster CryptoMiniSat on the bivium family, but 2x slower CryptoMiniSat on two of five ascon instances), 2 = all degrees (same effect on ascon). Default: 0");
+    add_arg("--prodsplit", config.doProdSplit, fc_integral<int>,
+        "Rewrite rule prod-split: an equation p = 0 where 1 + p is a product of linear factors (l1+c1)*(l2+c2)*... becomes the linear equations l1+c1+1 = 0, l2+c2+1 = 0, ... (every factor must be 1); generalises 'x*y*z + 1 = 0 sets x, y, z'. Default: ON");
+    add_arg("--probe", config.doProbe, fc_integral<int>,
+        "Rewrite rule lit-probe: forced literals, equivalences and implication-graph SCCs from small equations. Default: ON");
+    add_arg("--cnfprobe", config.doCnfProbe, fc_integral<int>,
+        "Rewrite rule cnf-probe: the system is converted to CNF and CryptoMiniSat's inprocessing runs on it as Arjun does (equivalent-literal SCCs, probing of every ANF variable, in-tree probing, no variable elimination); the literals fixed at level 0 and the equivalent literals come back as equations (a CNF variable stands for a monomial, an XOR cut or a lineral). Runs once per rewrite round, after the cheap rules and before gb-cone, on a system that changed since its last run. Default: ON");
+    add_arg("--cnfprobevars", config.cnfProbeVars, fc_integral<size_t>,
+        "cnf-probe: probe at most this many ANF variables, the most incident first. Default: 200000");
+    add_arg("--cnfprobebin", config.cnfProbeBin, fc_integral<int>,
+        "cnf-probe: import the binary clauses of the probed CNF over ANF variables and monomials as equations (a -> b becomes a*b + a = 0, a rule for binom-red and a generator for gb-cone): 0 = off, 1 = irredundant clauses, 2 = also the redundant (learnt, hyper-binary) ones. Default: 0");
+    add_arg("--cnfprobelen", config.cnfProbeLen, fc_integral<size_t>,
+        "cnf-probe: a nonlinear fact with more terms than this is dropped (two equal XOR-cut variables of linearised equations give the sum of the two partial sums, a long polynomial that is a combination of the equations); linear facts of any length go through the span filter. Default: 8");
+    add_arg("--varprobe", config.doVarProbe, fc_integral<int>,
+        "Rewrite rule var-probe: failed-literal probing with propagation, as CNF preprocessors do it: x = 0 and x = 1 are each propagated through the equations (units, m+1, products with one factor left); a branch that runs into 1 = 0 forces x, a variable set the same way in both branches is set, one set opposite ways is equivalent to x. Only units propagate, so it finds nothing on the S-box and stream-cipher families. Default: OFF");
+    add_arg("--varprobebudget", config.varProbeBudget, fc_integral<uint64_t>,
+        "var-probe: equation evaluations per call, a deterministic work budget. Default: 2e6");
+    add_arg("--varprobelen", config.varProbeLen, fc_integral<size_t>,
+        "var-probe: polynomial equations with more terms than this are not evaluated (products of linear factors always are). Default: 64");
+    add_arg("--probevars", config.probeVars, fc_integral<uint32_t>,
+        "lit-probe only looks at equations with at most this many variables. Default: 8");
+    add_arg("--faccanon", config.doFacCanon, fc_integral<int>,
+        "Rewrite rule fac-canon: reduce every linear factor of a product modulo the linear equations and use the shortest representative of its class, so equal factors become identical and short. Makes the CNF smaller but CryptoMiniSat slower on average on the bivium family. Default: OFF");
+    add_arg("--facres", config.doFacRes, fc_integral<int>,
+        "Rewrite rule fac-res: resolution between products sharing a linear factor with opposite constants; a resolvent with one factor is a new linear equation. Default: OFF");
+    add_arg("--facresmax", config.facResMaxFactors, fc_integral<uint32_t>,
+        "fac-res only adds resolvents with at most this many factors. Default: 2");
+    add_arg("--gb", config.doGB, fc_integral<int>,
+        "Rewrite rule gb-cone (Groebner bases): 0 = off, 1 = on for every system (cones of small equations sharing variables, short basis members are added), 2 = only the complete basis of a system with at most --gbwholevars variables. Default: 2");
+    add_arg("--gbfull", config.gbFull, fc_integral<int>, "gb-cone: 0 = degree-bounded Buchberger loop (--gbdeg) in the lexicographic main ring per cone; 1 = complete Groebner basis of every cone with BRiAl's symmGB_F2 in a degree-ordered ring; 2 = both per cone (the orderings find different consequences) and the complete basis for a whole small system (--gbwholevars). Default: 2");
+    add_arg("--gbdeg", config.gbDeg, fc_integral<uint32_t>, "gb-cone: with --gbfull 0, drop S-polynomials above this degree. Default: 3");
+    add_arg("--gbwindow", config.gbWindow, fc_integral<uint32_t>, "gb-cone: at most this many equations per cone. Default: 24");
+    add_arg("--gbmaxvars", config.gbMaxVars, fc_integral<uint32_t>, "gb-cone: a cone grows while its equations use at most this many variables. Default: 16");
+    add_arg("--gbengine", config.gbEngine, fc_integral<int>, "gb-cone: engine for the complete bases: 0 = BRiAl's symmGB_F2, 1 = Bosphorus's matrix F4 over the Boolean ring (M4RI, up to 64 variables per cone), 2 = matrix F5 (signature criterion, no reductions to zero for regular sequences). Default: 1");
+    add_arg("--gbmaxcells", config.gbMaxCells, fc_integral<uint64_t>, "gb-cone with the F4/F5 engines: largest matrix (rows times columns) that is built; a step needing more stops the basis and, for a whole-system basis, makes gb-split split the system on a variable. Default: 2e9, 250 MB");
+    add_arg("--gbsplit", config.gbSplitDepth, fc_integral<uint32_t>, "Rule gb-split: when the whole-system basis needs a matrix over --gbmaxcells, fix a variable both ways and combine the bases of the two branches, recursively up to this depth (0 = never). Fixing one variable of a random MQ system with n = 28 brings its degree of regularity from 5 back to 4. Default: 8");
+    add_arg("--gbsplitrows", config.gbSplitRows, fc_integral<uint64_t>, "gb-split: matrix rows over all branches together, a deterministic work budget. Default: 2e7");
+    add_arg("--gbtailreduce", config.gbTailReduce, fc_integral<int>, "gb-cone with the F4 engine: interreduce the tails of the basis after every degree step (no gain measured on MQ). Default: 0");
+    add_arg("--gbf5groups", config.gbF5Groups, fc_integral<uint32_t>, "gb-cone with the F5 engine: generator groups per degree (more groups prune more rows but cost more eliminations). Default: 8");
+    add_arg("--gbrecursion", config.gbRecursion, fc_integral<int>, "gb-cone with --gbfull 1: BRiAl's recursive implication bases for split generators (optAllowRecursion): 0 never, 1 always, 2 only for the whole-system basis of a small system (they cost 3-4x on small cones and are essential on MQ-like systems). Default: 2");
+    add_arg("--gbwholevars", config.gbWholeVars, fc_integral<uint32_t>, "gb-cone with --gbfull 1: a system with at most this many free variables is taken as one cone and its complete Groebner basis computed (with gb-split when its matrices exceed --gbmaxcells); solves random MQ systems with up to ~32 variables outright; 0 = never. Default: 40");
+    add_arg("--gbmaxlen", config.gbMaxLen, fc_integral<size_t>, "gb-cone: only equations with at most this many terms take part. Default: 32");
+    add_arg("--gbsteps", config.gbSteps, fc_integral<uint64_t>, "gb-cone: S-polynomials reduced per call, a deterministic work budget. Default: 100000");
+    add_arg("--gbfactdeg", config.gbFactDeg, fc_integral<uint32_t>, "gb-cone: add basis members of at most this degree. Default: 2");
+    add_arg("--gbconefactdeg", config.gbConeFactDeg, fc_integral<uint32_t>,
+        "gb-cone: members of a cone's basis of at most this degree are added as facts (the whole-system basis uses --gbfactdeg). 2 piles up quadratic facts (42k equations on ascon). Default: 1");
+    add_arg("--gbfactlen", config.gbFactLen, fc_integral<uint32_t>, "gb-cone: add basis members with at most this many terms. Default: 8");
+    add_arg("--keepfactor", config.keepFactor, fc_integral<int>,
+        "Never rewrite an equation that is a product of linear factors into one that is not, so the product form survives for the CNF encoding: 0 = off, 1 = on, 2 = auto (on when most nonlinear equations are such products). Default: 2");
+    add_arg("--rewriterounds", config.rewriteRounds, fc_integral<uint32_t>,
+        "Max rounds of the in-place rewrite rules per iteration. Default: 10");
 
-    po::options_description elimlin_options("ElimLin options");
-    elimlin_options.add_options()
-    ("el", po::value(&config.doEL), "Turn on/off ElimLin-based simplification. Default: ON")
-    ("elsample", po::value<double>(&config.ELsample)->default_value(config.ELsample),
-     "Size of matrixto sample for EL, in log2")
-    ;
+    // XL
+    add_arg("--xl", config.doXL, fc_integral<int>,
+        "Turn on/off XL-based simplification. Default: ON");
+    add_arg("--xldeg", config.xlDeg, fc_integral<uint32_t>,
+        "Expansion degree for XL algorithm. Default = 1 (0 = Just GJE. For now we only support 0 <= xldeg = 3)");
+    add_arg("--xlmaxlen", config.xlMaxLen, fc_integral<size_t>,
+        "XL and ElimLin only see equations with at most this many terms (products of long linear factors have thousands and only cost time). Default: 64");
+    add_arg("--xlsample", config.XLsample, fc_double,
+        "Size of matrix to sample for XL, in log2");
+    add_arg("--xlsamplex", config.XLsampleX, fc_double,
+        "Size of matrix to sample for XL, in log2, that we can expand by");
 
-    po::options_description sat_options("SAT options");
-    sat_options.add_options()
-    ("sat", po::value(&config.doSAT),  "Turn on/off SAT-based simplification. Default: ON")
-    ("satinc", po::value<uint64_t>(&config.numConfl_inc)->default_value(config.numConfl_inc),
-     "Conflict inc for built-in SAT solver.")
-    ("satlim", po::value<uint64_t>(&config.numConfl_lim)->default_value(config.numConfl_lim),
-     "Conflict limit for built-in SAT solver.")
-    ("threads,t", po::value<unsigned int>(&config.numThreads)->default_value(config.numThreads),
-     "Number of threads to use for SAT solver (same value is used for built-in and external).")
-    ("solmap", po::value(&solmap_file_write), "Write solution map to this file")
-    ;
+    // ElimLin options
+    add_arg("--el", config.doEL, fc_integral<int>,
+        "Turn on/off ElimLin-based simplification. Default: ON");
+    add_arg("--elsample", config.ELsample, fc_double,
+        "Size of matrixto sample for EL, in log2");
 
+    // SAT options
+    add_arg("--sat", config.doSAT, fc_integral<int>,
+        "Turn on/off SAT-based simplification. Default: ON");
+    add_arg("--satinc", config.numConfl_inc, fc_integral<uint64_t>,
+        "Conflict inc for built-in SAT solver.");
+    add_arg("--satlim", config.numConfl_lim, fc_integral<uint64_t>,
+        "Conflict limit for built-in SAT solver.");
+    add_arg2("-t", "--threads", config.numThreads, fc_integral<unsigned int>,
+        "Number of threads to use for SAT solver (same value is used for built-in and external).");
+    add_str_arg("--solmap", solmap_file_write, "Write solution map to this file");
     /* clang-format on */
-    po::options_description cmdline_options;
-    cmdline_options.add(generalOptions);
-    cmdline_options.add(cnf_conv_options);
-    cmdline_options.add(xl_options);
-    cmdline_options.add(elimlin_options);
-    cmdline_options.add(sat_options);
 
     try {
-        po::store(
-            po::command_line_parser(argc, argv).options(cmdline_options).run(),
-            vm);
-        if (vm.count("help")) {
-            cout << generalOptions << endl;
-            cout << cnf_conv_options << endl;
-            cout << xl_options << endl;
-            cout << elimlin_options << endl;
-            cout << sat_options << endl;
-            exit(0);
+        program.parse_args(argc, argv);
+    } catch (const std::exception& err) {
+        string msg = err.what();
+        if (msg == "Duplicate argument") {
+            std::map<string, int> seen;
+            for (int i = 1; i < argc; i++) {
+                if (argv[i][0] == '-') seen[argv[i]]++;
+            }
+            for (const auto& [k, v] : seen) {
+                if (v > 1) msg += ": " + k;
+            }
         }
-        po::notify(vm);
-    } catch (boost::exception_detail::clone_impl<
-             boost::exception_detail::error_info_injector<po::unknown_option> >&
-                 c) {
-        cout << "Some option you gave was wrong. Please give '--help' to get "
-                "help"
-             << endl;
-        cout << "Unkown option: " << c.what() << endl;
+        cerr << "ERROR parsing options: " << msg << endl
+             << "Please give '--help' to get help" << endl;
         exit(-1);
-    } catch (boost::bad_any_cast& e) {
-        cerr << e.what() << endl;
-        exit(-1);
-    } catch (boost::exception_detail::clone_impl<
-             boost::exception_detail::error_info_injector<
-                 po::invalid_option_value> >& what) {
-        cerr << "Invalid value '" << what.what() << "'"
-             << " given to option '" << what.get_option_name() << "'" << endl;
-        exit(-1);
-    } catch (boost::exception_detail::clone_impl<
-             boost::exception_detail::error_info_injector<
-                 po::multiple_occurrences> >& what) {
-        cerr << "Error: " << what.what() << " of option '"
-             << what.get_option_name() << "'" << endl;
-        exit(-1);
-    } catch (
-        boost::exception_detail::clone_impl<
-            boost::exception_detail::error_info_injector<po::required_option> >&
-            what) {
-        cerr << "You forgot to give a required option '"
-             << what.get_option_name() << "'" << endl;
-        exit(-1);
-    }
-
-    if (vm.count("version")) {
-        cout << "bosphorus " << Bosphorus::get_version_sha1() << '\n'
-             << Bosphorus::get_version_tag() << '\n'
-             << Bosphorus::get_compilation_env() << endl;
-        exit(0);
     }
 
     // I/O checks
-    if (vm.count("anfread")) {
-        readANF = true;
-    }
-    if (vm.count("cnfread")) {
-        readCNF = true;
-    }
-    if (vm.count("anfwrite")) {
-        writeANF = true;
-    }
-    if (vm.count("cnfwrite")) {
-        writeCNF = true;
-    }
+    readANF = program.is_used("--anfread");
+    readCNF = program.is_used("--cnfread");
 
-    if (vm.count("solvewrite")) {
-        solve_with_cms = true;
+    // Positional input file: infer ANF/CNF from the extension
+    const string posInput = program.get<string>("input");
+    if (!posInput.empty()) {
+        auto ends_with = [&](const string& suffix) {
+            return posInput.size() >= suffix.size() &&
+                   posInput.compare(posInput.size() - suffix.size(),
+                                    suffix.size(), suffix) == 0;
+        };
+        if (ends_with(".anf")) {
+            if (readANF) {
+                cerr << "ERROR: input file given both as positional argument and via --anfread\n";
+                exit(-1);
+            }
+            anfInput = posInput;
+            readANF = true;
+        } else if (ends_with(".cnf")) {
+            if (readCNF) {
+                cerr << "ERROR: input file given both as positional argument and via --cnfread\n";
+                exit(-1);
+            }
+            cnfInput = posInput;
+            readCNF = true;
+        } else {
+            cerr << "ERROR: cannot tell whether '" << posInput
+                 << "' is ANF or CNF: it must end in .anf or .cnf, "
+                    "or be given via --anfread/--cnfread\n";
+            exit(-1);
+        }
     }
+    writeANF = program.is_used("--anfwrite");
+    writeCNF = program.is_used("--cnfwrite");
 
-    if (solve_xnf) {
+    if (program.is_used("--solvewrite")) {
         solve_with_cms = true;
     }
 
@@ -260,6 +403,11 @@ void parseOptions(int argc, char* argv[])
         cout << "c --- Configuration --\n"
              << "c maxTime = " << std::scientific << std::setprecision(2)
              << config.maxTime << std::fixed << endl
+             << "c Rewrite rules: " << config.doRewrite
+             << " (binom-red " << config.doBinomRed << " len " << config.binomRedLen
+             << ", lin-gauss " << config.doLinGauss
+             << ", poly-shorten " << config.doShorten
+             << ", lit-probe " << config.doProbe << " vars " << config.probeVars << ")" << endl
              << "c XL simp (deg = " << config.xlDeg
              << "; s = " << config.XLsample << '+' << config.XLsampleX
              << "): " << config.doXL << endl
@@ -269,6 +417,8 @@ void parseOptions(int argc, char* argv[])
              << config.numConfl_lim << "): " << config.doSAT << endl
              << " using " << config.numThreads << " threads" << endl
              << "c Cut num: " << config.cutNum << endl
+             << "c Partner strategies: " << config.doPartner << endl
+             << "c Linear-factor encoding: " << config.doFactor << " xor clauses: " << config.xorClauses << endl
              << "c Brickenstein cutoff: " << config.brickestein_algo_cutoff << endl
              << "c --------------------" << endl;
     }
@@ -426,7 +576,7 @@ int main(int argc, char* argv[])
 
 void print_solution_cnf_style(const Solution& solution);
 void check_solution(const ANF* anf, const Solution& solution);
-void print_solution_anf_style(const Solution& solution);
+void print_solution_anf_style(const Solution& solution, Bosph::Bosphorus* mylib, const ANF* anf);
 void clear_solution_file();
 void write_solution_to_file_cnf_style(const Solution& solution);
 void ban_solution(CMSat::SATSolver& solver, const Solution& solution, const std::set<size_t>& proj);
@@ -442,19 +592,25 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
     vector<Clause> cls = mylib->get_clauses(cnf);
     CMSat::SATSolver solver;
     solver.set_num_threads(config.numThreads);
-    if (solve_xnf) {
-        solver.set_sls(0);
-        solver.set_find_xors(true);
-        solver.set_allow_otf_gauss();
-        solver.set_max_num_matrices(1000000);
-        solver.set_min_matrix_rows(1);
-        solver.set_simplify_at_startup(1);
-    }
+    // The settings for XOR-heavy systems (like "cryptominisat5 --sls 0
+    // --autodisablegauss 0 --presimp 1 --maxnummatrices 1000000
+    // --minmatrixrows 1"): Gauss-Jordan elimination is never disabled
+    // automatically, XORs are recovered from the clauses and every matrix
+    // is kept, however small.
+    solver.set_sls(0);
+    solver.set_allow_otf_gauss();
+    solver.set_simplify_at_startup(1);
+    solver.set_find_xors(true);
+    solver.set_max_num_matrices(1000000);
+    solver.set_min_matrix_rows(1);
     solver.new_vars(mylib->get_max_var(cnf));
     for(const Bosph::Clause& c: cls) {
         const Bosph::Clause* cc = &c;
         const vector<CMSat::Lit>* cc2 = (vector<CMSat::Lit>*)cc;
         solver.add_clause(*cc2);
+    }
+    for (const auto& x : mylib->get_xor_clauses(cnf)) {
+        solver.add_xor_clause(x.first, x.second);
     }
 
     clear_solution_file();
@@ -472,7 +628,7 @@ void solve(Bosph::Bosphorus* mylib, CNF* cnf, ANF* anf) {
         } else {
             solution.ret = l_False;
         }
-        print_solution_anf_style(solution);
+        print_solution_anf_style(solution, mylib, anf);
         write_solution_to_file_cnf_style(solution);
         if (ret == CMSat::l_True) {
             check_solution(anf, solution);
@@ -551,7 +707,7 @@ void ban_solution(CMSat::SATSolver& solver, const Solution& solution, const std:
     solver.add_clause(clause);
 }
 
-void print_solution_anf_style(const Solution& s)
+void print_solution_anf_style(const Solution& s, Bosph::Bosphorus* mylib, const ANF* anf)
 {
     if (s.ret == l_False) {
         cout << "s ANF-UNSATISFIABLE" << endl;
@@ -566,7 +722,7 @@ void print_solution_anf_style(const Solution& s)
             if (s.sol[i] == l_True) {
                 cout << "1+";
             }
-            cout << "x(" << i << ") ";
+            cout << mylib->get_var_name(anf, i) << ' ';
         }
     }
     cout << endl;

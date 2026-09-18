@@ -32,6 +32,9 @@ SOFTWARE.
 #include "replacer.hpp"
 #include "time_mem.h"
 #include "bosphincludes.hpp"
+#include "anfstats.hpp"
+#include <memory>
+#include <unordered_set>
 #include "elimlin.hpp"
 #include "extendedlinearization.hpp"
 #include "simplifybysat.hpp"
@@ -46,9 +49,29 @@ using BLib::ConfigData;
 class PrivateData {
 public:
     ConfigData config;
+    // The CNF built for SAT-based simplification uses the standard
+    // (one variable per monomial) strategy: the facts SimplifyBySat extracts
+    // from the solver are only understood for monomial variables, so the
+    // partner strategies would hide most of them. They are used for the
+    // output CNF only. This is config with doPartner turned off.
+    ConfigData sat_config;
+    PrivateData()
+    {
+        sat_config.doPartner = false;
+        sat_config.xorClauses = true; // the solver is CryptoMiniSat: XORs are native
+    }
     BoolePolyRing* pring = nullptr;
     vector<Clause> clauses_needed_for_anf_import;
     vector<BoolePolynomial> learnt;
+    // stableHash of every fact ever learnt by XL/ElimLin/SAT: a fact that
+    // was learnt before is not new even if the in-place rules have since
+    // rewritten the equation it became into another form (otherwise XL
+    // keeps re-learning the same linear equations and the loop never ends)
+    std::unordered_set<BoolePolynomial::hash_type> ever_learnt;
+    bool is_new_fact(const BoolePolynomial& p)
+    {
+        return ever_learnt.insert(p.stableHash()).second;
+    }
 
     bool read_in_data = false;
 };
@@ -68,11 +91,29 @@ void output_anf_to_cnf_map(const BLib::ANF* anf, const BLib::CNF* cnf,
         }
     }
     for (size_t i = 0; i < cnf->getNumVars(); ++i) {
-        const BooleMonomial mono = cnf->getMonomForVar(i);
-        if (mono.deg() > 0)
-            assert(i == cnf->getVarForMonom(mono));
-        if (mono.deg() > 1)
-            ofs << "c Internal ANF map " << i + 1 << " = " << mono << endl;
+        switch (cnf->getVarKind(i)) {
+            case BLib::CNF::kind_var:
+                break;
+            case BLib::CNF::kind_monom: {
+                const BooleMonomial mono = cnf->getMonomForVar(i);
+                assert(i == cnf->getVarForMonom(mono));
+                ofs << "c Internal ANF map " << i + 1 << " = " << mono << endl;
+                break;
+            }
+            case BLib::CNF::kind_chunk:
+                // partner strategy: one CNF variable for a sum of monomials
+                ofs << "c Internal ANF map " << i + 1 << " = "
+                    << cnf->getPolyForVar(i) << endl;
+                break;
+            case BLib::CNF::kind_cut:
+                ofs << "c Internal XOR cut " << i + 1 << " = "
+                    << cnf->getPolyForVar(i) << endl;
+                break;
+            case BLib::CNF::kind_lineral:
+                ofs << "c Internal ANF map " << i + 1 << " = "
+                    << cnf->getPolyForVar(i) << endl;
+                break;
+        }
     }
 }
 
@@ -95,7 +136,14 @@ void output_cnf(
         ofs << "c Executed arguments: " << dat->config.executedArgs << endl;
     }
     ofs << *cnf;
-    cnf->write_projection_set(&ofs, proj);
+    // The projection set of the input ('c p show ... END' in the ANF) is
+    // written as the CNF's 'c p show' line, over the CNF variables of the
+    // same ANF variables, so that a count over the projected variables of
+    // the CNF is the count over the projected variables of the ANF: every
+    // auxiliary variable is a function of the original ones.
+    const bool show = dat->config.projShow == 1 ||
+        (dat->config.projShow == 2 && anf->proj_set_given());
+    if (show) cnf->write_projection_set(&ofs, proj);
 
     ofs << "c Learnt " << dat->learnt.size() << " fact(s), not all of which have been dumped\n";
     if (dat->config.writecomments) {
@@ -140,14 +188,16 @@ Bosph::ANF* Bosphorus::read_anf(const char* fname)
     assert(fname != NULL);
     check_library_in_use();
 
-    // Find out maxVar in input ANF file
-    size_t maxVar = BLib::ANF::readFileForMaxVar(fname);
-
-    // Construct ANF
-    // ring size = maxVar + 1, because ANF variables start from x0
-    dat->pring = new BoolePolyRing(maxVar + 1);
+    // First pass: the variables (x<N> or named) and the ring size
+    const BLib::ANF::Names names = BLib::ANF::scanFile(fname);
+    dat->pring = new BoolePolyRing(names.ring_size);
+    for (size_t i = 0; i < names.names.size(); i++) {
+        if (!names.names[i].empty()) {
+            dat->pring->setVariableName(i, names.names[i].c_str());
+        }
+    }
     auto anf = new BLib::ANF(dat->pring, dat->config);
-    anf->readFile(fname);
+    anf->readFile(fname, &names);
     return (Bosph::ANF*)anf;
 }
 
@@ -284,6 +334,10 @@ Bosph::ANF* Bosphorus::chunk_dimacs(Bosph::DIMACS* dim)
     // ring size = maxVar, because CNF variables start from 1
     dat->pring = new BoolePolyRing(maxVar);
     auto anf = new BLib::ANF(dat->pring, dat->config);
+    // the CNF's own variables are the projection set: --allsol enumerates
+    // the solutions over them, the auxiliary variables of chopped-up
+    // clauses are not part of a solution
+    anf->set_proj_set_all(orig_var);
     for (auto clause : chunked_clauses) {
         BoolePolynomial poly(1, *dat->pring);
         for (const Lit& l : clause.getLits()) {
@@ -415,6 +469,12 @@ uint32_t Bosphorus::get_max_var(const Bosph::CNF* c) const
     return cnf->getNumVars();
 }
 
+const char* Bosphorus::get_var_name(const ANF* a, uint32_t var) const
+{
+    auto anf = (const BLib::ANF*)a;
+    return anf->getRing().getVariableName(var);
+}
+
 uint32_t Bosphorus::get_max_var(const ANF* a) const
 {
     auto anf = (const BLib::ANF*)a;
@@ -442,70 +502,152 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
     }
     timeout = (cpuTime() > dat->config.maxTime);
 
-    bool changes[] = {true, true, true}; // any changes for the strategies
-    size_t waits[] = {0, 0, 0};
-    size_t countdowns[] = {0, 0, 0};
+    // Strategies, in the order they run within one iteration. The in-place
+    // rewrite rules are cheap so they go first; XL/ElimLin/SAT learn facts
+    // on a copy of the system.
+    enum { S_REWRITE = 0, S_XL, S_EL, S_SAT, S_NUM };
+    static const char* strategy_str[] = {"Rewrite", "XL", "ElimLin", "SAT"};
+    static const char* rule_str[] = {"rewrite", "xl", "elimlin", "sat-simp"};
+    const int* const enabled[] = {&dat->config.doRewrite, &dat->config.doXL,
+                                  &dat->config.doEL, &dat->config.doSAT};
+
+    bool changes[S_NUM]; // any changes for the strategies
+    size_t waits[S_NUM];
+    size_t countdowns[S_NUM];
+    unsigned zero_streak[S_NUM]; // consecutive runs that learnt nothing
+    bool retired[S_NUM];         // learnt nothing twice in a row: not run again
+    // the system's stats after a run that learnt nothing: running the same
+    // strategy again on an unchanged system cannot learn anything either
+    BLib::ANFStats zero_stats[S_NUM];
+    bool zero_stats_valid[S_NUM];
+    auto same_stats = [](const BLib::ANFStats& a, const BLib::ANFStats& b) {
+        return a.eqs == b.eqs && a.monoms == b.monoms && a.lin_eqs == b.lin_eqs &&
+               a.nonlin_eqs == b.nonlin_eqs && a.set_vars == b.set_vars &&
+               a.repl_vars == b.repl_vars && a.free_vars == b.free_vars;
+    };
+    for (unsigned i = 0; i < S_NUM; i++) {
+        zero_stats_valid[i] = false;
+        changes[i] = true;
+        waits[i] = 0;
+        countdowns[i] = 0;
+        zero_streak[i] = 0;
+        retired[i] = false;
+    }
+    // XL and ElimLin work on a copy of the system: leave out the equations
+    // with thousands of terms (products of long linear factors), they only
+    // make the Macaulay matrix huge
+    auto short_eqs = [&]() {
+        vector<BoolePolynomial> out;
+        for (size_t i = 0; i < anf->size(); i++) {
+            if (anf->getEqLen(i) <= dat->config.xlMaxLen) out.push_back(anf->eq(i));
+        }
+        return out;
+    };
     uint32_t iters = 0;
     unsigned subiter = 0;
     BLib::CNF* cnf = NULL;
     BLib::SimplifyBySat* sbs = NULL;
 
+    auto any_changes = [&]() {
+        for (unsigned i = 0; i < S_NUM; i++) if (changes[i]) return true;
+        return false;
+    };
+
     while (
         !timeout
         && anf->getOK()
         && iters < max_iters
-        && (changes[0] || changes[1] || changes[2] || iters < 3)
+        && (any_changes() || iters < 3)
     ) {
         cout << "c [iter-simp] ------ Iteration " << std::fixed << std::dec
              << (int)iters << endl;
 
-        static const char* strategy_str[] = {"XL", "ElimLin", "SAT"};
         const double startTime = cpuTime();
         int num_learnt = 0;
+        bool needs_propagate = true;
 
-        if (countdowns[subiter] > 0) {
+        // Prints the ANF stats before the strategy runs and, when it goes
+        // out of scope at the end of this iteration, after it (and after
+        // the propagation of what it learnt). The rewrite rules print their
+        // own per-rule stats so they get no outer scope.
+        std::unique_ptr<BLib::SimpStatsScope> stats_scope;
+        if (countdowns[subiter] == 0 && *enabled[subiter] && subiter != S_REWRITE && !retired[subiter]) {
+            stats_scope.reset(new BLib::SimpStatsScope(*anf, rule_str[subiter]));
+        }
+
+        if (!retired[subiter] && countdowns[subiter] == 0 && subiter != S_REWRITE &&
+            *enabled[subiter] && zero_stats_valid[subiter] &&
+            same_stats(zero_stats[subiter], anf->get_stats())) {
+            retired[subiter] = true;
+            stats_scope.reset();
+            if (dat->config.verbosity >= 1) {
+                cout << "c [" << strategy_str[subiter]
+                     << "] learnt nothing and the system has not changed since, not running it again" << endl;
+            }
+        }
+        if (retired[subiter]) {
+            // nothing to do
+        } else if (countdowns[subiter] > 0) {
             cout << "c [" << strategy_str[subiter] << "] waiting for "
                  << countdowns[subiter] << " iteration(s)." << endl;
         } else {
             const size_t prevsz = dat->learnt.size();
             bool sub_iter_performed = false;
             switch (subiter) {
-                case 0:
+                case S_REWRITE:
+                    if (dat->config.doRewrite) {
+                        sub_iter_performed = true;
+                        needs_propagate = false; // the rules propagate themselves
+                        // progress means a smaller system or more variables
+                        // known, not the number of rewrites: rewriting the
+                        // same equations back and forth is no progress
+                        const BLib::ANFStats bef = anf->get_stats();
+                        anf->rewrite_inplace();
+                        const BLib::ANFStats aft = anf->get_stats();
+                        num_learnt = (aft.monoms < bef.monoms || aft.eqs < bef.eqs ||
+                                      aft.set_vars + aft.repl_vars > bef.set_vars + bef.repl_vars) ? 1 : 0;
+                    }
+                    break;
+                case S_XL:
                     if (dat->config.doXL) {
                         sub_iter_performed = true;
-                        if (!extendedLinearization(dat->config, anf->getEqs(),
+                        const vector<BoolePolynomial> eqs_for_xl = short_eqs();
+                        if (!extendedLinearization(dat->config, eqs_for_xl,
                                                    dat->learnt)) {
                             anf->setNOTOK();
                         } else {
+                            vector<BoolePolynomial> fresh;
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
-                                num_learnt +=
-                                    anf->addBoolePolynomial(dat->learnt[i]);
-
+                                if (!dat->is_new_fact(dat->learnt[i])) continue;
+                                fresh.push_back(dat->learnt[i]);
                                 if (dat->config.verbosity > 4)  {
                                     cout << "Xl Learnt poly: " << dat->learnt[i] << endl;
                                 }
                             }
+                            num_learnt += anf->add_linearly_new_facts(fresh, false);
                         }
                     }
                     break;
-                case 1:
+                case S_EL:
                     if (dat->config.doEL) {
                         sub_iter_performed = true;
-                        if (!elimLin(dat->config, anf->getEqs(), dat->learnt)) {
+                        const vector<BoolePolynomial> eqs_for_el = short_eqs();
+                        if (!elimLin(dat->config, eqs_for_el, dat->learnt)) {
                             anf->setNOTOK();
                         } else {
+                            vector<BoolePolynomial> fresh;
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
-                                num_learnt +=
-                                    anf->addBoolePolynomial(dat->learnt[i]);
-
+                                if (!dat->is_new_fact(dat->learnt[i])) continue;
+                                fresh.push_back(dat->learnt[i]);
                                 if (dat->config.verbosity > 4)  {
                                     cout << "EL Learnt poly: " << dat->learnt[i] << endl;
                                 }
                             }
+                            num_learnt += anf->add_linearly_new_facts(fresh, false);
                         }
                     }
                     break;
-                case 2:
+                case S_SAT:
                     if (dat->config.doSAT) {
                         sub_iter_performed = true;
                         size_t no_cls = 0;
@@ -513,16 +655,16 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                             if (cnf == NULL) {
                                 assert(sbs == NULL);
                                 cnf = new BLib::CNF(orig_cnf_file, *anf,
-                                              dat->clauses_needed_for_anf_import, dat->config);
-                                sbs = new BLib::SimplifyBySat(*cnf, dat->config);
+                                              dat->clauses_needed_for_anf_import, dat->sat_config);
+                                sbs = new BLib::SimplifyBySat(*cnf, dat->sat_config);
                             } else {
                                 no_cls = cnf->update();
                             }
                         } else {
                             delete cnf;
                             delete sbs;
-                            cnf = new BLib::CNF(*anf, dat->config);
-                            sbs = new BLib::SimplifyBySat(*cnf, dat->config);
+                            cnf = new BLib::CNF(*anf, dat->sat_config);
+                            sbs = new BLib::SimplifyBySat(*cnf, dat->sat_config);
                         }
 
                         lbool ret = sbs->simplify(dat->config.numConfl_lim,
@@ -530,13 +672,15 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                                       no_cls, dat->learnt, *anf);
 
                         if (ret != l_False) {
+                            vector<BoolePolynomial> fresh;
                             for (size_t i = prevsz; i < dat->learnt.size(); ++i) {
-                                num_learnt += anf->addLearntBoolePolynomial(dat->learnt[i]);
-
+                                if (!dat->is_new_fact(dat->learnt[i])) continue;
+                                fresh.push_back(dat->learnt[i]);
                                 if (dat->config.verbosity > 4)  {
                                     cout << "SAT Learnt poly: " << dat->learnt[i] << endl;
                                 }
                             }
+                            num_learnt += anf->add_linearly_new_facts(fresh, true);
                         }
                     }
                     break;
@@ -547,6 +691,20 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
                      << num_learnt << " new facts in "
                      << (cpuTime() - startTime) << " seconds." << endl;
             }
+            if (sub_iter_performed && subiter != S_REWRITE) {
+                if (num_learnt == 0) {
+                    zero_stats[subiter] = anf->get_stats();
+                    zero_stats_valid[subiter] = true;
+                }
+                zero_streak[subiter] = (num_learnt > 0) ? 0 : zero_streak[subiter] + 1;
+                if (zero_streak[subiter] >= 2) {
+                    retired[subiter] = true;
+                    if (dat->config.verbosity >= 1) {
+                        cout << "c [" << strategy_str[subiter]
+                             << "] learnt nothing twice in a row, not running it again" << endl;
+                    }
+                }
+            }
         }
 
         // Check if there are any changes to the system
@@ -554,7 +712,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
             changes[subiter] = false;
         } else {
             changes[subiter] = true;
-            bool ok = anf->propagate();
+            bool ok = needs_propagate ? anf->propagate() : anf->getOK();
             if (!ok) {
                 if (dat->config.verbosity >= 1) {
                     cout << "c [ANF Propagation] is false\n";
@@ -579,7 +737,7 @@ bool Bosphorus::simplify(ANF* a, const char* orig_cnf_file, uint32_t max_iters)
         }
 
         //Schedule next iteration
-        if (subiter < 2) {
+        if (subiter < S_NUM - 1) {
             ++subiter;
         } else {
             ++iters;
@@ -658,6 +816,12 @@ vector<Clause> Bosphorus::get_learnt(ANF* a)
     return cnf->get_clauses_simple();
 }
 
+vector<std::pair<vector<uint32_t>, bool> > Bosphorus::get_xor_clauses(CNF* c)
+{
+    auto cnf = (BLib::CNF*)c;
+    return cnf->getXorClauses();
+}
+
 vector<Clause> Bosphorus::get_clauses(CNF* c)
 {
     auto cnf = (BLib::CNF*)c;
@@ -673,6 +837,9 @@ vector<Clause> Bosphorus::get_clauses(CNF* c)
 void Bosphorus::set_config(void* cfg)
 {
     dat->config = *(BLib::ConfigData*)cfg;
+    dat->sat_config = dat->config;
+    dat->sat_config.doPartner = false;
+    dat->sat_config.xorClauses = true;
 }
 
 const char* Bosphorus::get_compilation_env()

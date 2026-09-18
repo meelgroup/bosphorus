@@ -1,0 +1,13 @@
+c RUN: %solver --anfread %s --anfwrite /dev/stdout --xl 0 --el 0 --sat 0 --shorten 0 --probe 0 | %OutputCheck %s
+c RUN: %solver --anfread %s --solve --allsol --verb 0 | %verify allsol %s
+c
+c x1*x2 + x1 = 0 means x1 -> x2, so x1*x2 can be rewritten to x1 wherever it
+c occurs; binom-red does so in the second equation, lowering its degree.
+c x4*x5 + x6 = 0 is a definition, so x4*x5*x7 becomes x6*x7.
+x1*x2 + x1
+x1*x2*x3 + x4 + x5
+x4*x5 + x6
+x4*x5*x7 + x1 + x7
+c CHECK: \[binom-red\] rewrote 2 eqs
+c CHECK-L: x(1)*x(3) + x(4) + x(5)
+c CHECK-L: x(1) + x(6)*x(7) + x(7)

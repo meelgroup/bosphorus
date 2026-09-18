@@ -81,6 +81,8 @@ public:
     CNF* cnf_from_anf_and_cnf(const char* cnf_fname, const ANF* anf);
     uint32_t get_max_var(const CNF* cnf) const;
     uint32_t get_max_var(const ANF* anf) const;
+    /// the name of ANF variable `var` as printed ("x(3)" or a name from the file)
+    const char* get_var_name(const ANF* anf, uint32_t var) const;
 
     bool simplify(ANF* anf, const char* orig_cnf_file, uint32_t max_iters = 100);
 
@@ -98,6 +100,8 @@ public:
     static void print_anf(ANF* a);
 
     vector<Clause> get_clauses(CNF* cnf);
+    /// native XOR clauses of the CNF (XOR(vars) = rhs), only with --xorcls
+    vector<std::pair<vector<uint32_t>, bool> > get_xor_clauses(CNF* cnf);
     vector<Clause> get_learnt(ANF* anf);
 
 private:

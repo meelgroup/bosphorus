@@ -76,7 +76,6 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 option(BUILD_SHARED_LIBS "Build the shared library" ON)
 option(STATICCOMPILE "Compile to static executable" OFF)
 if(STATICCOMPILE)
-    set(Boost_USE_STATIC_LIBS ON)
     set(BUILD_SHARED_LIBS OFF)
 endif()
 
@@ -93,6 +92,15 @@ if(NOT MSVC)
     add_compile_options("$<$<CONFIG:RELEASE>:-g0>")
 
     add_compile_options("$<$<CONFIG:DEBUG>:-O0>")
+
+    # the Groebner engines count bits in every monomial comparison: without
+    # the popcnt instruction __builtin_popcountll is a library call (29% of
+    # a run on a random quadratic system)
+    include(CheckCXXCompilerFlag)
+    check_cxx_compiler_flag("-mpopcnt" COMPILER_SUPPORTS_MPOPCNT)
+    if(COMPILER_SUPPORTS_MPOPCNT)
+        add_compile_options(-mpopcnt)
+    endif()
 
     if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -O2")
@@ -260,7 +268,6 @@ if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR (${CMAKE_SYSTEM_NAME} MATCHES "Darw
             set(${VAR_TO_MODIFY} "${replacement}" CACHE STRING "Default flags for ${build_config} configuration" FORCE)
         endforeach()
     else()
-        add_definitions(-DBOOST_TEST_DYN_LINK)
         message(STATUS "Compiling for dynamic library use")
     endif()
 endif()
@@ -268,14 +275,22 @@ endif()
 # -----------------------------------------------------------------------------
 # Dependencies
 #
-# Boost, zlib, GMP, m4ri and BRiAl must come from the system. CryptoMiniSat is
+# zlib, GMP, m4ri and BRiAl must come from the system. CryptoMiniSat is
 # fetched and built automatically; point -Dcryptominisat5_DIR at an install
 # prefix to use a pre-built one instead.
 # -----------------------------------------------------------------------------
-find_package(Boost 1.34 REQUIRED COMPONENTS program_options)
 find_package(ZLIB REQUIRED)
 find_package(m4ri REQUIRED)
 find_package(BRiAl REQUIRED)
+
+# Bosphorus itself does not use Boost, but BRiAl's public headers do, so the
+# compiler must be able to find Boost's headers. That is automatic on Linux
+# (/usr/include) but not e.g. with Homebrew, so ask CMake where they are.
+# Header-only: nothing from Boost is linked.
+find_package(Boost QUIET)
+if(NOT Boost_FOUND)
+    message(STATUS "Boost headers not located by CMake; BRiAl's headers need them, so they must be on the compiler's default include path")
+endif()
 
 set(cryptominisat5_DIR "" CACHE PATH "CryptoMiniSat5 install prefix. Fetched and built if empty.")
 if(cryptominisat5_DIR)

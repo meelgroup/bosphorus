@@ -1,0 +1,6 @@
+c RUN: %solver --cnfread %S/cnf_unused_var.cnf --solve --allsol --verb 0 | %OutputCheck %s
+c
+c The CNF declares 4 variables but variable 4 occurs in no clause; it must
+c still exist and be enumerated: the two clauses have 4 solutions over
+c x1..x3, times 2 for the free x4.
+c CHECK-L: c Number of solutions found: 8

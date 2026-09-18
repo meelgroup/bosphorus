@@ -23,6 +23,15 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/GitSHA1.cpp.in" "${CMAKE_CURRENT_BIN
 
 set(bosph_lib_files
     anf.cpp
+    anfparse.cpp
+    anfstats.cpp
+    anfrewrite.cpp
+    anfgroebner.cpp
+    boolf4.cpp
+    boolf5.cpp
+    boolsplit.cpp
+    anfcnfprobe.cpp
+    linfactor.cpp
     cnf.cpp
     anfcnfutils.cpp
     replacer.cpp
@@ -37,9 +46,9 @@ set(bosph_lib_files
 
 add_library(bosphorus ${bosph_lib_files})
 
-# polybori's headers include Boost, so the library needs Boost's include dir
-# even though only bosphorus-bin links a Boost library. Matters wherever Boost
-# is not in the default search path, e.g. Homebrew.
+# polybori's headers include Boost headers, so the library needs Boost's
+# include dir (nothing from Boost is linked). Matters wherever Boost is not in
+# the default search path, e.g. Homebrew.
 target_include_directories(bosphorus
   PRIVATE
     ${PROJECT_SOURCE_DIR}
@@ -57,6 +66,7 @@ target_link_libraries(bosphorus
   PUBLIC
     ${m4ri_LIBRARIES}
     ${BRiAl_LIBRARIES}
+    ${BRiAl_GROEBNER_LIBRARIES}
     ${CRYPTOMINISAT5_LIBRARIES}
     ${ZLIB_LIBRARY}
 )
@@ -82,7 +92,6 @@ target_include_directories(bosphorus-bin PRIVATE
 
 target_link_libraries(bosphorus-bin PRIVATE
     bosphorus
-    Boost::program_options
 )
 
 bosphorus_add_public_header(bosphorus ${CMAKE_CURRENT_SOURCE_DIR}/bosphorus.hpp)
