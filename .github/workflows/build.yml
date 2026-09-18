@@ -4,6 +4,7 @@ on:
   push:
     branches: [ "master" ]
   pull_request:
+    branches: [ "*" ]
 
 jobs:
   build:
@@ -33,7 +34,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -yq build-essential cmake pkg-config \
-          libgmp-dev zlib1g-dev libboost-dev
+          libgmp-dev zlib1g-dev libboost-dev libboost-test-dev
 
     - name: Install dependencies for Mac
       if: contains(matrix.os, 'macos')

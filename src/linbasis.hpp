@@ -124,7 +124,7 @@ class LinBasis {
             if (level.size() % 2) next.push_back(level.back());
             level.swap(next);
         }
-        polybori::BoolePolynomial p(r[words], ring);
+        polybori::BoolePolynomial p(constant(r), ring);
         if (!level.empty()) p += level.front();
         return p;
     }

@@ -14,4 +14,4 @@ x1*x9 + x1*x10 + x1 + x2*x9 + x2*x10 + x2 + x3*x9 + x3*x10 + x3 + x4*x9 + x4*x10
 x5*x11 + x6*x11 + x7*x11
 x12*x13 + x12
 x1 + x5 + x9 + x12 + x13 + 1
-c CHECK: \[cnf-stats\] vars 17 clauses 48 lits 213 anf_vars 14 monom_vars 0 chunk_vars 0 chunk_terms 0 cut_vars 0 linfactor_vars 3 product_cls 4 xor_cls 0
+c CHECK: \[cnf-stats\] vars 17 clauses 48 lits 213 anf_vars 14 monom_vars 0 chunk_vars 0 chunk_terms 0 cut_vars 0 linfactor_vars 3 product_cls 4 and_vars 0 quad_eqs 0 xor_cls 0
