@@ -248,6 +248,7 @@ class ANF
     ANFStats gb_last;
     bool gb_ran = false;
     ANFStats cp_last; // cnf-probe: the system's stats after its last run
+    std::unordered_set<uint64_t> cp_bins_seen; // cnf-probe: binary clauses already imported (other rules rewrite them, so they must not come back every round)
     bool cp_ran = false;
     std::unordered_set<uint64_t> gb_seen;               // cones (by their equations) already processed
     std::map<size_t, polybori::BoolePolyRing> gb_rings; // cone rings by number of variables

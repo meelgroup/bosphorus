@@ -244,6 +244,8 @@ void parseOptions(int argc, char* argv[])
         "Rewrite rule cnf-probe: the system is converted to CNF and CryptoMiniSat's inprocessing runs on it as Arjun does (equivalent-literal SCCs, probing of every ANF variable, in-tree probing, no variable elimination); the literals fixed at level 0 and the equivalent literals come back as equations (a CNF variable stands for a monomial, an XOR cut or a lineral). Runs once per rewrite round, after the cheap rules and before gb-cone, on a system that changed since its last run. Default: ON");
     add_arg("--cnfprobevars", config.cnfProbeVars, fc_integral<size_t>,
         "cnf-probe: probe at most this many ANF variables, the most incident first. Default: 200000");
+    add_arg("--cnfprobebin", config.cnfProbeBin, fc_integral<int>,
+        "cnf-probe: import the binary clauses of the probed CNF over ANF variables and monomials as equations (a -> b becomes a*b + a = 0, a rule for binom-red and a generator for gb-cone): 0 = off, 1 = irredundant clauses, 2 = also the redundant (learnt, hyper-binary) ones. Default: 0");
     add_arg("--cnfprobelen", config.cnfProbeLen, fc_integral<size_t>,
         "cnf-probe: a nonlinear fact with more terms than this is dropped (two equal XOR-cut variables of linearised equations give the sum of the two partial sums, a long polynomial that is a combination of the equations); linear facts of any length go through the span filter. Default: 8");
     add_arg("--varprobe", config.doVarProbe, fc_integral<int>,

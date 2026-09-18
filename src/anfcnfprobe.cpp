@@ -140,6 +140,37 @@ size_t ANF::cnf_probe()
             if (keep(p)) num_equiv++;
         }
     }
+    // Binary clauses between ANF variables and monomials are implications
+    // (a -> b) and exclusions (not a or not b): as equations they are the
+    // binomials a*b + a = 0 and a*b = 0, exactly the rules binom-red
+    // reduces by, and generators for the Groebner cones. A clause (l1 or
+    // l2) is false when both literals are, so the equation is the product
+    // of the two "literal is false" polynomials.
+    size_t num_bins = 0;
+    if (ret != CMSat::l_False && config.cnfProbeBin > 0) {
+        auto false_poly = [&](const CMSat::Lit& l) {
+            BoolePolynomial p = poly_of_var(l.var());
+            if (!l.sign()) p += BooleConstant(true); // a positive literal is false when p = 0
+            return p;
+        };
+        for (int red = 0; red < (config.cnfProbeBin >= 2 ? 2 : 1); red++) {
+            solver.start_getting_constraints(red == 1, false, 2);
+            vector<CMSat::Lit> cl;
+            bool is_xor = false, rhs = false;
+            while (solver.get_next_constraint(cl, is_xor, rhs)) {
+                if (is_xor || cl.size() != 2) continue;
+                const uint32_t v1 = cl[0].var(), v2 = cl[1].var();
+                if (v1 == v2 || !known(v1) || !known(v2)) continue;
+                if (!cnf.varRepresentsMonomial(v1) || !cnf.varRepresentsMonomial(v2)) continue;
+                const BoolePolynomial p = false_poly(cl[0]) * false_poly(cl[1]);
+                if (p.isZero() || eqs_hash.find(p.hash()) != eqs_hash.end()) continue;
+                if (!cp_bins_seen.insert(p.stableHash()).second) continue;
+                if (config.verbosity >= 5) cout << "c [cnf-probe] binary " << cl[0] << " " << cl[1] << " -> " << p << endl;
+                if (keep(p)) num_bins++;
+            }
+            solver.end_getting_constraints();
+        }
+    }
     // The CNF carries the values and equivalences the replacer already
     // knows, and the solver reports them back: contextualising the facts
     // turns those into 0, so only what is new is counted and added; linear
@@ -151,6 +182,7 @@ size_t ANF::cnf_probe()
     if (config.verbosity >= 1) {
         cout << "c [cnf-probe] cnf vars " << cnf.getNumVars() << " cls " << num_cls
              << " probed " << probed << " units " << num_units << " equivs " << num_equiv
+             << " bins " << num_bins
              << " long-dropped " << num_long << " new " << added << (ret == CMSat::l_False ? " UNSAT" : "") << " T: " << std::fixed
              << std::setprecision(2) << (cpuTime() - myTime) << endl;
     }

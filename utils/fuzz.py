@@ -248,7 +248,7 @@ def rand_cnf(rng):
 # cutoff must be added here. All are always passed: switches with a random
 # value in 0..max, cutoffs with the extremes or the default.
 SWITCHES = [('--simplify', 1), ('--rewrite', 1), ('--lingauss', 1), ('--spanfilter', 1), ('--binomred', 1),
-            ('--shorten', 1), ('--monogauss', 1), ('--prodsplit', 1), ('--probe', 1), ('--varprobe', 1), ('--cnfprobe', 1),
+            ('--shorten', 1), ('--monogauss', 1), ('--prodsplit', 1), ('--probe', 1), ('--varprobe', 1), ('--cnfprobe', 1), ('--cnfprobebin', 2),
             ('--faccanon', 1), ('--facres', 1), ('--gb', 2), ('--gbfull', 2), ('--gbengine', 2),
             ('--gbrecursion', 2), ('--gbtailreduce', 1), ('--keepfactor', 2), ('--xl', 1), ('--el', 1),
             ('--sat', 1), ('--factor', 1), ('--partner', 1), ('--xorcls', 1), ('--projshow', 2)]
