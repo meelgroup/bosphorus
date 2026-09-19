@@ -238,7 +238,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif()
 
 if(ENABLE_ASSERTIONS)
-    # NDEBUG was already removed.
+    # NDEBUG was already removed. Boost is only used through BRiAl's inline
+    # code, whose copies in our library are also run on BRiAl's own objects:
+    # BRiAl (built with NDEBUG) sets a bit one past the end of a
+    # PairStatusSet dynamic_bitset row, harmless, but boost's invariant
+    # check in our copy of the destructor aborts on it.
+    add_compile_definitions(BOOST_DISABLE_ASSERTS)
 else()
     # Note this definition doesn't appear in the cache variables.
     add_compile_definitions(NDEBUG)
