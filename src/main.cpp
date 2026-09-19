@@ -289,7 +289,7 @@ void parseOptions(int argc, char* argv[])
 
     // XL
     add_arg("--xl", config.doXL, fc_integral<int>,
-        "Turn on/off XL-based simplification. Default: ON");
+        "Turn on/off XL-based simplification (a random sample of the short equations, expanded and eliminated; learnt nothing new on bivium, ascon and MQ). Default: OFF");
     add_arg("--xldeg", config.xlDeg, fc_integral<uint32_t>,
         "Expansion degree for XL algorithm. Default = 1 (0 = Just GJE. For now we only support 0 <= xldeg = 3)");
     add_arg("--xlmaxlen", config.xlMaxLen, fc_integral<size_t>,

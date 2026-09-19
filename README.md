@@ -100,7 +100,7 @@ This means x0 is `false`, x1 is `true`, x2 is `true` and x3 is `false`.
 | `fac-res` | Resolution between products sharing a linear factor (default: off). |
 | `gb-cone` | Gröbner bases (F4 [[3]](#references)) of cones of small equations; the linear members are added (default: on for small systems). |
 | `gb-split` | Fixes a variable both ways when the whole-system Gröbner basis would exceed the matrix budget, and combines the two bases; a fixed variable lowers the degree of regularity [[5]](#references). |
-| `xl` | eXtended Linearization [[6]](#references) on the short equations. |
+| `xl` | eXtended Linearization [[6]](#references) on a random sample of the short equations (default: off; it learnt nothing new on bivium, ascon and MQ). |
 | `elimlin` | ElimLin [[7]](#references): elimination and substitution of linear equations, iterated. |
 | `sat-simp` | Bounded CryptoMiniSat run; imports the units, equivalences and XORs it finds. |
 
