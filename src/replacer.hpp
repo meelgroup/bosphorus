@@ -91,7 +91,7 @@ class Replacer
     //state
     bool ok;
 
-    friend std::ostream& operator<<(std::ostream& os, const Replacer& repl);
+    friend void write_replacer(std::ostream& os, const Replacer& repl, const BoolePolyRing& ring);
 };
 
 inline lbool Replacer::getValue(const uint32_t var) const
@@ -176,7 +176,8 @@ inline size_t Replacer::getNumSetVars() const
     return ret;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Replacer& repl)
+// with the ring's variable names, so that reading it back gives the same variables
+inline void write_replacer(std::ostream& os, const Replacer& repl, const BoolePolyRing& ring)
 {
     //print values
     os << "c -------------" << std::endl;
@@ -189,7 +190,7 @@ inline std::ostream& operator<<(std::ostream& os, const Replacer& repl)
         if (*it == l_Undef)
             continue;
 
-        os << "x(" << num << ")";
+        os << BooleVariable(num, ring);
         if (*it == l_True)
             os << " + 1";
         os << std::endl;
@@ -206,7 +207,7 @@ inline std::ostream& operator<<(std::ostream& os, const Replacer& repl)
         if (*it == Lit(num, false) || repl.getValue(num) != l_Undef)
             continue;
 
-        os << "x(" << num << ") + x(" << it->var() << ")";
+        os << BooleVariable(num, ring) << " + " << BooleVariable(it->var(), ring);
         if (it->sign())
             os << " + 1";
         os << std::endl;
@@ -220,8 +221,6 @@ inline std::ostream& operator<<(std::ostream& os, const Replacer& repl)
         os << "1" << std::endl;
     }
     os << "c UNSAT : " << std::boolalpha << !repl.ok << std::endl;
-
-    return os;
 }
 
 }

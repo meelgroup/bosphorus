@@ -20,13 +20,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <algorithm>
 #include <complex>
 
 #include "dimacscache.hpp"
+#include "gzstream.hpp"
 
 using std::cout;
 using std::endl;
@@ -54,10 +54,9 @@ DIMACSCache::DIMACSCache(const char* _fname)
     maxVar = 0;
     clauses.clear();
 
-    std::ifstream ifs;
+    GzIfstream ifs(fname);
     std::string temp;
     std::string x;
-    ifs.open(fname);
     if (!ifs) {
         cout << "ERROR: Problem opening file '" << fname << "' for reading\n";
         exit(-1);
@@ -66,6 +65,22 @@ DIMACSCache::DIMACSCache(const char* _fname)
     vector<Lit> lits;
     while (std::getline(ifs, temp)) {
         if (temp.length() == 0 || temp[0] == 'c') {
+            // the projection set may span several lines, each ending in 0
+            std::istringstream iss(temp);
+            std::string c, p, show;
+            iss >> c >> p;
+            if (c != "c" || (p != "ind" && !(p == "p" && (iss >> show) && show == "show")))
+                continue;
+            proj_given = true;
+            long v;
+            while (iss >> v && v != 0) {
+                if (v < 0) {
+                    cout << "ERROR: negative variable in the projection set: " << temp << endl;
+                    exit(-1);
+                }
+                projection.push_back(v - 1);
+                maxVar = std::max<uint32_t>(maxVar, v);
+            }
             continue;
         } else if (temp[0] == 'p') {
             // "p cnf <vars> <clauses>": a variable that occurs in no clause

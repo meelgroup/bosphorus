@@ -1,0 +1,6 @@
+c RUN: gzip -c %S/cnf_unused_var.cnf > %t.cnf.gz
+c RUN: %solver %t.cnf.gz --allsol --verb 0 | %OutputCheck %s
+c RUN: %solver --cnfread %t.cnf.gz --allsol --verb 0 | %OutputCheck %s
+c
+c A gzipped CNF input is read like a plain one (see cnf_unused_var.anf).
+c CHECK-L: c Number of solutions found: 8

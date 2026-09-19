@@ -69,9 +69,9 @@ class Clause
         return lits.empty();
     }
 
+    // may be empty: the CNF of an equation 1 = 0, UNSAT for the SAT solver
     std::vector<Lit> getClause() const
     {
-        assert(!lits.empty());
         return lits;
     }
 

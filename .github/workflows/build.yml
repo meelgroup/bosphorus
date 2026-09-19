@@ -66,6 +66,17 @@ jobs:
         ./build/bosphorus --version
         ./build/bosphorus --help | grep -q -- --anfread
 
+    - name: Smoke-test the binary on a real problem
+      run: |
+        printf 'x1 + x2 + x3\nx2 + x3 + 1\n' > smoke.anf
+        ./build/bosphorus --anfread smoke.anf --solve --verb 0 | tee smoke.out
+        grep -q "^s ANF-SATISFIABLE" smoke.out
+        gzip -c smoke.anf > smoke.anf.gz
+        ./build/bosphorus smoke.anf.gz --verb 0 | tee smoke-gz.out
+        grep -q "^s ANF-SATISFIABLE" smoke-gz.out
+        ./build/bosphorus smoke.anf.gz smoke.cnf --verb 0
+        grep -q "^p cnf" smoke.cnf
+
     - name: Test
       run: ctest -C ${{ matrix.build_type }} --verbose
       working-directory: build

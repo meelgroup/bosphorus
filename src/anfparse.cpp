@@ -36,12 +36,12 @@ SOFTWARE.
 
 #include <algorithm>
 #include <cctype>
-#include <fstream>
 #include <limits>
 #include <sstream>
 #include <unordered_set>
 
 #include "anf.hpp"
+#include "gzstream.hpp"
 
 using std::cout;
 using std::endl;
@@ -185,7 +185,7 @@ bool is_declaration(const std::vector<Tok>& toks)
 ANF::Names ANF::scanFile(const string& filename)
 {
     Names names;
-    std::ifstream ifs(filename.c_str());
+    GzIfstream ifs(filename);
     if (!ifs) {
         cout << "Problem opening file: \"" << filename << "\" for reading\n";
         exit(-1);
@@ -203,7 +203,7 @@ ANF::Names ANF::scanFile(const string& filename)
             std::istringstream iss(line);
             string c, p, show;
             iss >> c >> p >> show;
-            if (!(c == "c" && p == "show") && !(c == "c" && p == "p" && show == "show")) continue;
+            if (!(c == "c" && p == "p" && show == "show")) continue;
             string rest;
             std::getline(iss, rest);
             const size_t end = rest.find("END");
@@ -238,7 +238,7 @@ size_t ANF::readFile(const string& filename, const Names* names)
         local = scanFile(filename);
         names = &local;
     }
-    std::ifstream ifs(filename.c_str());
+    GzIfstream ifs(filename);
     if (!ifs) {
         cout << "Problem opening file: \"" << filename << "\" for reading\n";
         exit(-1);

@@ -89,7 +89,8 @@ class ANF
     void get_solution_map(map<uint32_t, VarMap>& ret) const;
 
     // Returns true if polynomial is new and has been added
-    bool addBoolePolynomial(const BoolePolynomial& poly);
+    // len: the number of terms of poly when the caller knows it (SIZE_MAX: count it)
+    bool addBoolePolynomial(const BoolePolynomial& poly, size_t len = SIZE_MAX);
     // Adds the polynomial given as a list of monomials (the empty vector is
     // the constant 1). If it is a product of linear factors it is stored as
     // such and never expanded into a ZDD unless a rule needs that.
@@ -176,6 +177,11 @@ class ANF
     {
         proj_set.clear();
         for (size_t i = 0; i < n; i++) proj_set.insert(i);
+    }
+    void set_proj_set(const std::vector<uint32_t>& vs)
+    {
+        proj_set.clear();
+        proj_set.insert(vs.begin(), vs.end());
     }
 
     // In-place rewrite rules (anfrewrite.cpp). Each returns the number of
@@ -375,6 +381,14 @@ inline std::ostream& operator<<(std::ostream& os, const ANF& anf)
         if (comment.compare(0, 9, "c p show ") == 0) continue; // rewritten below
         os << comment << endl;
     }
+    // declare the whole ring: free variables after the last used one would
+    // be dropped on reading (changing the solution count), and named
+    // variables keep their indices
+    if (anf.ring->nVariables() >= 2) {
+        for (size_t v = 0; v < anf.ring->nVariables(); v++)
+            os << (v ? ", " : "") << BooleVariable(v, *anf.ring);
+        os << endl;
+    }
     // the projection set of the input, so that the written ANF keeps its meaning
     if (anf.proj_given) {
         os << "c p show";
@@ -388,7 +402,7 @@ inline std::ostream& operator<<(std::ostream& os, const ANF& anf)
         os << endl;
     }
 
-    os << *(anf.replacer);
+    write_replacer(os, *anf.replacer, *anf.ring);
     return os;
 }
 

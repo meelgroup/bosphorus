@@ -238,7 +238,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif()
 
 if(ENABLE_ASSERTIONS)
-    # NDEBUG was already removed.
+    # NDEBUG was already removed. Boost is only used through BRiAl's inline
+    # code, whose copies in our library are also run on BRiAl's own objects:
+    # BRiAl (built with NDEBUG) sets a bit one past the end of a
+    # PairStatusSet dynamic_bitset row, harmless, but boost's invariant
+    # check in our copy of the destructor aborts on it.
+    add_compile_definitions(BOOST_DISABLE_ASSERTS)
 else()
     # Note this definition doesn't appear in the cache variables.
     add_compile_definitions(NDEBUG)
@@ -329,7 +334,7 @@ endfunction()
 include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 
-set(BOSPHORUS_FULL_VERSION "4.0.0")
+set(BOSPHORUS_FULL_VERSION "4.1.0")
 string(REPLACE "." ";" BOSPHORUS_FULL_VERSION ${BOSPHORUS_FULL_VERSION})
 SetVersionNumber("PROJECT" ${BOSPHORUS_FULL_VERSION})
 message(STATUS "PROJECT_VERSION: ${PROJECT_VERSION}")

@@ -136,7 +136,7 @@ bool ANF::check_if_need_update(const BoolePolynomial& poly,
     return false;
 }
 
-bool ANF::addBoolePolynomial(const BoolePolynomial& poly)
+bool ANF::addBoolePolynomial(const BoolePolynomial& poly, size_t len)
 {
     // Don't add constants
     if (poly.isConstant()) {
@@ -157,7 +157,7 @@ bool ANF::addBoolePolynomial(const BoolePolynomial& poly)
     eqs.push_back(poly);
     poly_valid.push_back(1);
     factors.push_back(vector<Lineral>());
-    eq_len.push_back(poly.length());
+    eq_len.push_back(len == SIZE_MAX ? poly.length() : len);
 
     return true;
 }
@@ -242,7 +242,8 @@ bool ANF::addTerms(vector<VarVec>& terms)
     }
     BoolePolynomial poly(*ring);
     if (!level.empty()) poly = level.front();
-    return addBoolePolynomial(poly);
+    // the terms are distinct, so they are the monomials of poly
+    return addBoolePolynomial(poly, terms.size());
 }
 
 bool ANF::addProduct(const vector<Lineral>& f_in)

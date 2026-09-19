@@ -47,8 +47,17 @@ class DIMACSCache
         return clauses;
     }
 
+    /// 0-based variables of the "c p show ... 0" / "c ind ... 0" lines
+    const std::vector<uint32_t>& getProjection(void) const
+    {
+        return projection;
+    }
+    bool projectionGiven(void) const { return proj_given; }
+
    private:
     std::vector<Clause> clauses;
+    std::vector<uint32_t> projection;
+    bool proj_given = false;
     uint32_t maxVar = 0;
     const char* fname = nullptr;
 };

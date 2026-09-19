@@ -1,5 +1,6 @@
 c RUN: %solver --anfread %s --anfwrite %t.anf --simplify 0 --verb 0
-c RUN: grep -c '^x' %t.anf > %t.count
+c RUN: grep '^x' %t.anf | grep -vc ', ' > %t.count
+c RUN: grep -qx 'x(0), x(1), x(2), x(3), x(4), x(5)' %t.anf
 c RUN: grep -qx 2 %t.count
 c RUN: grep -q 'x(1)\*x(2) + x(3)' %t.anf
 c RUN: grep -q 'x(4) + x(5) + 1' %t.anf

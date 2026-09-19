@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 """Fuzzer for Bosphorus: random small ANF and CNF inputs, random options,
-every answer checked against brute force.
+every count checked with ganak (never by enumeration).
 
-  python3 utils/fuzz.py [--iters N] [--seed S] [--bin build/bosphorus]
+  python3 utils/fuzz.py [--iters N (default 0: endless)] [--seed S] [--bin build/bosphorus] [--ganak PATH]
 
-ANF inputs are solved with --solve --allsol and the solution set is compared
-with the brute-forced one (also for the ANF written by --anfwrite and, when
-small enough, the CNF written by --cnfwrite). CNF inputs are read with
---cnfread and solved: the SAT/UNSAT answer must match brute force and a
-reported model must satisfy the CNF. A failing input and its command line are
-kept as fuzz-fail-<seed>.anf/.cnf for replay.
+ANF inputs: the --allsol solutions satisfy the equations and their number is
+ganak's (projected) count; the ANF written by --anfwrite, the CNF written by
+--cnfwrite and the CNF of the written ANF have the same projected count.
+CNF inputs ('c p show' / 'c ind' projection lines included): the same for
+--allsol, --cnfwrite, --anfwrite and --anfwrite followed by --cnfwrite.
+A run over 5 s is skipped, not a failure. Every file is created with
+unique_file() in out/ (several fuzzers can share the directory, see
+fuzz_session.sh) and deleted after the iteration unless it failed: then the
+files are kept with a repro_N.sh and the fuzzer exits, printing how to
+re-run and re-generate the failure.
 """
-import argparse, itertools, os, random, re, subprocess, sys, shutil
+import argparse, collections, itertools, os, random, re, shlex, shutil, signal, stat, subprocess, sys, time, traceback
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'tests', 'utils'))
-from verify_anf import Parser, brute_force, parse_solution_lines, NAMES, NAME_RE, var_index, is_declaration  # noqa: E402
+from verify_anf import Parser, NAMES, NAME_RE, var_index, is_declaration, read_anf, read_cnf, evaluate, max_var_in_file  # noqa: E402
 
 
 def _vname(style, v):
@@ -240,8 +244,18 @@ def rand_cnf(rng):
         vs = rng.sample(range(1, nvars + 1), min(k, nvars))
         cls.append([v if rng.random() < 0.5 else -v for v in vs])
     txt = 'p cnf %d %d\n' % (nvars, len(cls))
+    proj = None
+    if rng.random() < 0.4:
+        # a projection set, possibly split over several lines, in either syntax
+        proj = sorted(rng.sample(range(1, nvars + 1), rng.randint(1, nvars)))
+        rest, lines = list(proj), []
+        while rest:
+            k = rng.randint(1, len(rest))
+            lines.append(rng.choice(['c p show', 'c ind']) + ''.join(' %d' % v for v in rest[:k]) + ' 0\n')
+            rest = rest[k:]
+        txt = ''.join(lines) + txt if rng.random() < 0.5 else txt + ''.join(lines)
     txt += ''.join(' '.join(map(str, c)) + ' 0\n' for c in cls)
-    return txt, nvars, cls
+    return txt, nvars, cls, proj
 
 
 # Every option is listed by hand (never derived from --help): a new rule or
@@ -281,38 +295,169 @@ def rand_opts(rng):
     return o
 
 
-def run(cmd, timeout=60):
-    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout, text=True)
+class Timeout(Exception):
+    pass
+
+
+def run(cmd, timeout=5):
+    try:
+        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout, text=True)
+    except subprocess.TimeoutExpired:
+        raise Timeout()
     return p.returncode, p.stdout
 
 
-def cnf_solutions(nvars, cls):
-    sols = set()
-    for bits in itertools.product([0, 1], repeat=nvars):
-        ok = all(any((bits[abs(l) - 1] == 1) == (l > 0) for l in c) for c in cls)
-        if ok: sols.add(bits)
-    return sols
+GANAK = None
+FILES = []  # the files of the current iteration: deleted unless it failed
 
 
-def check_anf(binary, rng, seed, tmpdir):
+def unique_file(prefix, suffix, max_num_files=10000):
+    """a new file in out/, created atomically so that fuzzers running in
+    parallel in the same directory never share one"""
+    counter = 1
+    while True:
+        path = "out/" + prefix + '_' + str(counter) + suffix
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL, stat.S_IREAD | stat.S_IWRITE)
+            os.fdopen(fd).close()
+            FILES.append(path)
+            return path
+        except OSError:
+            pass
+        counter += 1
+        if counter > max_num_files:
+            print(f"Cannot create unique_file, last try was: {path}")
+            sys.exit(-1)
+STATS = collections.Counter()  # completed checks, printed at the end so that a dead check shows
+
+
+def xor_clauses(vs, rhs, fresh):
+    """XOR(vs) = rhs as clauses, cut into pieces of at most 4 variables"""
+    out = []
+    while len(vs) > 4:
+        t = fresh()
+        out += xor_clauses(vs[:3] + [t], 0, fresh)
+        vs = [t] + vs[3:]
+    if not vs:
+        if rhs:
+            t = fresh()
+            out += [[t], [-t]]
+        return out
+    for signs in itertools.product([1, -1], repeat=len(vs)):
+        # forbid every assignment of the wrong parity (sign -1: variable true)
+        if signs.count(-1) % 2 != rhs:
+            out.append([s * v for s, v in zip(signs, vs)])
+    return out
+
+
+def anf_cnf(polys, base):
+    """Tseitin encoding, ANF variable i is CNF variable i+1; the auxiliary
+    variables (above base) are functions of the ANF variables"""
+    nv = [max([base] + [v + 1 for p in polys for m in p for v in m])]
+    def fresh():
+        nv[0] += 1
+        return nv[0]
+    cls, ands = [], {}
+    for p in polys:
+        lits, rhs = [], 0
+        for m in p:
+            if not m: rhs ^= 1
+            elif len(m) == 1: lits.append(next(iter(m)) + 1)
+            else:
+                if m not in ands:
+                    t = ands[m] = fresh()
+                    cls += [[-t, v + 1] for v in m] + [[t] + [-(v + 1) for v in m]]
+                lits.append(ands[m])
+        cls += xor_clauses(lits, rhs, fresh)
+    return cls, nv[0]
+
+
+def cnf_with_xors(cls, xors, nvars):
+    """a written CNF's XOR lines 'x1 -2 3 0' (odd parity, a negation flips it) as clauses"""
+    nv = [nvars]
+    def fresh():
+        nv[0] += 1
+        return nv[0]
+    out = list(cls)
+    for x in xors:
+        out += xor_clauses([abs(l) for l in x], 1 ^ (sum(l < 0 for l in x) % 2), fresh)
+    return out, nv[0]
+
+
+def count(cls, nvars, proj):
+    """ganak's model count projected onto proj (CNF variables)"""
+    # an extra free projected variable: the projection set is never empty
+    extra = max([nvars] + list(proj)) + 1
+    path = unique_file('count', '.cnf')
+    with open(path, 'w') as f:
+        f.write('c t pmc\np cnf %d %d\n' % (extra, len(cls)))
+        f.write('c p show ' + ' '.join(map(str, sorted(set(proj)) + [extra])) + ' 0\n')
+        f.writelines(' '.join(map(str, c)) + ' 0\n' for c in cls)
+    _, out = run([GANAK, path], timeout=20)
+    m = re.search(r'^c s exact arb int (\d+)$', out, re.M)
+    if not m:
+        raise RuntimeError('ganak gave no count on %s:\n%s' % (path, out[-2000:]))
+    return int(m.group(1)) // 2
+
+
+def written_cnf_count(path):
+    ocls, oxors, onv, _, oproj = read_cnf(path)
+    if oproj is None:
+        return None
+    cls, nv = cnf_with_xors(ocls, oxors, onv)
+    return count(cls, nv, oproj)
+
+
+def with_projshow(opts, v):
+    o = list(opts)
+    o[o.index('--projshow') + 1] = str(v)
+    return o
+
+
+def read_written_anf(path):
+    """the polynomials of an ANF Bosphorus wrote, with the variable names of its input"""
+    saved = dict(NAMES)
+    polys = []
+    for l in open(path).read().splitlines():
+        if not l or l.startswith('c') or (',' in l and is_declaration(l)): continue
+        polys.append(Parser(l).parse())
+    NAMES.clear(); NAMES.update(saved)
+    return polys
+
+
+def anf_count_via_cnf(binary, anf_path, opts, projshow, expect, what):
+    """ANF -> --cnfwrite -> the count over its 'c p show' line must be expect"""
+    outcnf = unique_file('written', '.cnf')
+    cmd = [binary, '--anfread', anf_path, '--cnfwrite', outcnf, '--verb', '0'] + with_projshow(opts, projshow)
+    rc, out = run(cmd)
+    if rc != 0:
+        return '%s: exit %d' % (what, rc), cmd, out
+    c = written_cnf_count(outcnf)
+    if c is None:
+        return '%s: no projection line' % what, cmd, out
+    if c != expect:
+        return '%s: %d projected models, expected %d' % (what, c, expect), cmd, out
+    STATS[what] += 1
+    return None
+
+
+def check_anf(binary, rng):
     txt, nvars, proj = rand_anf(rng)
-    path = os.path.join(tmpdir, 'in.anf')
+    path = unique_file('input', '.anf')
     open(path, 'w').write(txt)
     opts = rand_opts(rng)
-    # 1) all solutions vs brute force
+    polys = read_anf(path)
+    ring = max_var_in_file(path) + 1
+    pidx = [verify_anf_index(v, txt) for v in proj] if proj is not None else None
+    if pidx: ring = max([ring] + [i + 1 for i in pidx])
+
+    # 1) --allsol: every reported solution satisfies the equations, and there
+    # is exactly one per solution (per projected solution with a projection
+    # set), so their number is ganak's (projected) count
     cmd = [binary, '--anfread', path, '--solve', '--allsol', '--verb', '0'] + opts
     rc, out = run(cmd)
-    from verify_anf import read_anf
-    try:
-        polys = read_anf(path)
-        expected, nv = brute_force(polys)
-    except SystemExit as e:
-        return 'brute force: %s' % e, cmd, out
     if rc != 0:
         return 'exit %d' % rc, cmd, out
-    # Bosphorus reports every variable up to the highest declared one, which
-    # may exceed the highest one used in an equation (declaration line):
-    # the extra variables are free, so compare projections and counts.
     reported = []
     for line in out.splitlines():
         if not line.startswith('v '): continue
@@ -327,97 +472,75 @@ def check_anf(binary, rng, seed, tmpdir):
         if not assign or sorted(assign) != list(range(max(assign) + 1)):
             return 'solution covers vars %s' % sorted(assign), cmd, out
         reported.append(tuple(assign[i] for i in range(max(assign) + 1)))
-    if len(set(reported)) != len(reported):
-        return 'duplicate solutions', cmd, out
-    extra = (len(reported[0]) - nv) if reported else 0
-    if extra < 0:
-        return 'solution covers fewer variables than the equations use', cmd, out
-    if proj is not None:
-        # --allsol enumerates one solution per assignment of the projected
-        # variables: each reported one must be a solution, and projected
-        # onto the projection set they must be exactly the projected
-        # brute-forced solutions
-        pidx = [verify_anf_index(v, txt) for v in proj]
-        got_full = set(tuple(s[:nv]) for s in reported)
-        if not got_full <= expected:
+    # Bosphorus reports every variable of its ring, which may exceed the
+    # highest one used in an equation: the extra ones are free
+    n = len(reported[0]) if reported else ring
+    if any(len(s) != n for s in reported):
+        return 'solutions of different lengths', cmd, out
+    if n < ring:
+        return 'solution covers %d variables, the input has %d' % (n, ring), cmd, out
+    for s in reported:
+        assign = dict(enumerate(s))
+        if any(evaluate(p, assign) for p in polys):
             return 'a reported solution is not a solution', cmd, out
-        # a projected variable used in no equation is free: extend the
-        # brute-forced solutions over it
-        n_all = max([nv] + [i + 1 for i in pidx])
-        if n_all > nv:
-            ext = set()
-            for s0 in expected:
-                for bits in itertools.product([0, 1], repeat=n_all - nv):
-                    ext.add(tuple(s0) + bits)
-            expected = ext
-            if reported and len(reported[0]) < n_all:
-                return 'solution covers fewer variables than the projection', cmd, out
-        exp_proj = set(tuple(s[i] for i in pidx) for s in expected)
-        got_proj = [tuple(s[i] for i in pidx) for s in reported]
-        if set(got_proj) != exp_proj or len(got_proj) != len(exp_proj):
-            return 'projected solutions differ: expected %d got %d' % (len(exp_proj), len(got_proj)), cmd, out
-    else:
-        got = set(tuple(s[:nv]) for s in reported)
-        if got != expected or len(reported) != len(expected) * (1 << extra):
-            return 'solutions differ: expected %d got %d (extra free vars %d)' % (len(expected), len(reported), extra), cmd, out
-    # 2) the written ANF must have the same solutions (it lists fixed values and equivalences)
-    outanf = os.path.join(tmpdir, 'out.anf')
+    P = pidx if pidx is not None else list(range(n))
+    keys = set(tuple(s[i] for i in P) for s in reported)
+    if len(keys) != len(reported):
+        return 'two reported solutions agree on the %s' % ('projection set' if pidx else 'variables'), cmd, out
+    cls, nv = anf_cnf(polys, n)
+    expect = count(cls, nv, [i + 1 for i in P])
+    if len(reported) != expect:
+        return '%d solutions reported, ganak counts %d' % (len(reported), expect), cmd, out
+    STATS['anf: allsol count'] += 1
+
+    # 2) --anfwrite: the written ANF has the same count over the same
+    # variables; without a projection set it has the same solutions
+    outanf = unique_file('written', '.anf')
     cmd2 = [binary, '--anfread', path, '--anfwrite', outanf, '--verb', '0'] + opts
     rc, out2 = run(cmd2)
     if rc != 0:
         return 'anfwrite exit %d' % rc, cmd2, out2
-    # the written ANF uses the same names (x(N) for numbered variables);
-    # keep the name table of the input while parsing it
-    saved = dict(NAMES)
-    polys2 = []
-    for l in open(outanf).read().splitlines():
-        if not l or l.startswith('c') or (',' in l and is_declaration(l)): continue
-        polys2.append(Parser(l).parse())
-    NAMES.clear(); NAMES.update(saved)
-    exp2, _ = brute_force(polys2)
-    # brute_force() derives the variable count from the polys: compare on the common variables
-    if exp2 != expected:
-        # the written ANF may use fewer variables (dropped ones are free): compare projections
-        def proj(sols, n):
-            return set(tuple(s[:n]) for s in sols)
-        n = min(len(next(iter(exp2))) if exp2 else 0, len(next(iter(expected))) if expected else 0)
-        if not (exp2 and expected) or proj(exp2, n) != proj(expected, n):
+    polys2 = read_written_anf(outanf)
+    cls2, nv2 = anf_cnf(polys2, n)
+    c2 = count(cls2, nv2, [i + 1 for i in P])
+    if c2 != expect:
+        return 'written ANF: %d projected models, expected %d' % (c2, expect), cmd2, out2
+    if pidx is None:
+        clsb, nvb = anf_cnf(polys + polys2, n)
+        if count(clsb, nvb, [i + 1 for i in P]) != expect:
             return 'written ANF has different solutions', cmd2, out2
-    # 3) the written CNF must have the same solutions when small enough to brute force
-    outcnf = os.path.join(tmpdir, 'out.cnf')
-    cmd3 = [binary, '--anfread', path, '--cnfwrite', outcnf, '--verb', '0'] + opts
-    rc, out3 = run(cmd3)
-    if rc != 0:
-        return 'cnfwrite exit %d' % rc, cmd3, out3
-    header = re.search(r'^p cnf (\d+)', open(outcnf).read(), re.M)
-    if header and int(header.group(1)) <= 16 and '--xorcls' not in opts:
-        verify = os.path.join(HERE, '..', 'tests', 'utils', 'verify_anf.py')
-        rc, out4 = run([sys.executable, verify, 'cnf', path, outcnf])
-        if rc != 0:
-            return 'written CNF differs: %s' % out4.strip().splitlines()[-1], cmd3, out4
+    STATS['anf: anfwrite count'] += 1
+
+    # 3) --cnfwrite, of the input and of the written ANF: the count over the
+    # CNF's 'c p show' line (all variables of the ring with --projshow 1)
+    ps = 2 if pidx is not None else 1
+    err = anf_count_via_cnf(binary, path, opts, ps, expect, 'anf: cnfwrite count')
+    if err: return err
+    err = anf_count_via_cnf(binary, outanf, opts, ps, expect, 'anf: anfwrite+cnfwrite count')
+    if err: return err
     return None, cmd, out
 
 
-def check_cnf(binary, rng, seed, tmpdir):
-    txt, nvars, cls = rand_cnf(rng)
-    path = os.path.join(tmpdir, 'in.cnf')
+def check_cnf(binary, rng):
+    txt, nvars, cls, proj = rand_cnf(rng)
+    path = unique_file('input', '.cnf')
     open(path, 'w').write(txt)
     opts = rand_opts(rng)
+    P = proj if proj is not None else list(range(1, nvars + 1))
+    expect = count(cls, nvars, P)
+
+    # 1) --allsol: every model "v x(0) 1+x(1) ..." (ANF variable x(i) = CNF
+    # variable i+1) satisfies the CNF, one per (projected) solution
     cmd = [binary, '--cnfread', path, '--solve', '--allsol', '--verb', '0'] + opts
     rc, out = run(cmd)
     if rc != 0:
         return 'exit %d' % rc, cmd, out
-    sols = cnf_solutions(nvars, cls)
     sat = 's ANF-SATISFIABLE' in out
-    unsat = 's ANF-UNSATISFIABLE' in out
-    if not sat and not unsat:
+    if not sat and 's ANF-UNSATISFIABLE' not in out:
         return 'no answer', cmd, out
-    if sat != bool(sols):
-        return 'wrong answer: brute force says %s' % ('SAT' if sols else 'UNSAT'), cmd, out
-    # every model "v x(0) 1+x(1) ..." (ANF variable x(i) = CNF variable i+1)
-    # must satisfy the CNF, and projected onto the CNF's variables the
-    # models must be exactly the brute-forced solutions
-    got = set()
+    if sat != (expect > 0):
+        return 'wrong answer: ganak counts %d' % expect, cmd, out
+    keys = []
     for m in re.finditer(r'^v (.*)$', out, re.M):
         assign = {}
         for tok in m.group(1).split():
@@ -427,40 +550,124 @@ def check_cnf(binary, rng, seed, tmpdir):
         for c in cls:
             if not any(assign.get(abs(l), False) == (l > 0) for l in c):
                 return 'model does not satisfy the CNF', cmd, out
-        got.add(tuple(1 if assign.get(v, False) else 0 for v in range(1, nvars + 1)))
-    if got != sols:
-        return 'solution set differs: expected %d got %d' % (len(sols), len(got)), cmd, out
+        keys.append(tuple(assign.get(v, False) for v in P))
+    if len(set(keys)) != len(keys):
+        return 'two models agree on the %s' % ('projection set' if proj else 'variables'), cmd, out
+    if len(keys) != expect:
+        return '%d models reported, ganak counts %d' % (len(keys), expect), cmd, out
+    STATS['cnf: allsol count'] += 1
+
+    # 2) --cnfwrite: the count over the written 'c p show' line (the
+    # projection set, or all input variables with --projshow 1)
+    outcnf = unique_file('written', '.cnf')
+    cmd2 = [binary, '--cnfread', path, '--cnfwrite', outcnf, '--verb', '0'] + with_projshow(opts, 2 if proj else 1)
+    rc, out2 = run(cmd2)
+    if rc != 0:
+        return 'cnfwrite exit %d' % rc, cmd2, out2
+    c = written_cnf_count(outcnf)
+    if c is None:
+        return 'written CNF has no projection line', cmd2, out2
+    if c != expect:
+        return 'written CNF: %d projected models, expected %d' % (c, expect), cmd2, out2
+    STATS['cnf: cnfwrite count'] += 1
+
+    # 3) --anfwrite: the count over the input's variables, then that ANF
+    # through --cnfwrite, projected as the written ANF says
+    outanf = unique_file('written', '.anf')
+    cmd3 = [binary, '--cnfread', path, '--anfwrite', outanf, '--verb', '0'] + opts
+    rc, out3 = run(cmd3)
+    if rc != 0:
+        return 'anfwrite exit %d' % rc, cmd3, out3
+    polys = read_anf(outanf)
+    acls, anv = anf_cnf(polys, nvars)
+    c = count(acls, anv, P)
+    if c != expect:
+        return 'written ANF: %d projected models, expected %d' % (c, expect), cmd3, out3
+    STATS['cnf: anfwrite count'] += 1
+    ps = 2 if re.search(r'(?m)^c p show ', open(outanf).read()) else 1
+    err = anf_count_via_cnf(binary, outanf, opts, ps, expect, 'cnf: anfwrite+cnfwrite count')
+    if err: return err
     return None, cmd, out
 
 
+def write_repro(cmd):
+    """a script re-running the failing command, run from the fuzzer's directory"""
+    path = unique_file('repro', '.sh')
+    with open(path, 'w') as f:
+        f.write('#!/bin/bash\nset -x\ncd "$(dirname "$0")/.."\n')
+        f.write(' '.join(shlex.quote(c) for c in cmd) + '\n')
+    os.chmod(path, 0o755)
+    return path
+
+
+def remove_files():
+    for f in FILES:
+        try: os.unlink(f)
+        except OSError: pass
+    del FILES[:]
+
+
+def stop(signum, frame):
+    # stopped mid-iteration (Ctrl-C, tmux kill-session): leave nothing behind
+    remove_files()
+    sys.exit(1)
+
+
 def main():
+    global GANAK
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, stop)
     ap = argparse.ArgumentParser()
-    ap.add_argument('--iters', type=int, default=60)
+    ap.add_argument('--iters', type=int, default=0, help='number of iterations, 0 (default): run until stopped')
     ap.add_argument('--seed', type=int, default=None)
     ap.add_argument('--bin', default=os.path.join(HERE, '..', 'build', 'bosphorus'))
+    default_ganak = os.path.join(HERE, '..', '..', 'sat_solvers', 'ganak', 'build', 'ganak')
+    if not os.access(default_ganak, os.X_OK): default_ganak = None
+    ap.add_argument('--ganak', default=os.environ.get('GANAK') or default_ganak or shutil.which('ganak'),
+                    help='ganak binary for the model counts (default: $GANAK, then '
+                         '../../sat_solvers/ganak/build/ganak from the repository, then PATH)')
     a = ap.parse_args()
+    if not a.ganak:
+        sys.exit('fuzz: no ganak binary: set GANAK, pass --ganak or build ../sat_solvers/ganak next to this repository')
+    GANAK = os.path.abspath(a.ganak) if os.path.exists(a.ganak) else a.ganak
+    a.bin = os.path.abspath(a.bin)
+    # out/ is next to this script wherever it is started from
+    os.chdir(HERE)
+    os.makedirs('out', exist_ok=True)
     base_seed = a.seed if a.seed is not None else random.randrange(1 << 30)
-    tmpdir = os.path.join(os.environ.get('TMPDIR', '/tmp'), 'bosph-fuzz-%d' % os.getpid())
-    os.makedirs(tmpdir, exist_ok=True)
-    fails = 0
-    for i in range(a.iters):
+    timeouts = i = 0
+    start = time.time()
+    while a.iters == 0 or i < a.iters:
         seed = base_seed + i
+        i += 1
         rng = random.Random(seed)
         kind = 'cnf' if rng.random() < 0.35 else 'anf'
+        del FILES[:]
         try:
-            err, cmd, out = (check_cnf if kind == 'cnf' else check_anf)(a.bin, rng, seed, tmpdir)
-        except subprocess.TimeoutExpired:
-            err, cmd, out = 'timeout', ['(timeout)'], ''
+            err, cmd, out = (check_cnf if kind == 'cnf' else check_anf)(a.bin, rng)
+        except Timeout:
+            # random inputs can be slow: skip them, it is not a failure
+            timeouts += 1
+            err = None
+        except Exception:
+            err, cmd, out = 'fuzzer exception', [sys.executable] + sys.argv, traceback.format_exc()
         if err:
-            fails += 1
-            keep = 'fuzz-fail-%d.%s' % (seed, kind)
-            shutil.copy(os.path.join(tmpdir, 'in.' + kind), keep)
-            print('FAIL seed %d (%s): %s\n  input: %s\n  cmd: %s' % (seed, kind, err, keep, ' '.join(cmd)))
-            print('  output tail: ' + ' | '.join(out.strip().splitlines()[-3:]))
-    shutil.rmtree(tmpdir, ignore_errors=True)
-    print('fuzz: %d iterations, base seed %d, %d failure(s)' % (a.iters, base_seed, fails))
-    sys.exit(1 if fails else 0)
-
+            regen = 'cd %s && GANAK=%s ./fuzz.py --iters 1 --seed %d --bin %s' % (
+                shlex.quote(HERE), shlex.quote(GANAK), seed, shlex.quote(a.bin))
+            print('\nFAIL (%s input, seed %d): %s' % (kind, seed, err))
+            print('  command:    %s' % ' '.join(shlex.quote(c) for c in cmd))
+            print('  output tail:\n    ' + '\n    '.join(out.strip().splitlines()[-15:]))
+            print('  files kept: %s' % ' '.join(os.path.join(HERE, f) for f in FILES))
+            print('  re-run the failing command: %s' % os.path.join(HERE, write_repro(cmd)))
+            print('  re-generate this iteration: %s' % regen, flush=True)
+            sys.exit(1)
+        remove_files()
+        if i % 10 == 0:
+            print('fuzz: %d iterations from seed %d, %d timed out, fuzz iterations/s: %.2f' % (
+                i, base_seed, timeouts, i / (time.time() - start)), flush=True)
+    print('fuzz: checks passed: ' + ', '.join('%s %d' % kv for kv in sorted(STATS.items())))
+    print('fuzz: all %d iterations passed, base seed %d, %d timed out (skipped), fuzz iterations/s: %.2f' % (
+        i, base_seed, timeouts, i / (time.time() - start)))
 
 if __name__ == '__main__':
     main()

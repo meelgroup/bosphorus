@@ -21,7 +21,6 @@ SOFTWARE.
 ***********************************************/
 
 #include <iostream>
-#include <unordered_set>
 
 #include "anfutils.hpp"
 
@@ -30,7 +29,6 @@ using std::endl;
 using std::make_pair;
 using std::pair;
 using std::swap;
-using std::unordered_set;
 using std::vector;
 
 USING_NAMESPACE_PBORI
@@ -71,7 +69,11 @@ double BLib::do_sample_and_clone(const uint32_t verbosity,
         idx[i] = i;
 
     // randomly select equations until a limit
-    unordered_set<BooleMonomial::hash_type> unique;
+    // BRiAl's length() walks the whole ZDD with a std::map cache on every
+    // call: count each equation once and keep the size of unique as a sum
+    vector<size_t> len(eqs.size(), SIZE_MAX);
+    BooleSet unique(eqs.front().ring());
+    size_t unique_sz = 0;
     double log2uniquesz = 0;
     size_t sampled = 1, reject = 0;
     double rej_rate = 0;
@@ -80,29 +82,31 @@ double BLib::do_sample_and_clone(const uint32_t verbosity,
         size_t sel =
             std::floor(static_cast<double>(rand()) / RAND_MAX * idx.size());
         const BoolePolynomial& poly(eqs[idx[sel]]);
+        size_t& plen = len[idx[sel]];
+        if (plen == SIZE_MAX) plen = poly.length();
         ++sampled;
-        if (!unique.empty() && rej_rate < 0.8) {
+        size_t out = SIZE_MAX;
+        if (!unique.isZero() && rej_rate < 0.8) {
             // accept with probability of not increasing then number of monomials
-            size_t out = 0;
-            for (const BooleMonomial& mono : poly)
-                if (unique.find(mono.hash()) == unique.end())
-                    ++out;
+            out = plen - poly.set().intersect(unique).size();
             if (static_cast<double>(rand()) / RAND_MAX <
-                static_cast<double>(out) / poly.length()) {
+                static_cast<double>(out) / plen) {
                 ++reject;
                 continue; // reject and continue with do-while loop
             }
         }
+        if (out == SIZE_MAX)
+            out = unique.isZero() ? plen : plen - poly.set().intersect(unique).size();
         equations.push_back(poly);
         swap(idx.back(), idx[sel]);
         idx.pop_back();
-        for (const BooleMonomial& mono : equations.back())
-            unique.insert(mono.hash());
-        log2uniquesz = log2(unique.size());
+        unique = unique.unite(poly.set());
+        unique_sz += out;
+        log2uniquesz = log2(unique_sz);
     } while ((log2(equations.size()) + log2uniquesz < log2size) &&
              (idx.size() > 0));
     if (verbosity >= 3)
-        cout << "c  Selected " << equations.size() << '[' << unique.size()
+        cout << "c  Selected " << equations.size() << '[' << unique_sz
              << "] equations with rejection rate " << rej_rate << endl;
 
     return log2uniquesz;
@@ -111,23 +115,8 @@ double BLib::do_sample_and_clone(const uint32_t verbosity,
 void BLib::substitute(const BooleVariable& from_var,
                       const BoolePolynomial& to_poly, BoolePolynomial& poly)
 {
-    BoolePolynomial quotient = poly / from_var;
-
-    if (quotient.isZero()) {
-        // `from_var` does not occur in `poly`, so just keep `poly` as it is.
-        return;
-    }
-
-    // Note: `quotient == 1` doesn't mean `poly == from_var`, just that `poly == from_var + r` for some remainder.
-
-    quotient *= to_poly;
-
-    if (!poly.isSingleton()) {
-        for (const BooleMonomial& mono : poly) {
-            if (!mono.reducibleBy(from_var)) {
-                quotient += mono;
-            }
-        }
-    }
-    swap(quotient, poly); // because we are returning poly
+    const BooleSet s = poly.set();
+    const BoolePolynomial p1(s.subset1(from_var.index()));
+    if (p1.isZero()) return;
+    poly = BoolePolynomial(s.subset0(from_var.index())) + to_poly * p1;
 }
