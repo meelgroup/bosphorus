@@ -21,7 +21,6 @@ SOFTWARE.
 ***********************************************/
 
 #include <iostream>
-#include <unordered_set>
 
 #include "anfutils.hpp"
 
@@ -30,7 +29,6 @@ using std::endl;
 using std::make_pair;
 using std::pair;
 using std::swap;
-using std::unordered_set;
 using std::vector;
 
 USING_NAMESPACE_PBORI
@@ -71,7 +69,7 @@ double BLib::do_sample_and_clone(const uint32_t verbosity,
         idx[i] = i;
 
     // randomly select equations until a limit
-    unordered_set<BooleMonomial::hash_type> unique;
+    BooleSet unique(eqs.front().ring());
     double log2uniquesz = 0;
     size_t sampled = 1, reject = 0;
     double rej_rate = 0;
@@ -81,12 +79,10 @@ double BLib::do_sample_and_clone(const uint32_t verbosity,
             std::floor(static_cast<double>(rand()) / RAND_MAX * idx.size());
         const BoolePolynomial& poly(eqs[idx[sel]]);
         ++sampled;
-        if (!unique.empty() && rej_rate < 0.8) {
+        if (!unique.isZero() && rej_rate < 0.8) {
             // accept with probability of not increasing then number of monomials
-            size_t out = 0;
-            for (const BooleMonomial& mono : poly)
-                if (unique.find(mono.hash()) == unique.end())
-                    ++out;
+            const size_t out =
+                poly.length() - poly.set().intersect(unique).size();
             if (static_cast<double>(rand()) / RAND_MAX <
                 static_cast<double>(out) / poly.length()) {
                 ++reject;
@@ -96,8 +92,7 @@ double BLib::do_sample_and_clone(const uint32_t verbosity,
         equations.push_back(poly);
         swap(idx.back(), idx[sel]);
         idx.pop_back();
-        for (const BooleMonomial& mono : equations.back())
-            unique.insert(mono.hash());
+        unique = unique.unite(poly.set());
         log2uniquesz = log2(unique.size());
     } while ((log2(equations.size()) + log2uniquesz < log2size) &&
              (idx.size() > 0));
@@ -111,23 +106,8 @@ double BLib::do_sample_and_clone(const uint32_t verbosity,
 void BLib::substitute(const BooleVariable& from_var,
                       const BoolePolynomial& to_poly, BoolePolynomial& poly)
 {
-    BoolePolynomial quotient = poly / from_var;
-
-    if (quotient.isZero()) {
-        // `from_var` does not occur in `poly`, so just keep `poly` as it is.
-        return;
-    }
-
-    // Note: `quotient == 1` doesn't mean `poly == from_var`, just that `poly == from_var + r` for some remainder.
-
-    quotient *= to_poly;
-
-    if (!poly.isSingleton()) {
-        for (const BooleMonomial& mono : poly) {
-            if (!mono.reducibleBy(from_var)) {
-                quotient += mono;
-            }
-        }
-    }
-    swap(quotient, poly); // because we are returning poly
+    const BooleSet s = poly.set();
+    const BoolePolynomial p1(s.subset1(from_var.index()));
+    if (p1.isZero()) return;
+    poly = BoolePolynomial(s.subset0(from_var.index())) + to_poly * p1;
 }
