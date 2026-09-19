@@ -1,0 +1,6 @@
+c RUN: %solver %s %t.cnf --verb 0 && %verify cnf %s %t.cnf
+c RUN: %solver %s %t.out.anf --verb 0 && %solver %t.out.anf --allsol --verb 0 | %verify allsol %s
+c
+c The second positional file is the output, ANF or CNF by its extension.
+x1*x2 + x3
+x2 + x3 + x4 + 1

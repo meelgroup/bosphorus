@@ -1,0 +1,5 @@
+c RUN: not %solver %s %t.a.cnf %t.b.cnf 2>&1 | %OutputCheck %s
+c
+c At most an input and an output file.
+c CHECK-L: Maximum number of positional arguments exceeded
+x1 + 1

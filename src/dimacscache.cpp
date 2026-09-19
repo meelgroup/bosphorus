@@ -20,13 +20,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ***********************************************/
 
-#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <algorithm>
 #include <complex>
 
 #include "dimacscache.hpp"
+#include "gzstream.hpp"
 
 using std::cout;
 using std::endl;
@@ -54,10 +54,9 @@ DIMACSCache::DIMACSCache(const char* _fname)
     maxVar = 0;
     clauses.clear();
 
-    std::ifstream ifs;
+    GzIfstream ifs(fname);
     std::string temp;
     std::string x;
-    ifs.open(fname);
     if (!ifs) {
         cout << "ERROR: Problem opening file '" << fname << "' for reading\n";
         exit(-1);

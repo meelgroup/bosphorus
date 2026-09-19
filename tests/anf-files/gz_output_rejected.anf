@@ -1,0 +1,8 @@
+c RUN: not %solver %s %t.anf.gz 2>&1 | %OutputCheck %s
+c RUN: not %solver %s %t.cnf.gz 2>&1 | %OutputCheck %s
+c RUN: not %solver %s --anfwrite %t.anf.gz 2>&1 | %OutputCheck %s
+c RUN: not %solver %s --cnfwrite %t.cnf.gz 2>&1 | %OutputCheck %s
+c
+c Output is never compressed: a .gz output file is an error.
+c CHECK-L: ERROR: cannot write compressed output
+x1 + x2

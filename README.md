@@ -53,10 +53,17 @@ x(1) + x(2) + x(3)
 x(1)*x(2) + x(2)*x(3) + 1
 ```
 
-Simplify it, write the simplified ANF and CNF, solve and write the solution
-(a `.anf` input is read as ANF, a `.cnf` input as CNF):
+Bosphorus takes an input and at most one output file, and tells ANF from
+CNF by the `.anf`/`.cnf` extension; inputs may be gzipped (`.anf.gz`,
+`.cnf.gz`). Without an output file it solves:
 ```
-$ ./bosphorus test.anf --anfwrite out.anf --cnfwrite out.cnf --solvewrite solution
+$ ./bosphorus test.anf              # simplify and solve
+$ ./bosphorus test.anf out.cnf      # simplify and write the CNF
+```
+
+To write both the simplified ANF and CNF, and solve and write the solution:
+```
+$ ./bosphorus test.anf out.anf --cnfwrite out.cnf --solvewrite solution
 ```
 
 The simplified ANF is in `out.anf`:
@@ -143,7 +150,7 @@ SAT solving.
 To reproduce a row of the table below:
 ```
 python3 utils/mqgen.py 24 48 1 > mq24.anf   # n=24, m=48, seed 1
-./build/bosphorus mq24.anf --solve              # F4; --gbengine 2 for F5
+./build/bosphorus mq24.anf                  # F4; --gbengine 2 for F5
 ```
 
 The degree of regularity of such a system is 4 up to n = 27 and 5 from
@@ -177,7 +184,7 @@ solutions:
 
 To find all solutions to `myfile.anf`:
 ```
-./bosphorus myfile.anf --solve --allsol
+./bosphorus myfile.anf --allsol
 [...]
 s ANF-SATISFIABLE
 v x(0) x(1)+1 x(2) x(3)
@@ -201,7 +208,7 @@ $ cat count.anf
 c p show x1 x2 x3 x4 END
 x1*x2 + x3 + 1
 x3*x5 + x6
-$ ./bosphorus count.anf --cnfwrite out.cnf
+$ ./bosphorus count.anf out.cnf
 $ ./approxmc out.cnf
 [...]
 c [appmc] Number of solutions is: 4*2**0*2
@@ -223,7 +230,7 @@ Write the CNF together with a solution map, solve the CNF with any SAT
 solver, and map the model back to the ANF's variables:
 
 ```
-./bosphorus test.anf --cnfwrite test.cnf --solmap solution_map
+./bosphorus test.anf test.cnf --solmap solution_map
 ./cryptominisat5 test.cnf > cnf_solution
 ./scripts/map_solution.py solution_map cnf_solution
 s ANF-SATISFIABLE

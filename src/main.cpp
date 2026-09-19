@@ -164,7 +164,12 @@ void parseOptions(int argc, char* argv[])
     program.add_argument("input")
         .nargs(argparse::nargs_pattern::optional)
         .default_value(string())
-        .help("Input file. Treated as --anfread if it ends in .anf, --cnfread if it ends in .cnf");
+        .help("Input file. Treated as --anfread if it ends in .anf or .anf.gz, --cnfread if it ends in .cnf or .cnf.gz");
+    program.add_argument("output")
+        .nargs(argparse::nargs_pattern::optional)
+        .default_value(string())
+        .help("Output file. Treated as --anfwrite if it ends in .anf, --cnfwrite if it ends in .cnf. "
+              "Without any output file the system is solved");
     add_str_arg("--anfread", anfInput, "Read ANF from this file");
     add_str_arg("--cnfread", cnfInput, "Read CNF from this file");
     add_str_arg("--anfwrite", anfOutput, "Write ANF output to file");
@@ -174,7 +179,7 @@ void parseOptions(int argc, char* argv[])
     add_arg("--simplify", config.simplify, fc_integral<int>, "Simplify ANF");
     add_arg("--color", config.color, fc_integral<int>,
         "Colour the [simp-stats] lines: 0 = never, 1 = always, 2 = auto (terminal and NO_COLOR unset)");
-    add_flag("--solve", solve_with_cms, "Solve the resulting ANF (built-in CryptoMiniSat with Gauss-Jordan and XOR recovery on)");
+    add_flag("--solve", solve_with_cms, "Solve the resulting ANF also when an output file is written; without one it is always solved (built-in CryptoMiniSat with Gauss-Jordan and XOR recovery on)");
     add_str_arg("--solvewrite", solution_output_file,
         "Solve the resulting ANF and print the solution to this file");
     add_flag("--allsol", all_solutions, "Enumerate all solutions with the built-in solver, one SAT call per solution: fine up to some 10000 solutions, use ApproxMC on the written CNF beyond that");
@@ -339,37 +344,61 @@ void parseOptions(int argc, char* argv[])
     readANF = program.is_used("--anfread");
     readCNF = program.is_used("--cnfread");
 
-    // Positional input file: infer ANF/CNF from the extension
-    const string posInput = program.get<string>("input");
-    if (!posInput.empty()) {
-        auto ends_with = [&](const string& suffix) {
-            return posInput.size() >= suffix.size() &&
-                   posInput.compare(posInput.size() - suffix.size(),
-                                    suffix.size(), suffix) == 0;
-        };
-        if (ends_with(".anf")) {
-            if (readANF) {
-                cerr << "ERROR: input file given both as positional argument and via --anfread\n";
-                exit(-1);
-            }
-            anfInput = posInput;
-            readANF = true;
-        } else if (ends_with(".cnf")) {
-            if (readCNF) {
-                cerr << "ERROR: input file given both as positional argument and via --cnfread\n";
-                exit(-1);
-            }
-            cnfInput = posInput;
-            readCNF = true;
-        } else {
-            cerr << "ERROR: cannot tell whether '" << posInput
-                 << "' is ANF or CNF: it must end in .anf or .cnf, "
-                    "or be given via --anfread/--cnfread\n";
+    const auto ends_with = [](const string& f, const string& suffix) {
+        return f.size() >= suffix.size() &&
+               f.compare(f.size() - suffix.size(), suffix.size(), suffix) == 0;
+    };
+    const auto reject_gz_output = [&](const string& f) {
+        if (ends_with(f, ".gz")) {
+            cerr << "ERROR: cannot write compressed output: '" << f << "'\n";
             exit(-1);
         }
-    }
+    };
+    const auto file_kind = [&](const string& f, bool is_input) {
+        if (is_input) {
+            if (ends_with(f, ".anf") || ends_with(f, ".anf.gz")) return true;
+            if (ends_with(f, ".cnf") || ends_with(f, ".cnf.gz")) return false;
+        } else {
+            reject_gz_output(f);
+            if (ends_with(f, ".anf")) return true;
+            if (ends_with(f, ".cnf")) return false;
+        }
+        cerr << "ERROR: cannot tell whether the " << (is_input ? "input" : "output")
+             << " '" << f << "' is ANF or CNF: it must end in "
+             << (is_input ? ".anf, .anf.gz, .cnf or .cnf.gz, or be given via --anfread/--cnfread"
+                          : ".anf or .cnf, or be given via --anfwrite/--cnfwrite")
+             << "\n";
+        exit(-1);
+    };
+    const auto take = [](string& dst, bool& flag, const string& f, const char* opt) {
+        if (flag) {
+            cerr << "ERROR: file given both as positional argument and via " << opt << "\n";
+            exit(-1);
+        }
+        dst = f;
+        flag = true;
+    };
+
     writeANF = program.is_used("--anfwrite");
     writeCNF = program.is_used("--cnfwrite");
+    if (writeANF) reject_gz_output(anfOutput);
+    if (writeCNF) reject_gz_output(cnfOutput);
+    const string posInput = program.get<string>("input");
+    if (!posInput.empty()) {
+        if (file_kind(posInput, true))
+            take(anfInput, readANF, posInput, "--anfread");
+        else
+            take(cnfInput, readCNF, posInput, "--cnfread");
+    }
+    const string posOutput = program.get<string>("output");
+    if (!posOutput.empty()) {
+        if (file_kind(posOutput, false))
+            take(anfOutput, writeANF, posOutput, "--anfwrite");
+        else
+            take(cnfOutput, writeCNF, posOutput, "--cnfwrite");
+    }
+    if (!writeANF && !writeCNF) solve_with_cms = true;
+    if (all_solutions) solve_with_cms = true;
 
     if (program.is_used("--solvewrite")) {
         solve_with_cms = true;

@@ -1,0 +1,5 @@
+c RUN: %solver %s --verb 0 | %OutputCheck %s
+c
+c Without an output file the system is solved.
+c CHECK-L: s ANF-SATISFIABLE
+x1*x2 + 1
