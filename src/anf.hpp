@@ -89,7 +89,8 @@ class ANF
     void get_solution_map(map<uint32_t, VarMap>& ret) const;
 
     // Returns true if polynomial is new and has been added
-    bool addBoolePolynomial(const BoolePolynomial& poly);
+    // len: the number of terms of poly when the caller knows it (SIZE_MAX: count it)
+    bool addBoolePolynomial(const BoolePolynomial& poly, size_t len = SIZE_MAX);
     // Adds the polynomial given as a list of monomials (the empty vector is
     // the constant 1). If it is a product of linear factors it is stored as
     // such and never expanded into a ZDD unless a rule needs that.
