@@ -108,7 +108,7 @@ This means x0 is `false`, x1 is `true`, x2 is `true` and x3 is `false`.
 Complete bases come from Bosphorus's own matrix-F4 engine (`--gbengine 1`,
 M4RI over squarefree 64-bit monomials, deterministic budgets `--gbsteps`
 and `--gbmaxcells`); `--gbengine 0` uses BRiAl's `symmGB_F2` [[8]](#references) and
-`--gbengine 2` a Matrix-F5 [[4]](#references) variant (with a MutantXL step: rows that fell
+`--gbengine 2` a Matrix-F5 [[4]](#references) variant (with a MutantXL [[9]](#references) step: rows that fell
 in degree are multiplied up again before the next degree) that is faster
 on random quadratic systems and slower on structured ones. Both engines
 stop as soon as the linear basis members fix every variable. A step whose
@@ -118,35 +118,33 @@ levels, `--gbsplitrows` matrix rows in total), so memory stays bounded
 and the degree stays low.
 
 ## ANF-to-CNF conversion strategies
-Small polynomials are converted directly (Brickenstein's algorithm), and
-small equations that share variables, such as the equations of one S-box,
-are encoded jointly over the union of their variables. Larger ones are
-linearised: nonlinear parts become CNF variables that are XORed together,
-with small combinations such as `x*y + x` or `x*y + x*z` folded into one
-variable each (the partner strategies of Jovanovic and Kreuzer). A product
-of linear factors becomes one clause over one XOR-defined variable per
-factor, which is how stream-cipher instances look as ANF. XORs are cut
-into short pieces, or written as CryptoMiniSat's native xor clauses. A
-projection set in the ANF becomes a `c p show` line over the same
-variables in the CNF, so solution counts over it agree. `--quadsplit k`
-encodes a quadratic equation with at most `k` products in its Dickson
-decomposition `l1*l2 + l3*l4 + ... + linear` with one shared XOR-defined
-variable per linear form and one per product, the way the raw CNFs of
-cipher instances are written; on the ascon family this made CryptoMiniSat
-slower on three of four instances (three seeds each), so it is off by
-default.
+Small polynomials are converted directly (Brickenstein's algorithm
+[[10]](#references)), and small equations that share variables, such as
+those of one S-box, are encoded jointly. Larger ones are linearised:
+nonlinear parts become XORed CNF variables, with small combinations such
+as `x*y + x` folded into one variable (the partner strategies of Jovanovic
+and Kreuzer [[11]](#references)). A product of linear factors becomes one
+clause over one XOR-defined variable per factor. XORs are cut into short
+pieces, or written as CryptoMiniSat's native XOR clauses.
+
+A projection set in the ANF becomes a `c p show` line in the CNF, so
+solution counts over it agree. `--quadsplit k` encodes a quadratic
+equation with at most `k` products through its Dickson decomposition
+`l1*l2 + l3*l4 + ... + linear`, with one XOR-defined variable per linear
+form and per product; it is off by default, as it made CryptoMiniSat
+slower on most ascon instances.
 
 ## Multivariate quadratic (MQ) and HFE systems
 Post-quantum multivariate schemes reduce to quadratic systems over GF(2).
 Bosphorus reads [Fukuoka MQ challenge](https://www.mqchallenge.org/) files
-and Magma polynomial lists such as the HFE systems of
-`magma.maths.usyd.edu.au/users/allan/gb` through converters in `utils/`,
+and Magma polynomial lists such as the
+[HFE systems of Allan Steel](http://magma.maths.usyd.edu.au/users/allan/gb/)
+through converters in `utils/`,
 and can generate random MQ systems with a planted solution. A system with
 few enough variables is solved by its Gröbner basis alone, without any
 SAT solving.
 
-Random MQ systems with m = 2n and a planted solution, one core (a 2020
-laptop core), 200 s limit for the SAT solver. To reproduce a row:
+To reproduce a row of the table below:
 ```
 python3 utils/mqgen.py 24 48 1 > mq24.anf   # n=24, m=48, seed 1
 ./build/bosphorus mq24.anf --solve              # F4; --gbengine 2 for F5
@@ -169,11 +167,9 @@ Memory in parentheses.
 | 32 | timeout | | 119 s (945 MB) | 134 s (2.1 GB) |
 | 34 | timeout | | 603 s (1.5 GB) | 537 s (2.6 GB) |
 
-HFE systems (secret degree 96) from Allan Steel's Magma page. Magma's F4
-solved them in 2004 on hardware of that time (a 750 MHz UltraSPARC class
-machine, roughly 20-30x slower than a current core), so its times are
-what a far better engine achieved two decades ago; Bosphorus finds the
-same solutions:
+HFE systems (secret degree 96): Magma's F4 solved them in 2004 on hardware
+roughly 20-30x slower than a current core; Bosphorus finds the same
+solutions:
 
 | system | Magma F4 (2004) | BRiAl `symmGB_F2` | Bosphorus F4 |
 |---|---|---|---|
@@ -250,3 +246,6 @@ v x(0) 1+x(1) 1+x(2) x(3)
 6. N. Courtois, A. Klimov, J. Patarin, A. Shamir, [Efficient algorithms for solving overdefined systems of multivariate polynomial equations](https://doi.org/10.1007/3-540-45539-6_27), EUROCRYPT 2000.
 7. N. Courtois, P. Sepehrdad, P. Sušil, S. Vaudenay, [ElimLin algorithm revisited](https://doi.org/10.1007/978-3-642-34047-5_18), FSE 2012.
 8. M. Brickenstein, A. Dreyer, [PolyBoRi: a framework for Gröbner-basis computations with Boolean polynomials](https://doi.org/10.1016/j.jsc.2008.02.017), J. Symb. Comput. 44, 2009.
+9. J. Ding, J. Buchmann, M. S. E. Mohamed, W. S. A. Mohamed, R.-P. Weinmann, MutantXL, SCC 2008.
+10. M. Brickenstein, Boolean Gröbner bases: theory, algorithms and applications, PhD thesis, TU Kaiserslautern, 2010.
+11. P. Jovanovic, M. Kreuzer, [Algebraic attacks using SAT-solvers](https://doi.org/10.1515/gcc.2010.016), Groups Complex. Cryptol. 2, 2010.
