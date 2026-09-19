@@ -57,9 +57,15 @@ PolyBoRi/CUDD tend to dominate; check which rule calls them.
   e.g. `--gbsteps`, `--shortenbudget`), never with seconds: time limits make
   runs irreproducible and bugs impossible to replay. The only time limit is the
   user's global `--maxtime`.
-- **Fuzz before every commit**: `python3 utils/fuzz.py --iters 60` (about 15 s)
-  generates random small ANF and CNF inputs with random option settings and
-  checks Bosphorus's solutions/CNF against brute force. Commit only when it
+- **Fuzz before every commit**: `python3 utils/fuzz.py --iters 60` (a few
+  seconds) generates random small ANF and CNF inputs with random option
+  settings and checks every (projected) count with ganak (`$GANAK`, else
+  `~/development/sat_solvers/ganak/build/ganak`, else PATH): the
+  --allsol solutions, --anfwrite, --cnfwrite and --anfwrite then --cnfwrite.
+  Never brute force. A run over 5 s is skipped, not a failure.
+  `utils/fuzz_session.sh [--num N]` runs N (16) endless fuzzers in tmux; all
+  files go through `unique_file()` in `utils/out/`, a failure keeps its
+  files and a `repro_N.sh` there. Commit only when it
   reports no failures; a failing case is saved under `fuzz-fail-*` for replay.
   Fuzz with an assertions-on build (`ENABLE_ASSERTIONS`): a broken invariant
   often gives correct answers and shows only as an assert.

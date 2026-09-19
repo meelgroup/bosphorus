@@ -10,3 +10,4 @@ compile_commands.json
 *.pdf
 *.zip
 result
+utils/out/
