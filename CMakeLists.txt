@@ -329,7 +329,7 @@ endfunction()
 include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 
-set(BOSPHORUS_FULL_VERSION "3.2.0")
+set(BOSPHORUS_FULL_VERSION "4.0.0")
 string(REPLACE "." ";" BOSPHORUS_FULL_VERSION ${BOSPHORUS_FULL_VERSION})
 SetVersionNumber("PROJECT" ${BOSPHORUS_FULL_VERSION})
 message(STATUS "PROJECT_VERSION: ${PROJECT_VERSION}")
