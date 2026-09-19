@@ -203,7 +203,7 @@ ANF::Names ANF::scanFile(const string& filename)
             std::istringstream iss(line);
             string c, p, show;
             iss >> c >> p >> show;
-            if (!(c == "c" && p == "show") && !(c == "c" && p == "p" && show == "show")) continue;
+            if (!(c == "c" && p == "p" && show == "show")) continue;
             string rest;
             std::getline(iss, rest);
             const size_t end = rest.find("END");
