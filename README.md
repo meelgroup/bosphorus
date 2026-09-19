@@ -193,16 +193,19 @@ This enumerates one solution per SAT call and does not scale beyond some
 
 ## Counting solutions of an ANF
 When there are too many solutions to list (say 2**40), count them on the
-CNF: a projection set in the ANF (`c p show x1 x2 ... END`) is written into
-the CNF as `c p show var1 var2 ... varn 0`, which
-[ApproxMC](https://github.com/meelgroup/approxmc) understands:
+CNF with [ApproxMC](https://github.com/meelgroup/approxmc). The ANF line
+`c p show ... END` sets the projection set; it becomes `c p show ... 0` in the CNF:
 
 ```
-./bosphorus test.anf --cnfwrite out.cnf
-./approxmc out.cnf
+$ cat count.anf
+c p show x1 x2 x3 x4 END
+x1*x2 + x3 + 1
+x3*x5 + x6
+$ ./bosphorus count.anf --cnfwrite out.cnf
+$ ./approxmc out.cnf
 [...]
-c [appmc] Number of solutions is: 256*2**6
-s mc 16384
+c [appmc] Number of solutions is: 4*2**0*2
+s mc 8
 ```
 
 If the number of solutions is low (say, less than 1000) you can also use
@@ -211,7 +214,7 @@ CryptoMiniSat to do the counting:
 ```
 ./cryptominisat5 --maxsol 100000 out.cnf
 [...]
-c Number of solutions found until now:    16384
+c Number of solutions found until now:      8
 s UNSATISFIABLE
 ```
 
