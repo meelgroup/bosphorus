@@ -128,11 +128,7 @@ clause over one XOR-defined variable per factor. XORs are cut into short
 pieces, or written as CryptoMiniSat's native XOR clauses.
 
 A projection set in the ANF becomes a `c p show` line in the CNF, so
-solution counts over it agree. `--quadsplit k` encodes a quadratic
-equation with at most `k` products through its Dickson decomposition
-`l1*l2 + l3*l4 + ... + linear`, with one XOR-defined variable per linear
-form and per product; it is off by default, as it made CryptoMiniSat
-slower on most ascon instances.
+solution counts over it agree.
 
 ## Multivariate quadratic (MQ) and HFE systems
 Post-quantum multivariate schemes reduce to quadratic systems over GF(2).
