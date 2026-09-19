@@ -125,4 +125,5 @@ jobs:
         tag_name: ${{ github.ref_name }}
         name: ${{ env.RELEASE_NAME }}
         generate_release_notes: true
+        draft: true
         files: artifacts/*
